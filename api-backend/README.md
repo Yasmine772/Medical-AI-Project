@@ -22,16 +22,9 @@ Follow these steps to set up your local development environment:
 
 ### 1. Enter the Service Directory
 
-If you are using the monorepo, run:
+From the monorepo root:
 
 ```bash
-cd api-backend
-```
-
-If this service is standalone, clone it and then enter the folder:
-
-```bash
-git clone <https://github.com/Medical-Diagnosis-AI-System-1/api-backend.git>
 cd api-backend
 ```
 
