@@ -1,0 +1,57 @@
+# Web Framework
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.4.2
+pydantic-settings==2.0.3
+
+# Data Processing & Analysis
+numpy==1.24.3
+pandas==2.1.1
+scipy==1.11.4
+
+# Image Processing
+pillow==10.0.0
+opencv-python==4.8.1.78
+scikit-image==0.22.0
+
+# Machine Learning & Deep Learning
+scikit-learn==1.3.1
+tensorflow==2.14.0
+keras==2.14.0
+torch==2.1.0
+torchvision==0.16.0
+
+# Medical Imaging
+pydicom==2.4.0
+nibabel==5.1.0
+SimpleITK==2.3.1
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+pymongo==4.6.1
+
+# API & HTTP
+requests==2.31.0
+httpx==0.25.1
+
+# Authentication & Security
+python-jose==3.3.0
+passlib==1.7.4
+python-multipart==0.0.6
+bcrypt==4.1.1
+
+# Logging & Monitoring
+python-json-logger==2.0.7
+structlog==23.2.0
+
+# Utilities
+python-dotenv==1.0.0
+loguru==0.7.2
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.12.0
+flake8==6.1.0
+mypy==1.7.1
