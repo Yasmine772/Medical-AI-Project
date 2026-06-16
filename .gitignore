@@ -22,7 +22,10 @@ Thumbs.db
 # Environment files
 # -------------------
 .env
-.env.*
+.env.backup
+.env.production
+.env.local
+!.env.example
 
 # -------------------
 # Docker
