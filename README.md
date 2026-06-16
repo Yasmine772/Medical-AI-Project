@@ -69,10 +69,10 @@ This repository follows a Monorepo structure:
 ```
 Medical-AI-Project/
 ├── api-backend/      # Laravel 11.x REST API
-├── react-app/        # React 18 Admin Dashboard (Vite)
+├── ai-engine/        # Python FastAPI engine
+├── web-frontend/     # React 18 Admin Dashboard (Vite)
 ├── docker-compose.yml# Container orchestration
 └── .gitignore        # Global git ignore configuration
-└──  README.md
 ```
 
 ---
@@ -125,7 +125,7 @@ Medical-AI-Project/
 | **Docker Compose** *(Recommended)* | 2.x | `docker compose version` |
 | Git | 2.x | `git --version` |
 
-> **Note:** Docker is recommended for easier orchestration. For local development without Docker, see [Local Development Setup](#-local-development-setup).
+> **Note:** Docker is recommended for easier orchestration. For local development without Docker, see the steps below.
 
 ---
 ## 🚀 Quick Start
@@ -229,6 +229,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 pip install -r requirements.txt
+# Replace main.py with your service entrypoint file if different
 python main.py
 ```
 

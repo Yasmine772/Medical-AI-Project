@@ -73,6 +73,8 @@ python main.py
 uvicorn main:app --reload --host 0.0.0.0 --port 5000
 ```
 
+> If your AI engine entrypoint is not `main.py`, replace the command with the correct filename, for example `python app.py` or `uvicorn api:app`.
+
 The API will be available at:
 - 🌐 **Main API**: http://localhost:5000
 - 📚 **Interactive Docs (Swagger UI)**: http://localhost:5000/docs
@@ -97,9 +99,13 @@ Ensure the Laravel API is running on `http://localhost:8000` or update the conne
 ai-engine/
 ├── models/         # Trained model files (.h5 / .pkl) — NOT committed to Git (see note below)
 ├── data/           # Test datasets — NOT committed to Git
-├── main.py         # Application entry point
-└── requirements.txt
+├── requirements.txt
+├── Dockerfile
+├── README.md
+└── <entrypoint>.py  # e.g. main.py or app.py
 ```
+
+> Ensure the AI engine entrypoint file exists in `ai-engine/` before running locally or via Docker.
 
 > **⚠️ Models & Data are not tracked in this repository.**
 > Download the required model files from **[Google Drive / external link — update here]** and place them inside the `/models` directory before running.

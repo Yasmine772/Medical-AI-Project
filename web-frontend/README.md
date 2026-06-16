@@ -25,7 +25,15 @@ This repository contains the **frontend client** of the Medical Diagnosis AI Sys
 
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
+### 1. Enter the Service Directory
+
+If you are using the monorepo, run:
+
+```bash
+cd web-frontend
+```
+
+If this service is standalone, clone it and then enter the folder:
 
 ```bash
 git clone <https://github.com/Medical-Diagnosis-AI-System-1/web-frontend.git>
@@ -44,6 +52,7 @@ Create a `.env` file in the project root:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000/api
+VITE_AI_ENGINE_URL=http://localhost:5000
 ```
 
 ### 4. Start the Development Server
@@ -53,6 +62,8 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:5173`.
+
+> Make sure the backend API is running before using the frontend.
 
 ---
 

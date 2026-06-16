@@ -20,7 +20,15 @@ Ensure the following are installed on your machine before getting started:
 
 Follow these steps to set up your local development environment:
 
-### 1. Clone the Repository
+### 1. Enter the Service Directory
+
+If you are using the monorepo, run:
+
+```bash
+cd api-backend
+```
+
+If this service is standalone, clone it and then enter the folder:
 
 ```bash
 git clone <https://github.com/Medical-Diagnosis-AI-System-1/api-backend.git>
@@ -66,6 +74,8 @@ php artisan serve
 ```
 
 The API will be available at `http://localhost:8000`.
+
+> If the service uses a different host or port, update the `.env` file and the `--host` / `--port` flags as needed.
 
 ---
 
