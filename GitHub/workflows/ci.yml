@@ -1,0 +1,47 @@
+name: Global Test Suite
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # اختبار مشروع الـ Backend (مثال: Python/FastAPI)
+  test-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api-backend
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+      - name: Run Tests
+        run: pytest
+
+  # اختبار مشروع الـ Frontend (مثال: React/Node.js)
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-frontend
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: npm install
+      - name: Run Tests
+        run: npm test
+
+  # اختبار مشروع الـ AI Engine (مثال: Python)
+  test-ai-engine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-engine
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+      - name: Run Tests
+        run: pytest
