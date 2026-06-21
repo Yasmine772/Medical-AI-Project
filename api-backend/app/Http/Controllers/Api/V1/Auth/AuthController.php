@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\LoginRequest;
+use App\Http\Requests\User\RefreshTokenRequest;
 use App\Http\Requests\User\RegisterRequest;
+use App\Http\Requests\User\ResendEmailVerificationRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Services\Api\AuthService;
 use Illuminate\Http\Request;
@@ -26,7 +28,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'Status'  => 'Success',
-                'message' => 'User has been registered successfully',
+                'message' => 'User has been registered successfully and verification email has been sent✔',
                 'data'    => new UserResource($user)
             ], 201);
             
@@ -39,28 +41,59 @@ class AuthController extends Controller
 //-------------------------------------------------------------------------------------------
     public function login(LoginRequest $request)
     {
-        $result = $this->authService->login($request->validated());
+        try {
+            $result = $this->authService->login($request->validated());
 
-        if (!$result) {
+            return match ($result) {
+                'unVerifiedEmail' => response()->json([
+                                        'Status' => 'Error',
+                                        'message' => 'Please verify your email before logging in'
+                                    ], 403),
+
+                'unauthorized' => response()->json([
+                                        'Status' => 'Error',
+                                        'message' => 'Email or password not correct!'
+                                    ], 401),
+
+                $result => response()->json([
+                            'Status'  => 'Success',
+                            'message' => 'User login successfully',
+                            'User_info' => $result
+                        ], 200)
+            };
+        } 
+        catch(Throwable $e) {
             return response()->json([
-                'Status'  => 'Error',
-                'message' => 'Email or password not correct!',
-                'data'    => null
-            ], 422);                
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'Status'  => 'Success',
-            'message' => 'User login successfully',
-            'User_info' => [
-                'personal_info' => $result['user'],
-                'token' => $result['token'],
-                'token_type' => $result['token_type'],
-                'expires_in' => $result['expires_in']
-            ],
-        ], 200);
     }
-//-------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------
+    public function refreshToken(RefreshTokenRequest $request)
+    {
+        try {
+            $result = $this->authService->refreshToken($request->validated());
+
+            return match ($result) {
+                'InvalidOrExpiredRefreshToken' => response()->json([
+                                        'Status' => 'Error',
+                                        'message' => 'Invalid or expired refresh token'
+                                    ], 401),
+
+                $result => response()->json([
+                                    'Status'  => 'Success',
+                                    'message' => 'Token refreshed successfully',
+                                    'data' => $result
+                                ],200)
+            };
+        } 
+        catch (Throwable $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    //-------------------------------------------------------------------------------------------
     public function logout(Request $request)
     {
         auth()->user()->tokens()->delete();
@@ -68,5 +101,60 @@ class AuthController extends Controller
             'Status'  => 'Success',
             'message' => 'User logout successfully',
         ], 200);
+    }
+    //-------------------------------------------------------------------------------------------
+    public function verify(int $id , string $hash)
+    {
+        try {
+            $result =  $this->authService->verify($id ,$hash);
+
+            return match($result) {
+                'InvalidLinkError' => response()->json([
+                                            'Status' => 'Error',
+                                            'message' => 'Invalid verification link'
+                                            ], 400),
+
+                'Emailverified' => response()->json([
+                                            'Status' => 'Error',
+                                            'message' => 'Email already verified'
+                                            ], 409),
+
+                true => response()->json([
+                                    'Status' => 'Success',
+                                    'message' => 'Email verified successfully'
+                                    ], 200),
+            };
+            
+        } catch (Throwable $e) {
+            return response()->json([
+                'Status' => 'Error',
+                'message' => 'Verification failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    //*********************************************************************** */
+    public function resend(ResendEmailVerificationRequest $request)
+    {
+        try {
+            $result = $this->authService->resend($request->validated());
+
+            return match ($result) {
+                'EmailVerified' => response()->json([
+                                    'Status' => 'Error',
+                                    'message' => 'Email already verified!'
+                                ], 409),
+
+                true => response()->json([
+                                'Status' => 'Success',
+                                'message' => 'Verification email sent'
+                            ], 200)
+            };
+
+        } catch (Throwable $e) {
+            return response()->json([
+                'Status' => 'Error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }
