@@ -5,13 +5,22 @@ use Illuminate\Support\Facades\Route;
 
 
 
+Route::prefix('v1/auth/user')->group(function (){
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/refresh', [AuthController::class, 'refreshToken']);
 
-
-Route::prefix('v1')->group(function (){
-    Route::post('/auth/user/register', [AuthController::class, 'register']);
-    Route::post('/auth/user/login', [AuthController::class, 'login']);
+    //email verification:
+    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verify'])->name('verification.verify')
+                                                                              ->middleware(['signed']);
+    Route::post('/email/resend', [AuthController::class, 'resend']);
 
     Route::middleware(['auth:sanctum'])->group(function () {
-        Route::post('/auth/user/logout', [AuthController::class, 'logout']);
+        Route::post('/logout', [AuthController::class, 'logout']);
+    });
+
+
+    Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+        //Any route needs email verification
     });
 });
