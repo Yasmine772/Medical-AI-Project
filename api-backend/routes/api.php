@@ -12,6 +12,11 @@ Route::prefix('v1')->group(function (){
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
 
+      //email verification:
+    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verify'])->name('verification.verify')
+                                                                              ->middleware(['signed']);
+    Route::post('/email/resend', [AuthController::class, 'resend']);
+
     // Google OAuth
     Route::get('/auth/google/redirect',  [GoogleAuthController::class, 'redirectToGoogle']);
     Route::get('/auth/google/callback',  [GoogleAuthController::class, 'handleGoogleCallback']);
