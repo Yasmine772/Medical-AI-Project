@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+
 class PatientProfile extends Model
 {
     protected $fillable = [
-        'age',
+        'birth_date',
         'gender',
         'is_smoker',
         'has_diabetes',

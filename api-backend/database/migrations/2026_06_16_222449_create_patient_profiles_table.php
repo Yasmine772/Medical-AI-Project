@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('patient_profiles', function (Blueprint $table) {
             $table->id();
-            $table->integer('age');
+            $table->date('birth_date')->nullable();
             $table->enum('gender', ['male', 'female']);
             $table->boolean('is_smoker')->default(false);
             $table->boolean('has_diabetes')->default(false);
@@ -21,6 +21,9 @@ return new class extends Migration
             $table->boolean('is_pregnant')->default(false);
             $table->enum('activity_level', ['sedentary', 'moderate', 'active'])->nullable();
             $table->timestamp('last_checkup_date');
+            //setting for user preferences
+            $table->boolean('notifications_enabled')->default(true);
+            $table->string('theme')->default('light');
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->timestamps();
         });
