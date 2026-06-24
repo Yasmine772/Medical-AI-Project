@@ -128,3 +128,7 @@ coverage/
 Thumbs.db
 .idea/
 .vscode/
+node_modules/
+.env
+dist/
+build/
