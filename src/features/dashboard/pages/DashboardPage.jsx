@@ -7,10 +7,10 @@ import doctorImg from "../../../assets/doctor-illustration.png";
 
 const DashboardPage = () => {
   return (
-    // نستخدم h-full لضمان أن الصفحة تأخذ ارتفاع الحاوية الأب فقط
+   
 
     <div className=" flex flex-col gap-4 overflow-y-auto">
-      {/* القسم العلوي: الهيدر */}
+      {/* header */}
       <div className="flex justify-between items-center shrink-0">
         <div>
           <h1 className="text-4xl font-bold text-gray-800 ">HOME PAGE</h1>
@@ -27,12 +27,11 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* القسم العلوي: بطاقة الترحيب + بطاقة نوع المرضى */}
-      {/* قمنا بتغيير الشبكة إلى 4 أعمدة للتحكم الدقيق */}
+     
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8 ">
         <div className="lg:col-span-1 flex flex-col justify-center">
           <div className="bg-white/40 backdrop-blur-md p-4 rounded-[24px] border border-white/50 shadow-sm w-56">
-            {/* الشهر والسنة */}
+           
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-[#72A6BB] font-bold text-sm uppercase tracking-wider">
                 June 2026
@@ -43,7 +42,7 @@ const DashboardPage = () => {
               </div>
             </div>
 
-            {/* أيام الأسبوع */}
+           
             <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-gray-500 mb-2">
               <span>M</span>
               <span>T</span>
@@ -54,9 +53,9 @@ const DashboardPage = () => {
               <span>S</span>
             </div>
 
-            {/* أرقام الأيام */}
+           
             <div className="grid grid-cols-7 gap-1 text-center text-xs">
-              {/* مثال لأيام الشهر */}
+              
               {[...Array(14).keys()].map((i) => (
                 <span key={i} className="text-gray-400 p-1"></span>
               ))}
@@ -72,9 +71,9 @@ const DashboardPage = () => {
             </div>
           </div>
         </div>
-        {/* بطاقة الترحيب: نجعلها تشغل عموداً واحداً (lg:col-span-1) ونزيحها للبدء من العمود الثالث */}
+        {/* welcome card */}
         <div className="lg:col-span-2 bg-gradient-to-r from-[#72A6BB] to-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex items-center relative overflow-hidden h-32">
-          {/* المحتوى النصي */}
+         
           <div className="flex-1 z-10 pl-2 space-y-1">
             <h1 className="text-2xl font-semibold text-white">
               Good morning, Doc!
@@ -83,7 +82,7 @@ const DashboardPage = () => {
               Ready for an exciting day? You've got patients lined up!
             </p>
           </div>
-          {/* تصغير حجم الصورة قليلاً لتناسب الحجم الجديد */}
+          
           <div className="absolute right-0 top-0 bottom-0 w-40 z-0">
             <img
               src={doctorImg}
@@ -93,14 +92,13 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* بطاقة نوع المرضى: نجعلها تشغل عموداً واحداً (lg:col-span-1) ليكون لها نفس الحجم */}
-        {/* ستأخذ تلقائياً العمود الرابع (لأننا بدأنا الكارد الأول في الثالث) */}
+       
         <div className="lg:col-span-1">
           <PatientTypeCard />
         </div>
       </div>
 
-      {/* قسم البطاقات الأربعة */}
+      {/* four cards*/}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
         <KPICard title="Active Users" value="2,345" icon={Users} />
         <KPICard title="Daily Diagnoses" value="189" icon={Activity} />
@@ -108,7 +106,7 @@ const DashboardPage = () => {
         <KPICard title="New Content Items" value="12" icon={FileText} />
       </div>
 
-      {/* الرسم البياني + الطلبات (تأخذ باقي المساحة المتاحة flex-1) */}
+      
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
         <div className="lg:col-span-2 h-full min-h-0">
           <DiagnosisChart />

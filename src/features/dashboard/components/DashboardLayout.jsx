@@ -1,14 +1,14 @@
-import { useState } from "react"; // استيراد useState
+import { useState } from "react"; 
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
-import LogoutModal from "../../auth/components/LogoutModal"; // استيراد المودال
-import ConfirmationModal from "../../doctors/components/ConfirmationModal"; // استيراد المودال
+import LogoutModal from "../../auth/components/LogoutModal";
+import ConfirmationModal from "../../doctors/components/ConfirmationModal"; 
 const DashboardLayout = () => {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState({
     isOpen: false,
     type: "",
-    onConfirm: null, // قمنا بتبسيطها: لسنا بحاجة لحقل doctor هنا لأن onConfirm ستنفذ الدالة مباشرة
+    onConfirm: null, 
   });
 
   return (
@@ -23,12 +23,12 @@ const DashboardLayout = () => {
     >
       <Sidebar onLogoutClick={() => setIsLogoutModalOpen(true)} />
 
-      {/* الـ main يجب أن تظهر مرة واحدة فقط */}
+      
       <main className="flex-1 h-full overflow-y-auto p-6">
         <Outlet context={{ setActionModal }} />
       </main>
 
-      {/* المودالات هنا في الأعلى ستغطي الشاشة كاملة بفضل الـ z-index */}
+      
       <LogoutModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}

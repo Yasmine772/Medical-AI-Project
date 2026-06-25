@@ -7,16 +7,15 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
     setLoading(true);
     setTimeout(() => {
       onConfirm();
-      setLoading(false); // إعادة الحالة عند الانتهاء
+      setLoading(false); 
     }, 2000);
   };
 
   if (!isOpen) return null;
 
   return (
-    // التعديل الأساسي هنا: z-[9999] يضمن ظهوره فوق كل شيء
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      {/* الكارد في المنتصف */}
+     {/* card */}
       <div className="bg-white p-8 rounded-[32px] w-full max-w-sm text-center shadow-2xl border border-white/20">
         {loading ? (
           <div className="flex flex-col items-center gap-4">

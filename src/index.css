@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  /* 1. تعريف الألوان لتكون متاحة ككلاسات (مثل bg-medical أو text-medical-dark) */
+ 
   --color-medical: #72a6bb;
   --color-medical-light: #e3f0f5;
   --color-medical-dark: #58889b;
 
-  /* 2. تعريف الخط ليكون متاحاً ككلاس fontFamily (مثل font-tajawal) */
+  
   --font-tajawal: "Tajawal", sans-serif;
 }
 
-/* 3. تطبيق الخط كخط افتراضي للمشروع بالكامل */
+
 @layer base {
   body {
     font-family: var(--font-tajawal);

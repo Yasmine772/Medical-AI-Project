@@ -1,9 +1,9 @@
 import { useSelector, useDispatch } from "react-redux";
 import { deleteDoctor } from "../doctorsSlice";
 import { useOutletContext } from "react-router-dom";
-// 1. حذفنا onEdit من البروبس
+
 const DoctorsTable = () => {
-  // هذا السطر سيطبع لكِ ما يراه ريدكس في الكونسول
+ 
   const fullState = useSelector((state) => state);
   console.log("Current Redux State:", fullState);
   const doctors = useSelector((state) => state.doctors.approved || []);
@@ -12,9 +12,9 @@ const DoctorsTable = () => {
   const handleDelete = (doctor) => {
     setActionModal({
       isOpen: true,
-      type: "Delete", // سيظهر في العنوان: Confirm Delete
+      type: "Delete", 
       onConfirm: () => {
-        dispatch(deleteDoctor(doctor.id)); // تنفيذ عملية الحذف
+        dispatch(deleteDoctor(doctor.id)); 
       },
     });
   };
@@ -49,7 +49,7 @@ const DoctorsTable = () => {
                     {doc.status}
                   </span>
                 </td>
-                {/* 2. أبقينا فقط زر الحذف */}
+               
                 <td className="py-4">
                   <button
                     onClick={() => handleDelete(doc)}

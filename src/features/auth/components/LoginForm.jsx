@@ -9,9 +9,9 @@ const LoginForm = () => {
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    // هنا يفترض أن تضعي منطق التأكد من كلمة السر
-    // بمجرد نجاح العملية، ننتقل للـ Home
-    navigate("/app/dashboard"); // تأكدي أن هذا المسار يتطابق مع مسار الـ Dashboard في App.jsx
+    // confirm password
+    
+    navigate("/app/dashboard"); 
   };
 
   return (
@@ -19,20 +19,19 @@ const LoginForm = () => {
       onSubmit={handleSubmit}
       className="flex flex-col gap-4 w-full max-w-xs mx-auto font-sans"
     >
-      {/* عنوان الواجهة */}
+      
       <h2 className="text-xl font-bold text-gray-800 tracking-tight mt-2">
         Login to your{" "}
         <span className="text-medical font-medium">diagnostic account</span>
       </h2>
 
-      {/* حقول الإدخال */}
       <div className="flex flex-col gap-3">
         <Input label="Email Address" type="email" id="email" required />
 
         <Input label="Password" type="password" id="password" required />
       </div>
 
-      {/* رابط forgot password - أخضر غامق وتحته خط */}
+      {/* forgot password */}
       <div className="text-left">
         <a
           href="#forgot"
@@ -42,7 +41,7 @@ const LoginForm = () => {
         </a>
       </div>
 
-      {/* الأزرار المتطابقة المتتالية عمودياً */}
+      
       <div className="flex flex-col gap-2.5 mt-2">
         <Button
           type="button"

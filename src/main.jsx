@@ -4,14 +4,14 @@ import "./index.css";
 import App from "./App.jsx";
 
 import { PersistGate } from "redux-persist/integration/react";
-import { store, persistor } from "./store"; // استيراد persistor
+import { store, persistor } from "./store"; 
 
-// 1. الاستيرادات الجديدة
+
 import { Provider } from "react-redux";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    {/* 2. التغليف بالـ Provider */}
+    
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <App />

@@ -4,7 +4,7 @@ const PendingApplications = () => {
       <h3 className="text-lg font-bold mb-6">Pending Doctor Applications</h3>
 
       <div className="space-y-4">
-        {/* طلب 1 */}
+        
         <div className="flex justify-between items-center border-b pb-4">
           <div>
             <p className="font-semibold text-gray-800">Linva Doctor</p>
@@ -15,7 +15,7 @@ const PendingApplications = () => {
           </button>
         </div>
 
-        {/* طلب 2 */}
+       
         <div className="flex justify-between items-center">
           <div>
             <p className="font-semibold text-gray-800">Pending Doctor</p>

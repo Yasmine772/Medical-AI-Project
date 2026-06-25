@@ -9,7 +9,7 @@ import {
   PURGE,
   REGISTER,
 } from "redux-persist";
-// استبدال الاستيراد المباشر بتعريف يدوي لـ localStorage
+
 const storage = {
   getItem: (key) => Promise.resolve(localStorage.getItem(key)),
   setItem: (key, value) => Promise.resolve(localStorage.setItem(key, value)),
@@ -19,7 +19,7 @@ import doctorsReducer from "../features/doctors/doctorsSlice";
 
 const persistConfig = {
   key: "root",
-  storage, // نستخدم التعريف اليدوي الذي يضمن عمله مع المتصفح
+  storage, 
 };
 
 const persistedReducer = persistReducer(

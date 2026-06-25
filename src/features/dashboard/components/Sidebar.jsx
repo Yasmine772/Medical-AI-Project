@@ -8,7 +8,7 @@ import {
   LogOut,
 } from "lucide-react";
 
-// استقبلنا onLogoutClick هنا
+
 const Sidebar = ({ onLogoutClick }) => {
   const location = useLocation();
 
@@ -45,7 +45,7 @@ const Sidebar = ({ onLogoutClick }) => {
         })}
       </div>
 
-      {/* الأيقونة الأخيرة (Logout) نضعها في الأسفل بـ mt-auto */}
+      
       <div className="mt-auto">
         <button
           onClick={onLogoutClick}

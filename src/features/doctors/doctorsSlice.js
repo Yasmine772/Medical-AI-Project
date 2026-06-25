@@ -24,7 +24,7 @@ const doctorsSlice = createSlice({
     ],
   },
   reducers: {
-    // الموافقة على طلب (نقل من pending إلى approved)
+    
     approveDoctor: (state, action) => {
       const doctor = state.pending.find((d) => d.id === action.payload);
       if (doctor) {
@@ -32,11 +32,11 @@ const doctorsSlice = createSlice({
         state.pending = state.pending.filter((d) => d.id !== action.payload);
       }
     },
-    // رفض طلب (حذف من pending)
+    
     rejectDoctor: (state, action) => {
       state.pending = state.pending.filter((d) => d.id !== action.payload);
     },
-    // حذف طبيب معتمد (حذف من approved)
+    
     deleteDoctor: (state, action) => {
       state.approved = state.approved.filter(
         (doc) => doc.id !== action.payload,
@@ -45,7 +45,7 @@ const doctorsSlice = createSlice({
   },
 });
 
-// لاحظي أننا قمنا بتحديث الـ export ليحتوي فقط على الدوال المستخدمة
+
 export const { approveDoctor, rejectDoctor, deleteDoctor } =
   doctorsSlice.actions;
 export default doctorsSlice.reducer;

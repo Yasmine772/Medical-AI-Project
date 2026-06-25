@@ -23,7 +23,7 @@ const UsersTable = ({ users: initialUsers }) => {
 
   return (
     <div className="p-6 bg-white/80 backdrop-blur-xl shadow-lg rounded-[24px] border border-white/20">
-      {/* قسم الفلترة المطور */}
+     
       <div className="mb-6 flex items-center gap-4">
         <div className="flex items-center gap-2">
           <label className="text-gray-600 font-medium">Min Diagnosis:</label>
@@ -36,7 +36,7 @@ const UsersTable = ({ users: initialUsers }) => {
           />
         </div>
 
-        {/* زر مسح الفلترة */}
+        
         <button
           onClick={() => setFilterCount(0)}
           className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
@@ -64,11 +64,11 @@ const UsersTable = ({ users: initialUsers }) => {
               <td className="py-4 px-4 font-semibold text-gray-800">
                 {user.name}
               </td>
-              {/* عرض الإيميل */}
+              
               <td className="py-4 px-4 text-gray-600">{user.email}</td>
               <td className="py-4 px-4 text-gray-600">{user.diagnosisCount}</td>
 
-              {/* عمود الحالة */}
+             
               <td className="py-4 px-4">
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-bold w-24 inline-block text-center ${
@@ -81,7 +81,7 @@ const UsersTable = ({ users: initialUsers }) => {
                 </span>
               </td>
 
-              {/* عمود الحظر */}
+              
               <td className="py-4 px-4">
                 <button
                   onClick={() => toggleStatus(user.id)}

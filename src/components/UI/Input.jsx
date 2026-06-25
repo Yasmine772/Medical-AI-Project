@@ -1,12 +1,11 @@
 const Input = ({ label, type = 'text', id, placeholder, ...props }) => {
   return (
     <div className="flex flex-col gap-1 w-full font-sans">
-      {/* اسم الحقل بالرمادي الخفيف مثل الصورة المعمتدة */}
       <label htmlFor={id} className="text-xs font-normal text-gray-500">
         {label}
       </label>
       
-      {/* حقل الإدخال مع حواف ناعمة وتأثير عند الضغط عليه (Focus) */}
+      
       <input
         type={type}
         id={id}
