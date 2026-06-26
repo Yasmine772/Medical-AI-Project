@@ -8,11 +8,12 @@ use Illuminate\Support\Facades\Route;
 
 
 
-Route::prefix('v1')->group(function (){
-    Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/login', [AuthController::class, 'login']);
+Route::prefix('v1/auth')->group(function (){
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/refresh', [AuthController::class, 'refreshToken']);
 
-      //email verification:
+    //email verification:
     Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verify'])->name('verification.verify')
                                                                               ->middleware(['signed']);
     Route::post('/email/resend', [AuthController::class, 'resend']);
