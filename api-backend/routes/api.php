@@ -29,7 +29,7 @@ Route::prefix('v1/auth')->group(function (){
 
     Route::middleware(['auth:sanctum'])->group(function () {
 
-       Route::post('/auth/logout', [AuthController::class, 'logout']);
+       Route::post('/logout', [AuthController::class, 'logout']);
        //Profile routes
        Route::get('/profile/',[AuthController::class,'viewProfile']);
        Route::patch('/profile/',[AuthController::class,'updateProfile']);
