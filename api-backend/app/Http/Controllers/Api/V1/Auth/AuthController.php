@@ -31,7 +31,7 @@ class AuthController extends Controller
         try {
             $user = $this->authService->register($request->validated());
 
-            return $this->successResponse(new UserResource($user), 'User has been registered successfully', 201);
+            return $this->successResponse(new UserResource($user), 'User has been registered successfully , check your email for verify it', 201);
             
         } catch (Throwable $e) {
             return $this->errorResponse('Failed to register user', $e->getMessage(), 500);
