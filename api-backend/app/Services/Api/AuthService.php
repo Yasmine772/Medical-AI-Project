@@ -52,10 +52,10 @@ class AuthService
 
         return [
         'user' => $user,
-        'access_token' => $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken,
-        'access_token_expires_at' => $accessTokenExpiresAt,
-        'refresh_token' => $user->createToken('refresh_token', ['refresh'], $refreshTokenExpiresAt)->plainTextToken,
-        'refresh_token_expires_at' => $refreshTokenExpiresAt,
+        'access_token' =>  $accessToken,
+        'access_token_expires_at' => '3600 s',
+        'refresh_token' => $refreshToken,
+        'refresh_token_expires_at' => '7 days',
         'token_type' => 'Bearer',
     ];
     }
@@ -80,9 +80,9 @@ class AuthService
 
         $result = [
             'access_token' => $newAccessToken,
-            'access_token_expires_at' => $accessTokenExpiresAt,
+            'access_token_expires_at' => '3600 s',
             'refresh_token' => $newRefreshToken,
-            'refresh_token_expires_at' => $refreshTokenExpiresAt,
+            'refresh_token_expires_at' => '7 days',
             'token_type' => 'Bearer',
         ];
 

@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\LoginRequest;
+use App\Http\Requests\User\RefreshTokenRequest;
 use App\Http\Requests\User\RegisterRequest;
+use App\Http\Requests\User\ResendEmailVerificationRequest;
 use App\Http\Requests\User\UpdateProfileRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Services\Api\AuthService;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponseTrait;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
 
@@ -41,17 +42,73 @@ class AuthController extends Controller
     {
         $result = $this->authService->login($request->validated());
 
-        if (!is_array($result)) {
-        return $this->errorResponse('Email or password not correct!', null, 422);
-        }
-    
-        return $this->successResponse([
-        'user' => new UserResource($result['user']),
-        'access_token' => $result['access_token'],
-        'token_type'   => $result['token_type'],
-        'expires_in'   => 3600 
-         ], 'User login successfully', 200);
+        return match($result){
+            'unauthorized' =>  $this->errorResponse('Email or password not correct!', null, 422),
+
+            'unVerifiedEmail' => $this->errorResponse('Email not verified!', null, 422),
+
+            default => $this->successResponse([
+                        'user' => new UserResource($result['user']),
+                        'access_token' => $result['access_token'],
+                        'access_token_expires_at' => $result['access_token_expires_at'],
+                        'refresh_token' => $result['refresh_token'],
+                        'refresh_token_expires_at' => $result['refresh_token_expires_at'],
+                        'token_type'   => $result['token_type'],
+                        ], 'User login successfully', 200)
+        };
     }
+    //-------------------------------------------------------------------------------------------
+    public function verify(int $id, string $hash)
+    {
+        try {
+            $result =  $this->authService->verify($id, $hash);
+
+            return match ($result) {
+                'InvalidLinkError' =>  $this->errorResponse('Invalid verification link', null, 400),
+
+                'Emailverified' =>  $this->errorResponse('Email already verified', null, 409),
+
+                default => $this->successResponse(null , 'Email verified successfully', 200)
+            };
+
+        } catch (Throwable $e) {
+            $this->errorResponse('Verification failed: ' . $e->getMessage(), null, 500);
+        }
+    }
+    //*********************************************************************** */
+    public function resend(ResendEmailVerificationRequest $request)
+    {
+        try {
+            $result = $this->authService->resend($request->validated());
+
+            return match ($result) {
+                'Emailverified' =>  $this->errorResponse('Email already verified', null, 409),
+
+                default => $this->successResponse(null , 'Verification email sent', 200)
+            };
+
+        } catch (Throwable $e) {
+            $this->errorResponse($e->getMessage(), null, 500);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------
+    public function refreshToken(RefreshTokenRequest $request)
+    {
+        try {
+            $result = $this->authService->refreshToken($request->validated());
+
+            return match ($result) {
+                'InvalidOrExpiredRefreshToken' =>  $this->errorResponse('Invalid or expired refresh token', null, 401),
+
+                default => $this->successResponse($result, 'Token refreshed successfully', 200)
+
+            };
+        } catch (Throwable $e) {
+                $this->errorResponse($e->getMessage(), null, 500);
+        }
+    }    
+
 //-------------------------------------------------------------------------------------------
     public function logout(Request $request)
     {
