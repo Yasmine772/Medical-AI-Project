@@ -19,8 +19,8 @@ Route::prefix('v1/auth')->group(function (){
     Route::post('/email/resend', [AuthController::class, 'resend']);
 
     // Google OAuth
-    Route::get('/auth/google/redirect',  [GoogleAuthController::class, 'redirectToGoogle']);
-    Route::get('/auth/google/callback',  [GoogleAuthController::class, 'handleGoogleCallback']);
+    Route::get('/google/redirect',  [GoogleAuthController::class, 'redirectToGoogle']);
+    Route::get('/google/callback',  [GoogleAuthController::class, 'handleGoogleCallback']);
 
     //Forget and Reset Password
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
