@@ -2,17 +2,14 @@
 
 namespace App\Models;
 
-use App\Notifications\VerifyEmailCustom;
 use App\Notifications\ResetPasswordNotification;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Carbon\Carbon;
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable
 {
     use HasFactory, Notifiable , HasApiTokens, CanResetPassword;
     
@@ -25,6 +22,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'diagnose_num',
         'google_id',
         'avatar',
+        'otp',
+        'expires_at',
         'created_at',
     ];
 
@@ -39,13 +38,10 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'expires_at' => 'datetime',
         ];
     }
 
-    public function sendEmailVerificationNotification()
-    {
-        $this->notify(new VerifyEmailCustom);
-    }
 
     public function sendPasswordResetNotification($token): void
     {

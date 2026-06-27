@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Requests\User;
+namespace App\Http\Requests\User\OTP;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class ResendEmailVerificationRequest extends FormRequest
+class ResendOTPRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -29,7 +29,6 @@ class ResendEmailVerificationRequest extends FormRequest
         ];
     }
 
-
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(
@@ -39,6 +38,5 @@ class ResendEmailVerificationRequest extends FormRequest
             ], 422)
         );
     }
-
 
 }
