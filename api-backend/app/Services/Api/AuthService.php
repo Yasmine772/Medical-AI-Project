@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Arr;
 use App\Services\Api\OTPService;
+use Illuminate\Support\Facades\DB;
+use App\Notifications\ResetPasswordOTPNotification;
+
+
 
 
 class AuthService
@@ -54,44 +58,80 @@ class AuthService
     * Processes the password reset request.
     * * Logic:
     * 1. Checks if user exists via the Broker.
-    * 2. If exists, generates a secure token and saves it to 'password_reset_tokens'.
+    * 2. If exists, generates a secure 6-digit OTP and saves it to 'password_reset_tokens'.
     * 3. Dispatches a notification to the user.
     * * @param string $email
-    * @return bool True if the link was sent, false otherwise.
+    * @return bool True if the otp was sent, false otherwise.
     * @throws Exception If mail server is unreachable.
     */
     public function forgetPassword(string $email)
     {
-        $status = Password::sendResetLink(['email' => $email]);
+        $user = User::where('email', $email)->first();
 
-        return $status ;
+    if (!$user) {
+        return false;
+    }
+
+    // Generate a 6-digit OTP
+    $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    // Save or update the OTP in the database
+    DB::table('password_reset_tokens')->updateOrInsert(
+        ['email' => $email],
+        [
+            'token' => Hash::make($otp),
+            'created_at' => now()
+        ]
+    );
+
+    // Send the OTP via notification
+    $user->notify(new ResetPasswordOTPNotification($otp));
+
+    return true;
     }
 
     /**
-     * Reset the user password using the reset token.
+     * Reset the user password using the otp.
      * * Logic:
-     * 1. Validates the token and email using Laravel's Password Broker.
-     * 2. Updates the user's password if the token is valid.
-     * 3. Invalidates all existing tokens to force a fresh session.
+     * 1. Validates the OTP and email against the 'password_reset_tokens' table.
+     * 2. Checks if the OTP has expired (e.g., valid for 15 minutes).
+     * 3.Updates the user's password if the OTP is valid.
+     * 4. Deletes the used OTP from the database after successful reset..
      *
-     * @param array $data Contains email, password, password_confirmation, and token.
+     * @param array $data Contains email, password, password_confirmation, and otp.
      * @return bool True on success, false on failure.
      */
     public function resetPassword(array $data): bool
     {
-        $status = Password::reset(
-            $data,
-            function (User $user, string $password) {
-                $user->forceFill([
-                    'password' => Hash::make($password),
-                ])->save();
+            $record = DB::table('password_reset_tokens')->where('email', $data['email'])->first();
 
-                // Revoke all existing tokens for security
-                $user->tokens()->delete();
-            }
-        );
+        if (!$record || !Hash::check($data['otp'], $record->token)) {
+            return false;
+        }
 
-        return $status === Password::PASSWORD_RESET;
+        // Check expiration (e.g., 15 minutes)
+        if (Carbon::parse($record->created_at)->addMinutes(15)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+            return false;
+        }
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (!$user) {
+            return false;
+        }
+
+        // Update password
+        $user->forceFill([
+            'password' => Hash::make($data['password']),
+        ])->save();
+
+        // Revoke all existing tokens for security
+        $user->tokens()->delete();
+
+        // Delete the OTP record
+        DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+
+        return true;
     }
 
     /**

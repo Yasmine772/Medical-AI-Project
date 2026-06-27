@@ -13,8 +13,8 @@ Route::prefix('v1/auth')->group(function (){
     Route::post('/login', [AuthController::class, 'login']);
 
     // Google OAuth
-    Route::get('/auth/google/redirect',  [GoogleAuthController::class, 'redirectToGoogle']);
-    Route::get('/auth/google/callback',  [GoogleAuthController::class, 'handleGoogleCallback']);
+    Route::get('/google/redirect',  [GoogleAuthController::class, 'redirectToGoogle']);
+    Route::get('/google/callback',  [GoogleAuthController::class, 'handleGoogleCallback']);
 
     //Forget and Reset Password
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
@@ -33,4 +33,7 @@ Route::prefix('v1/auth')->group(function (){
         Route::post('/resendOtp', [AuthController::class, 'resendOtp']); 
 
     });
+});
+
+ 
 });

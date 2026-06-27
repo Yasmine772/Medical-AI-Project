@@ -8,12 +8,17 @@ use App\Http\Requests\User\Auth\RegisterRequest;
 use App\Http\Requests\User\OTP\ResendOTPRequest;
 use App\Http\Requests\User\OTP\VerifyOTPRequest;
 use App\Http\Requests\User\UpdateProfileRequest;
+use App\Http\Requests\User\ResetPasswordRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Services\Api\AuthService;
 use App\Services\Api\OTPService;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponseTrait;
 use Throwable;
+use Illuminate\Support\Facades\Mail;
+
+
+
 
 
 class AuthController extends Controller
@@ -87,14 +92,15 @@ class AuthController extends Controller
     }
 //-------------------------------------------------------------------------------------------
     /**
-     * Send a password reset link to the specified user email.
+     * Send an OTP to the specified user email.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
      public function forgetPassword(Request $request)
      {
-        try{
+        try{      
+           
         $request->validate(['email' => 'required|email']); 
         
         $result = $this->authService->forgetPassword($request->email);
@@ -104,34 +110,32 @@ class AuthController extends Controller
             return $this->errorResponse('Email not found!', null, 422);
         }
 
-        return $this->successResponse(null, 'Password reset link sent to your email', 200);
+        return $this->successResponse(null, 'OTP has been sent to your email', 200);
         }
         catch(Throwable $e)
         {
-            return $this->errorResponse('Failed to send password reset link', $e->getMessage(), 500);
+            return $this->errorResponse('Failed to send OTP', $e->getMessage(), 500);
         }
+
         
     }
     /**
-     * Reset the user's password using the provided token.
+     * Reset the user's password using the provided  OTP.
      *
-     * @param Request $request
+     * @param ResetPasswordRequest $request
      * @return \Illuminate\Http\JsonResponse
      */
 
-    public function resetPassword(Request $request)
+    public function resetPassword(ResetPasswordRequest $request)
     {
         try {
-        $request->validate([
-            'token'                 => 'required|string',
-            'email'                 => 'required|email',
-            'password'              => 'required|min:8|confirmed', 
-        ]);
+        
+        $request->validated();
 
-        $result = $this->authService->resetPassword($request->only('email', 'password', 'password_confirmation', 'token'));
+        $result = $this->authService->resetPassword($request->only('email', 'password', 'password_confirmation', 'otp'));
 
         if (!$result) {
-            return $this->errorResponse('Invalid or expired token', null, 422);
+            return $this->errorResponse('Invalid or expired otp', null, 422);
         }
 
         return $this->successResponse(null, 'Password reset successfully', 200);
