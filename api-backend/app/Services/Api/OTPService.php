@@ -33,7 +33,7 @@ class OTPService
         }
 
         if ($user->expires_at->isPast()) {
-            'OTPHasExpired';
+            return 'OTPHasExpired';
         }
 
         $user->update([

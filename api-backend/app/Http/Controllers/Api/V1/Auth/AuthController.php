@@ -15,11 +15,8 @@ use App\Services\Api\OTPService;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponseTrait;
 use Throwable;
-use Illuminate\Support\Facades\Mail;
-
-
-
-
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -103,12 +100,14 @@ class AuthController extends Controller
            
         $request->validate(['email' => 'required|email']); 
         
-        $result = $this->authService->forgetPassword($request->email);
-        
-       if(!$result)
-        {
-            return $this->errorResponse('Email not found!', null, 422);
+       $user = User::where('email', $request->email)->first();
+ 
+       if (!$user) {
+        return $this->errorResponse('Email not found!', null, 422);
         }
+
+         
+        $this->otpService->sendOTP($user);
 
         return $this->successResponse(null, 'OTP has been sent to your email', 200);
         }
@@ -128,23 +127,21 @@ class AuthController extends Controller
 
     public function resetPassword(ResetPasswordRequest $request)
     {
-        try {
         
-        $request->validated();
+        $data = $request->validated();
 
-        $result = $this->authService->resetPassword($request->only('email', 'password', 'password_confirmation', 'otp'));
-
-        if (!$result) {
-            return $this->errorResponse('Invalid or expired otp', null, 422);
+        $verifyStatus = $this->otpService->verifyOtp([
+        'email' => $data['email'],
+        'otp' => $data['otp']
+         ]);
+         if ($verifyStatus !== 'CorrectOTP') 
+            {
+        return $this->errorResponse($verifyStatus, null, 422);
         }
+        $user = User::where('email', $data['email'])->first();
+        $user->update(['password' => Hash::make($data['password'])]);
 
-        return $this->successResponse(null, 'Password reset successfully', 200);
-
-        } 
-     catch (Throwable $e) {
-        return $this->errorResponse('Failed to reset password', $e->getMessage(), 500);
-
-        }
+         return $this->successResponse(null, 'Password reset successfully', 200);
     } 
     /**
      * View the profile details of the authenticated user.
@@ -176,4 +173,20 @@ class AuthController extends Controller
     
     return $this->successResponse(new UserResource($user), 'Profile updated successfully', 200);
     }
+
+    /**
+     * Check if the current user is authenticated or not 
+     * @return \Illuminate\Http\JsonResponse
+     */
+
+    public function checkAuthentication()
+    {
+     $user = auth('sanctum')->user();
+
+    if (!$user) {
+        return $this->errorResponse('Unauthenticated', null, 401);
+    }
+
+    return $this->successResponse('authenticated', 'Success', 200);
+   }
 }

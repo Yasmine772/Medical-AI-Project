@@ -21,6 +21,8 @@ Route::prefix('v1/auth')->group(function (){
     Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
 
 
+
+
     Route::middleware(['auth:sanctum'])->group(function () {
 
        Route::post('/logout', [AuthController::class, 'logout']);
@@ -31,6 +33,9 @@ Route::prefix('v1/auth')->group(function (){
        //OTP 
         Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
         Route::post('/resendOtp', [AuthController::class, 'resendOtp']); 
+
+          //Check if the user is authenticated
+        Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
     });
 });
