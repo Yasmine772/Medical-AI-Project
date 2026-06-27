@@ -11,12 +11,6 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1/auth')->group(function (){
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/refresh', [AuthController::class, 'refreshToken']);
-
-    //email verification:
-    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verify'])->name('verification.verify')
-                                                                              ->middleware(['signed']);
-    Route::post('/email/resend', [AuthController::class, 'resend']);
 
     // Google OAuth
     Route::get('/google/redirect',  [GoogleAuthController::class, 'redirectToGoogle']);
@@ -34,8 +28,12 @@ Route::prefix('v1/auth')->group(function (){
        Route::get('/profile/',[AuthController::class,'viewProfile']);
        Route::patch('/profile/',[AuthController::class,'updateProfile']);
 
+       //OTP 
+        Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
+        Route::post('/resendOtp', [AuthController::class, 'resendOtp']); 
 
     });
+});
 
  
 });

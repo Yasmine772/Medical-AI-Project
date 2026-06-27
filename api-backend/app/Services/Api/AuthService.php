@@ -2,14 +2,15 @@
 
 namespace app\Services\Api;
 
+use App\Http\Requests\User\VerifyOTPRequest;
 use App\Models\User;
+use App\Notifications\OTPNotification;
 use Carbon\Carbon;
-use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Arr;
+use App\Services\Api\OTPService;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\ResetPasswordOTPNotification;
 
@@ -25,9 +26,6 @@ class AuthService
             'email'     => $data['email'],
             'password'  => Hash::make($data['password']),
         ]);
-
-        $user->sendEmailVerificationNotification();
-
         return $user;
     }
     /////////////////////////////////////////////////////////////////////////////////////
@@ -42,89 +40,20 @@ class AuthService
 
         $user = User::where('email' , $data['email'])->first();
 
-        if (!$user->hasVerifiedEmail()) {
-            return 'unVerifiedEmail';
-        }
-
         $user->tokens()->delete(); 
 
-        $accessTokenExpiresAt = Carbon::now()->addMinutes(60);
-        $refreshTokenExpiresAt = Carbon::now()->addDays(7);
+        $accessTokenExpiresAt = Carbon::now()->addDays(1);
 
         $accessToken = $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken;
-        $refreshToken = $user->createToken('refresh_token', ['refresh'], $refreshTokenExpiresAt)->plainTextToken;
 
         return [
         'user' => $user,
         'access_token' =>  $accessToken,
-        'access_token_expires_at' => '3600 s',
-        'refresh_token' => $refreshToken,
-        'refresh_token_expires_at' => '7 days',
+        'access_token_expires_at' => '1 day',
         'token_type' => 'Bearer',
     ];
     }
-    ///////////////////////////////////////////////////////////////////////////////////////
-    public function refreshToken(array $request)
-    {
-        $currentRefreshToken = $request['refresh_token'];
-        $refreshToken = PersonalAccessToken::findToken($currentRefreshToken);
-
-        if (!$refreshToken || $refreshToken->name !== 'refresh_token' || $refreshToken->expires_at->isPast()) {
-            return 'InvalidOrExpiredRefreshToken';
-        }
-
-        $user = $refreshToken->tokenable;
-        $refreshToken->delete();
-
-        $accessTokenExpiresAt = Carbon::now()->addMinutes(60);
-        $refreshTokenExpiresAt = Carbon::now()->addDays(7);
-
-        $newAccessToken = $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken;
-        $newRefreshToken = $user->createToken('refresh_token', ['refresh'], $refreshTokenExpiresAt)->plainTextToken;
-
-        $result = [
-            'access_token' => $newAccessToken,
-            'access_token_expires_at' => '3600 s',
-            'refresh_token' => $newRefreshToken,
-            'refresh_token_expires_at' => '7 days',
-            'token_type' => 'Bearer',
-        ];
-
-        return $result;
-    }
-    ///////////////////////////////////////////////////////////////////////////////////////
-    public function verify(int $id ,string $hash) 
-    {
-        $user = User::findOrFail($id);
-
-        if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
-            return 'InvalidLinkError';
-        }
-
-        if ($user->hasVerifiedEmail()) {
-            return 'Emailverified';
-        }
-
-        if ($user->markEmailAsVerified()) {
-            event(new Verified($user));
-            return true;
-        }
-
-    }
-    ////////////////////////////////////////////////////////////////////////////////////
-    public function resend(array $request)
-    {
-        $user = User::where('email', $request['email'])->first();
-
-        if ($user->hasVerifiedEmail()) {
-           return 'EmailVerified';
-        }
-
-        $user->sendEmailVerificationNotification();
-        return true;
-
-    }
-
+   
     /**
     * Processes the password reset request.
     * * Logic:

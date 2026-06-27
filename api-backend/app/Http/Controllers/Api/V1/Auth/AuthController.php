@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\User\LoginRequest;
-use App\Http\Requests\User\RefreshTokenRequest;
-use App\Http\Requests\User\RegisterRequest;
-use App\Http\Requests\User\ResendEmailVerificationRequest;
+use App\Http\Requests\User\Auth\LoginRequest;
+use App\Http\Requests\User\Auth\RegisterRequest;
+use App\Http\Requests\User\OTP\ResendOTPRequest;
+use App\Http\Requests\User\OTP\VerifyOTPRequest;
 use App\Http\Requests\User\UpdateProfileRequest;
 use App\Http\Requests\User\ResetPasswordRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Services\Api\AuthService;
+use App\Services\Api\OTPService;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponseTrait;
 use Throwable;
@@ -22,13 +23,14 @@ use Illuminate\Support\Facades\Mail;
 
 class AuthController extends Controller
 {
-   
     use ApiResponseTrait;
     protected AuthService $authService;
+    protected OTPService $otpService;
 
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService , OTPService $otpService)
     {
         $this->authService = $authService;
+        $this->otpService = $otpService;
     }
 //-------------------------------------------------------------------------------------------
     public function register(RegisterRequest $request)
@@ -36,7 +38,8 @@ class AuthController extends Controller
         try {
             $user = $this->authService->register($request->validated());
 
-            return $this->successResponse(new UserResource($user), 'User has been registered successfully , check your email for verify it', 201);
+            $this->otpService->sendOTP($user);
+            return $this->successResponse(new UserResource($user), 'User registered successfully. Please check your email, we sent OTP', 201);
             
         } catch (Throwable $e) {
             return $this->errorResponse('Failed to register user', $e->getMessage(), 500);
@@ -50,77 +53,44 @@ class AuthController extends Controller
         return match($result){
             'unauthorized' =>  $this->errorResponse('Email or password not correct!', null, 422),
 
-            'unVerifiedEmail' => $this->errorResponse('Email not verified!', null, 422),
-
             default => $this->successResponse([
                         'user' => new UserResource($result['user']),
                         'access_token' => $result['access_token'],
                         'access_token_expires_at' => $result['access_token_expires_at'],
-                        'refresh_token' => $result['refresh_token'],
-                        'refresh_token_expires_at' => $result['refresh_token_expires_at'],
                         'token_type'   => $result['token_type'],
                         ], 'User login successfully', 200)
         };
     }
-    //-------------------------------------------------------------------------------------------
-    public function verify(int $id, string $hash)
-    {
-        try {
-            $result =  $this->authService->verify($id, $hash);
-
-            return match ($result) {
-                'InvalidLinkError' =>  $this->errorResponse('Invalid verification link', null, 400),
-
-                'Emailverified' =>  $this->errorResponse('Email already verified', null, 409),
-
-                default => $this->successResponse(null , 'Email verified successfully', 200)
-            };
-
-        } catch (Throwable $e) {
-            $this->errorResponse('Verification failed: ' . $e->getMessage(), null, 500);
-        }
-    }
-    //*********************************************************************** */
-    public function resend(ResendEmailVerificationRequest $request)
-    {
-        try {
-            $result = $this->authService->resend($request->validated());
-
-            return match ($result) {
-                'Emailverified' =>  $this->errorResponse('Email already verified', null, 409),
-
-                default => $this->successResponse(null , 'Verification email sent', 200)
-            };
-
-        } catch (Throwable $e) {
-            $this->errorResponse($e->getMessage(), null, 500);
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------
-    public function refreshToken(RefreshTokenRequest $request)
-    {
-        try {
-            $result = $this->authService->refreshToken($request->validated());
-
-            return match ($result) {
-                'InvalidOrExpiredRefreshToken' =>  $this->errorResponse('Invalid or expired refresh token', null, 401),
-
-                default => $this->successResponse($result, 'Token refreshed successfully', 200)
-
-            };
-        } catch (Throwable $e) {
-                $this->errorResponse($e->getMessage(), null, 500);
-        }
-    }    
-
 //-------------------------------------------------------------------------------------------
     public function logout(Request $request)
     {
         auth()->user()->tokens()->delete();
         return $this->successResponse(null, 'User logout successfully', 200);
     }
+//-------------------------------------------------------------------------------------------
+    public function verifyOtp(VerifyOTPRequest $request)
+    {
+        $result = $this->otpService->verifyOtp($request->validated());
 
+        return match ($result) {
+            'UserNotFound'  =>  $this->errorResponse('User not found!', null, 422),
+            'NotValidOTP'   => $this->errorResponse('Not valid OTP!', null, 422),
+            'OTPHasExpired' => $this->errorResponse('OTP has expired!', null, 422),
+            'OTP used'      =>  $this->errorResponse('You have been used it!', null, 422),
+            default         => $this->successResponse(null, 'OTP verified successfully', 200)
+        };
+    }
+    //-------------------------------------------------------------------------------------------
+    public function resendOtp(ResendOTPRequest $request)
+    {
+        $result = $this->otpService->resendOtp($request->validated());
+
+        return match ($result) {
+            'UserNotFound' => $this->errorResponse('User not found!', null, 422),
+            default => $this->successResponse(null, 'OTP resent successfully. Please check your email.', 200)
+        };
+    }
+//-------------------------------------------------------------------------------------------
     /**
      * Send an OTP to the specified user email.
      *
