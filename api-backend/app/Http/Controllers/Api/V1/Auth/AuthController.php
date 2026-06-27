@@ -174,8 +174,9 @@ class AuthController extends Controller
     return $this->successResponse(new UserResource($user), 'Profile updated successfully', 200);
     }
 
-        /**
-     * View the profile details of the authenticated user.
+    /**
+     * Check if the current user is authenticated or not 
+     * @return \Illuminate\Http\JsonResponse
      */
 
     public function checkAuthentication()
@@ -186,7 +187,6 @@ class AuthController extends Controller
         return $this->errorResponse('Unauthenticated', null, 401);
     }
 
-    
     return $this->successResponse('authenticated', 'Success', 200);
    }
 }
