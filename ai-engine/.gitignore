@@ -37,3 +37,9 @@ venv/
 .DS_Store
 Thumbs.db
 
+#Sentence Transformers
+*.safetensors
+
+# ChromaDB
+chroma_db/
+
