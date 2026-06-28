@@ -19,8 +19,11 @@ Route::prefix('v1/auth')->group(function (){
     //Forget and Reset Password
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
     Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
-
-
+    
+    
+    //OTP 
+    Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
+    Route::post('/resendOtp', [AuthController::class, 'resendOtp']); 
 
 
     Route::middleware(['auth:sanctum'])->group(function () {
@@ -30,10 +33,7 @@ Route::prefix('v1/auth')->group(function (){
        Route::get('/profile/',[AuthController::class,'viewProfile']);
        Route::patch('/profile/',[AuthController::class,'updateProfile']);
 
-       //OTP 
-        Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
-        Route::post('/resendOtp', [AuthController::class, 'resendOtp']); 
-
+        
           //Check if the user is authenticated
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
