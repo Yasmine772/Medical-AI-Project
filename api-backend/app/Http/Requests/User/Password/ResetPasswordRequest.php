@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\User;
+namespace App\Http\Requests\User\Password;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -26,8 +26,7 @@ class ResetPasswordRequest extends FormRequest
     {   
     
         return [
-            'otp'                   => 'required|size:6',
-            'email'                 => 'required|email',
+            'email'                => 'required|email|exists:users,email',
             'password'              => 'required|min:8|confirmed', 
         ];
     }
