@@ -15,7 +15,8 @@ class OTPService
         $expiresAt = Carbon::now()->addMinutes(5);
 
         $user->update([ 'otp' => $otp,
-                        'expires_at' => $expiresAt
+                        'expires_at' => $expiresAt ,
+                        'otp_verified_at' => now()
                     ]);
 
         $user->notify(new OTPNotification($otp));
@@ -29,8 +30,8 @@ class OTPService
             return 'UserNotFound!';
         }
 
-         if ((string)$user->otp !==(string) $request['otp']) {
-             return 'NotValidOTP';
+        if($user->otp !=$request['otp']) {
+            return 'NotValidOTP';
         }
 
         if ($user->expires_at->isPast()) {
@@ -40,6 +41,7 @@ class OTPService
         $user->update([
             'otp' => null,
             'expires_at' => null,
+            'otp_verified_at' => now(),
         ]);
 
         if($user->otp == null){
@@ -63,6 +65,7 @@ class OTPService
         $user->update([
             'otp' => $otp,
             'expires_at' => $expiresAt,
+            'otp_verified_at' => null
         ]);
 
         $user->notify(new OTPNotification($otp));

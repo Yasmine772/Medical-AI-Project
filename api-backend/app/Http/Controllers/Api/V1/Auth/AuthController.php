@@ -140,8 +140,9 @@ class AuthController extends Controller
         $data = $request->validated();
      
         $user = User::where('email', $data['email'])->first();
-        
-        if (!$user->otp_verified_at || $user->otp_verified_at->lt(now()->subMinutes(10))) {
+        // dd($user->otp_verified_at);
+        if (!$user->otp_verified_at ) {
+           
            return $this->errorResponse('Please verify your OTP first', null, 403);
         }
         $user->update([

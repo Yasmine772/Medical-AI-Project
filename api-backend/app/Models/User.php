@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Notifications\ResetPasswordNotification;
+use App\Notifications\ResetPasswordOTPNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -23,6 +23,7 @@ class User extends Authenticatable
         'google_id',
         'avatar',
         'otp',
+        'otp_verified_at' ,
         'expires_at',
         'created_at',
     ];
@@ -37,6 +38,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'otp_verified_at' => 'datetime',
             'password' => 'hashed',
             'expires_at' => 'datetime',
         ];
@@ -45,7 +47,7 @@ class User extends Authenticatable
 
     public function sendPasswordResetNotification($token): void
     {
-       $this->notify(new ResetPasswordNotification($token));
+       $this->notify(new ResetPasswordOTPNotification($token));
     }
 
     public function profile()
