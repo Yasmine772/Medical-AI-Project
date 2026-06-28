@@ -8,7 +8,7 @@ use App\Http\Requests\User\Auth\RegisterRequest;
 use App\Http\Requests\User\OTP\ResendOTPRequest;
 use App\Http\Requests\User\OTP\VerifyOTPRequest;
 use App\Http\Requests\User\UpdateProfileRequest;
-use App\Http\Requests\User\ResetPasswordRequest;
+use App\Http\Requests\User\Password\ResetPasswordRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Services\Api\AuthService;
 use App\Services\Api\OTPService;
@@ -17,6 +17,8 @@ use App\Traits\ApiResponseTrait;
 use Throwable;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use \Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -69,6 +71,12 @@ class AuthController extends Controller
     {
         $result = $this->otpService->verifyOtp($request->validated());
 
+        if ($result === 'CorrectOTP') {
+        Cache::put('password_reset_' . $request->email, true, now()->addMinutes(5));
+        
+        return $this->successResponse(['email' => $request->email], 'OTP verified successfully', 200);
+    }
+
         return match ($result) {
             'UserNotFound'  =>  $this->errorResponse('User not found!', null, 422),
             'NotValidOTP'   => $this->errorResponse('Not valid OTP!', null, 422),
@@ -116,8 +124,9 @@ class AuthController extends Controller
             return $this->errorResponse('Failed to send OTP', $e->getMessage(), 500);
         }
 
-        
-    }
+     }
+
+     
     /**
      * Reset the user's password using the provided  OTP.
      *
@@ -129,17 +138,16 @@ class AuthController extends Controller
     {
         
         $data = $request->validated();
-
-        $verifyStatus = $this->otpService->verifyOtp([
-        'email' => $data['email'],
-        'otp' => $data['otp']
-         ]);
-         if ($verifyStatus !== 'CorrectOTP') 
-            {
-        return $this->errorResponse($verifyStatus, null, 422);
-        }
+     
         $user = User::where('email', $data['email'])->first();
-        $user->update(['password' => Hash::make($data['password'])]);
+        
+        if (!$user->otp_verified_at || $user->otp_verified_at->lt(now()->subMinutes(10))) {
+           return $this->errorResponse('Please verify your OTP first', null, 403);
+        }
+        $user->update([
+            'password' => Hash::make($data['password']),
+            'otp_verified_at' => null
+            ]);
 
          return $this->successResponse(null, 'Password reset successfully', 200);
     } 
@@ -179,14 +187,20 @@ class AuthController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
 
-    public function checkAuthentication()
+  public function checkAuthentication()
     {
-     $user = auth('sanctum')->user();
+    try {
+        $user = auth('sanctum')->user();
 
-    if (!$user) {
-        return $this->errorResponse('Unauthenticated', null, 401);
+        if (!$user) {
+            return $this->errorResponse('Unauthenticated', null, 401);
+        }
+
+        return $this->successResponse(['status' => 'authenticated'], 'Success', 200);
+
+    } catch (Throwable $e) {
+    
+        return $this->errorResponse('An error occurred during authentication check', null, 500);
     }
-
-    return $this->successResponse('authenticated', 'Success', 200);
-   }
+}
 }

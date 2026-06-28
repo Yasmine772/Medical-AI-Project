@@ -5,6 +5,7 @@ namespace App\Services\Api;
 use App\Models\User;
 use App\Notifications\OTPNotification;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class OTPService 
 {
@@ -28,8 +29,8 @@ class OTPService
             return 'UserNotFound!';
         }
 
-        if (!$user->otp === $request['otp']) {
-            return 'NotValidOTP';
+         if ((string)$user->otp !==(string) $request['otp']) {
+             return 'NotValidOTP';
         }
 
         if ($user->expires_at->isPast()) {
