@@ -187,14 +187,20 @@ class AuthController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
 
-    public function checkAuthentication()
+  public function checkAuthentication()
     {
-     $user = auth('sanctum')->user();
+    try {
+        $user = auth('sanctum')->user();
 
-    if (!$user) {
-        return $this->errorResponse('Unauthenticated', null, 401);
+        if (!$user) {
+            return $this->errorResponse('Unauthenticated', null, 401);
+        }
+
+        return $this->successResponse(['status' => 'authenticated'], 'Success', 200);
+
+    } catch (Throwable $e) {
+    
+        return $this->errorResponse('An error occurred during authentication check', null, 500);
     }
-
-    return $this->successResponse('authenticated', 'Success', 200);
-   }
+}
 }
