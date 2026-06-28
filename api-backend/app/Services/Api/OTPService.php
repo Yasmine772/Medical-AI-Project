@@ -28,12 +28,10 @@ class OTPService
         if (!$user) {
             return 'UserNotFound!';
         }
-    //     dd( $request['otp']);
-    //    Log::info("DEBUG: User DB OTP: " . $user->otp);
-    // Log::info("DEBUG: User Request OTP: " . $request['otp']);
-    //     if ((string)$user->otp !==(string) $request['otp']) {
-    //         return 'NotValidOTP';
-    //     }
+
+         if ((string)$user->otp !==(string) $request['otp']) {
+             return 'NotValidOTP';
+        }
 
         if ($user->expires_at->isPast()) {
             return 'OTPHasExpired';
