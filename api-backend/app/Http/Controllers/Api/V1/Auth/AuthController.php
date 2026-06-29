@@ -7,7 +7,7 @@ use App\Http\Requests\User\Auth\LoginRequest;
 use App\Http\Requests\User\Auth\RegisterRequest;
 use App\Http\Requests\User\OTP\ResendOTPRequest;
 use App\Http\Requests\User\OTP\VerifyOTPRequest;
-use App\Http\Requests\User\UpdateProfileRequest;
+use App\Http\Requests\User\Profile\UpdateProfileRequest;
 use App\Http\Requests\User\Password\ResetPasswordRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Services\Api\AuthService;
@@ -140,8 +140,8 @@ class AuthController extends Controller
         $data = $request->validated();
      
         $user = User::where('email', $data['email'])->first();
-        
-        if (!$user->otp_verified_at || $user->otp_verified_at->lt(now()->subMinutes(10))) {
+        if (!$user->otp_verified_at ) {
+           
            return $this->errorResponse('Please verify your OTP first', null, 403);
         }
         $user->update([
