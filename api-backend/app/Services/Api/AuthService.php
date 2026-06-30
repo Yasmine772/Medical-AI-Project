@@ -13,7 +13,7 @@ use Illuminate\Support\Arr;
 use App\Services\Api\OTPService;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\ResetPasswordOTPNotification;
-
+use Illuminate\Support\Facades\Storage;
 
 
 
@@ -73,17 +73,28 @@ class AuthService
      * @return \App\Models\User
      */
 
-   public function updateProfile(User $user, array $data)
-{
-    $userData = array_intersect_key($data, array_flip(['full_name', 'birth_date', 'gender', 'avatar']));
-    
-    $medicalData = Arr::except($data, ['full_name', 'birth_date', 'gender']);  
+    public function updateProfile(User $user, array $data, $avatarFile = null)
+     {
+        //dd($avatarFile);
+     if ($avatarFile instanceof \Illuminate\Http\UploadedFile) {
+        if ($user->avatar) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+        }
+        $user->avatar = $avatarFile->store('avatars', 'public');
+    }
 
-    $user->update($userData);
+    $user->update([
+        'full_name' => $data['full_name'] ?? $user->full_name,
+        'avatar'    => $user->avatar ?? $user->avatar, 
+    ]);
+    $medicalData = array_intersect_key($data, array_flip([
+        'birth_date', 'gender', 'is_smoker', 'has_diabetes', 
+        'has_hypertension', 'is_pregnant', 'activity_level'
+    ]));
 
     $user->profile()->updateOrCreate(
-        ['user_id' => $user->id], 
-        $medicalData              
+        ['user_id' => $user->id],
+        $medicalData
     );
 
     return $user->fresh()->load('profile');
