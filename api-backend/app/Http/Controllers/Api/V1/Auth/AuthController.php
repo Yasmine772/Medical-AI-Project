@@ -7,7 +7,7 @@ use App\Http\Requests\User\Auth\LoginRequest;
 use App\Http\Requests\User\Auth\RegisterRequest;
 use App\Http\Requests\User\OTP\ResendOTPRequest;
 use App\Http\Requests\User\OTP\VerifyOTPRequest;
-use App\Http\Requests\User\UpdateProfileRequest;
+use App\Http\Requests\User\Profile\UpdateProfileRequest;
 use App\Http\Requests\User\Password\ResetPasswordRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Services\Api\AuthService;
@@ -140,9 +140,7 @@ class AuthController extends Controller
         $data = $request->validated();
      
         $user = User::where('email', $data['email'])->first();
-        // dd($user->otp_verified_at);
         if (!$user->otp_verified_at ) {
-           
            return $this->errorResponse('Please verify your OTP first', null, 403);
         }
         $user->update([
@@ -158,11 +156,9 @@ class AuthController extends Controller
 
     public function viewProfile()
     {
-    $user = auth()->user()->load('profile');
+    $user = auth()->authenticate();
 
-    if (!$user) {
-        return $this->errorResponse('Unauthenticated', null, 401);
-    }
+    $user->load('profile');
 
     $profileData = $this->authService->getUserProfile($user);
     
@@ -177,8 +173,10 @@ class AuthController extends Controller
     public function updateProfile(UpdateProfileRequest $request)
     {
      $validatedData = $request->validated();
+
+     $avatarFile = $request->file('avatar') ?? $request->file('Avatar');
     
-    $user = $this->authService->updateProfile(auth()->user(), $validatedData);
+     $user = $this->authService->updateProfile(auth()->authenticate(), $validatedData, $avatarFile);
     
     return $this->successResponse(new UserResource($user), 'Profile updated successfully', 200);
     }

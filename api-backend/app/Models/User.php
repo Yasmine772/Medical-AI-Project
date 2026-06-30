@@ -20,7 +20,6 @@ class User extends Authenticatable
         'role',
         'status',
         'diagnose_num',
-        'google_id',
         'avatar',
         'otp',
         'otp_verified_at' ,
