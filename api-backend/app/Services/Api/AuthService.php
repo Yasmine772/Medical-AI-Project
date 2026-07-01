@@ -2,20 +2,11 @@
 
 namespace app\Services\Api;
 
-use App\Http\Requests\User\VerifyOTPRequest;
 use App\Models\User;
-use App\Notifications\OTPNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Arr;
-use App\Services\Api\OTPService;
-use Illuminate\Support\Facades\DB;
-use App\Notifications\ResetPasswordOTPNotification;
-use Illuminate\Support\Facades\Storage;
-
-
 
 class AuthService
 {
