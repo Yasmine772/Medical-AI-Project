@@ -1,7 +1,9 @@
+import hashlib
 import json
 import uuid
 from fastapi import APIRouter, File, UploadFile, HTTPException
 import fitz
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.models.schemas import DiseaseItem
 from app.state import get_store, get_embedder
@@ -68,6 +70,12 @@ async def insert_pdf(file: UploadFile = File(...)):
     content = await file.read()
     doc = fitz.open(stream=content, filetype="pdf")
 
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=80,
+        separators=["\n\n", "\n", "، ", ". ", "؟ ", "! ", " "],
+    )
+
     added = 0
     for page_num in range(len(doc)):
         page = doc[page_num]
@@ -75,23 +83,22 @@ async def insert_pdf(file: UploadFile = File(...)):
         if not text:
             continue
 
-        chunk_size = 500
-        words = text.split()
-        for chunk_idx in range(0, len(words), chunk_size):
-            chunk_text = " ".join(words[chunk_idx : chunk_idx + chunk_size])
-            chunk_id = f"{file.filename}-p{page_num}-c{chunk_idx // chunk_size}"
+        chunks = splitter.split_text(text)
+        for idx, chunk_text in enumerate(chunks):
+            chunk_text = chunk_text.strip()
+            if not chunk_text:
+                continue
+            raw_id = f"pdf_api_{file.filename}_p{page_num}_c{idx}"
+            chunk_id = hashlib.md5(raw_id.encode()).hexdigest()[:16]
             embedding = embedder.encode(chunk_text)
             metadata = {
-                "name_en": file.filename,
-                "name_ar": file.filename,
-                "severity": "",
-                "severity_ar": "",
-                "specialist": "en",
-                "specialist_ar": "en",
-                "symptoms_en": f"source={file.filename};page={page_num};chunk={chunk_idx // chunk_size}",
-                "symptoms_ar": f"source={file.filename};page={page_num};chunk={chunk_idx // chunk_size}",
+                "source": file.filename,
+                "page": page_num,
+                "chunk_index": idx,
+                "chunk_size": len(chunk_text),
+                "language": None,
             }
-            store.insert_disease(chunk_id, chunk_text, embedding, metadata)
+            store.insert_pdf_chunk(chunk_id, chunk_text, embedding, metadata)
             added += 1
 
     page_count = len(doc)

@@ -85,3 +85,47 @@ class PgVectorClient:
     def close(self):
         self._supabase = None
         return None
+
+    # ── PDF chunks ─────────────────────────────────────────
+
+    def insert_pdf_chunk(
+        self,
+        chunk_id: str,
+        document: str,
+        embedding: np.ndarray,
+        metadata: dict,
+    ):
+        payload = {
+            "chunk_id": chunk_id,
+            "doc": document,
+            "query_embedding": embedding.tolist()
+            if hasattr(embedding, "tolist")
+            else embedding,
+            "source": metadata.get("source"),
+            "page": metadata.get("page"),
+            "chunk_index": metadata.get("chunk_index"),
+            "language": metadata.get("language"),
+        }
+        self._rpc("insert_pdf_chunk", payload)
+
+    def search_pdf(
+        self,
+        query_embedding: np.ndarray,
+        limit: int = 3,
+    ) -> List[dict]:
+        response = self._rpc(
+            "search_pdf_chunks",
+            {
+                "query_embedding": query_embedding.tolist()
+                if hasattr(query_embedding, "tolist")
+                else query_embedding,
+                "match_count": limit,
+            },
+        )
+        return response.data or []
+
+    def count_pdf(self) -> int:
+        response = self._rpc("count_pdf_chunks")
+        if not response.data:
+            return 0
+        return int(response.data)

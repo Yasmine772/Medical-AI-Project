@@ -104,7 +104,7 @@ def seed_database():
 
     if total_attempted > 0:
         print("🧪 Running a quick search test...")
-        test_embedding = embedder.encode("حكة وطفح جلدي")
+        test_embedding = embedder.encode_query("حكة وطفح جلدي")
         results = client.search(test_embedding, limit=2)
         print("   Closest match for 'حكة وطفح جلدي':")
         for index, row in enumerate(results, start=1):
