@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
-use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -12,9 +11,7 @@ Route::prefix('v1/auth')->group(function (){
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 
-    // Google OAuth
-    Route::get('/google/redirect',  [GoogleAuthController::class, 'redirectToGoogle']);
-    Route::get('/google/callback',  [GoogleAuthController::class, 'handleGoogleCallback']);
+
 
     //Forget and Reset Password
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
@@ -29,13 +26,8 @@ Route::prefix('v1/auth')->group(function (){
 
     Route::post('/logout', [AuthController::class, 'logout']);
     //Profile routes
-<<<<<<< HEAD
-    Route::get('/profile/',[AuthController::class,'viewProfile']);
-    Route::patch('/profile/',[AuthController::class,'updateProfile']);
-=======
     Route::get('/profile',[AuthController::class,'viewProfile']);
     Route::patch('/profile',[AuthController::class,'updateProfile']);
->>>>>>> c5afd4bbff5885c9d13bd9b57c99db70dc891bd5
 
     //Check if the user is authenticated
     Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
@@ -44,3 +36,4 @@ Route::prefix('v1/auth')->group(function (){
 });
 
  
+
