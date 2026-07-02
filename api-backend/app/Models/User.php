@@ -9,9 +9,11 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Carbon\Carbon;
+use Spatie\Permission\Traits\HasRoles;
+
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable , HasApiTokens, CanResetPassword;
+    use HasFactory, Notifiable , HasApiTokens, CanResetPassword , HasRoles;
     
     protected $fillable = [
         'full_name',
