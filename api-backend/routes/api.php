@@ -29,8 +29,13 @@ Route::prefix('v1/auth')->group(function (){
 
     Route::post('/logout', [AuthController::class, 'logout']);
     //Profile routes
+<<<<<<< HEAD
     Route::get('/profile/',[AuthController::class,'viewProfile']);
     Route::patch('/profile/',[AuthController::class,'updateProfile']);
+=======
+    Route::get('/profile',[AuthController::class,'viewProfile']);
+    Route::patch('/profile',[AuthController::class,'updateProfile']);
+>>>>>>> c5afd4bbff5885c9d13bd9b57c99db70dc891bd5
 
     //Check if the user is authenticated
     Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);

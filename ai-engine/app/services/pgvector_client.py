@@ -1,9 +1,7 @@
 import os
-import psycopg2
-from psycopg2.extras import execute_values
-from pgvector.psycopg2 import register_vector
 import numpy as np
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
+from supabase import Client, create_client
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -12,50 +10,28 @@ load_dotenv()
 class PgVectorClient:
 
     def __init__(self):
-        self.connection_string = os.environ.get("SUPABASE_DATABASE_URL")
-        if not self.connection_string:
+        self.supabase_url = os.environ.get("SUPABASE_URL")
+        self.supabase_key = os.environ.get("SUPABASE_KEY")
+
+        if not (self.supabase_url and self.supabase_key):
             raise ValueError(
-                "SUPABASE_DATABASE_URL environment variable is not set. "
-                "Get it from your Supabase project: "
-                "Project Settings → Database → Connection String (URI)."
+                "Set SUPABASE_URL and SUPABASE_KEY in the environment."
             )
-        self._connection = None
+
+        self._supabase: Optional[Client] = None
 
     def connect(self):
-        if self._connection is None or self._connection.closed:
-            self._connection = psycopg2.connect(self.connection_string)
-            register_vector(self._connection)
-            self._enable_extension()
-        return self._connection
+        if self._supabase is None:
+            self._supabase = create_client(self.supabase_url, self.supabase_key)
+        return self._supabase
 
-    def _enable_extension(self):
-        with self._connection.cursor() as cur:
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-        self._connection.commit()
+    def _rpc(self, function_name: str, params: Dict[str, Any] | None = None):
+        client = self.connect()
+        return client.rpc(function_name, params or {}).execute()
 
-    def create_table(self):
-        with self._connection.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS disease_embeddings (
-                    id          TEXT PRIMARY KEY,
-                    document    TEXT NOT NULL,
-                    embedding   vector(384) NOT NULL,
-                    name_en     TEXT,
-                    name_ar     TEXT,
-                    severity    TEXT,
-                    severity_ar TEXT,
-                    specialist  TEXT,
-                    specialist_ar TEXT,
-                    symptoms_en TEXT,
-                    symptoms_ar TEXT
-                );
-            """)
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_disease_embeddings_cosine
-                ON disease_embeddings
-                USING hnsw (embedding vector_cosine_ops);
-            """)
-        self._connection.commit()
+    def ping(self) -> Any:
+        response = self._rpc("ping_pgvector")
+        return response.data
 
     def insert_disease(
         self,
@@ -64,75 +40,48 @@ class PgVectorClient:
         embedding: np.ndarray,
         metadata: dict,
     ):
-        with self._connection.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO disease_embeddings
-                    (id, document, embedding, name_en, name_ar,
-                     severity, severity_ar, specialist, specialist_ar,
-                     symptoms_en, symptoms_ar)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-                """,
-                (
-                    disease_id,
-                    document,
-                    embedding,
-                    metadata.get("name_en"),
-                    metadata.get("name_ar"),
-                    metadata.get("severity"),
-                    metadata.get("severity_ar"),
-                    metadata.get("specialist"),
-                    metadata.get("specialist_ar"),
-                    metadata.get("symptoms_en"),
-                    metadata.get("symptoms_ar"),
-                ),
-            )
-        self._connection.commit()
+        payload = {
+            "disease_id": disease_id,
+            "doc": document,
+            "query_embedding": embedding.tolist() if hasattr(embedding, "tolist") else embedding,
+            "name_en": metadata.get("name_en"),
+            "name_ar": metadata.get("name_ar"),
+            "severity": metadata.get("severity"),
+            "severity_ar": metadata.get("severity_ar"),
+            "specialist": metadata.get("specialist"),
+            "specialist_ar": metadata.get("specialist_ar"),
+            "symptoms_en": metadata.get("symptoms_en"),
+            "symptoms_ar": metadata.get("symptoms_ar"),
+        }
+        self._rpc("insert_disease_embedding", payload)
+        return None
 
     def search(
         self,
         query_embedding: np.ndarray,
         limit: int = 5,
     ) -> List[dict]:
-        with self._connection.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, document, name_en, name_ar, specialist_ar,
-                       symptoms_ar, description, advice,
-                       1 - (embedding <=> %s::vector) AS similarity
-                FROM disease_embeddings
-                ORDER BY embedding <=> %s::vector
-                LIMIT %s
-                """,
-                (query_embedding, query_embedding, limit),
-            )
-            rows = cur.fetchall()
-        return [
+        response = self._rpc(
+            "search_diseases",
             {
-                "id": row[0],
-                "document": row[1],
-                "name_en": row[2],
-                "name_ar": row[3],
-                "specialist_ar": row[4],
-                "symptoms_ar": row[5],
-                "description": row[6],
-                "advice": row[7],
-                "similarity": float(row[8]),
-            }
-            for row in rows
-        ]
+                "query_embedding": query_embedding.tolist()
+                if hasattr(query_embedding, "tolist")
+                else query_embedding,
+                "match_count": limit,
+            },
+        )
+        return response.data or []
 
     def count(self) -> int:
-        with self._connection.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM disease_embeddings")
-            return cur.fetchone()[0]
+        response = self._rpc("count_disease_embeddings")
+        if not response.data:
+            return 0
+        return int(response.data)
 
     def delete_all(self):
-        with self._connection.cursor() as cur:
-            cur.execute("DELETE FROM disease_embeddings")
-        self._connection.commit()
+        self._rpc("delete_all_disease_embeddings")
+        return None
 
     def close(self):
-        if self._connection and not self._connection.closed:
-            self._connection.close()
+        self._supabase = None
+        return None
