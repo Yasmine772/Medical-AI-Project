@@ -104,3 +104,81 @@ language sql
 as $$
   delete from public.disease_embeddings;
 $$;
+
+-- ============================================================
+-- PDF chunks (Arabic-optimized)
+-- ============================================================
+
+-- 9. PDF chunks table (separate from disease_embeddings)
+create table if not exists public.pdf_chunks (
+  id          text primary key,
+  document    text not null,
+  embedding   vector(384) not null,
+  source      text,
+  page        integer,
+  chunk_index integer,
+  language    text,
+  created_at  timestamptz default now()
+);
+
+-- 10. HNSW index for cosine similarity
+create index if not exists idx_pdf_chunks_cosine
+  on public.pdf_chunks
+  using hnsw (embedding vector_cosine_ops);
+
+-- 11. RPC: insert a PDF chunk
+create or replace function insert_pdf_chunk(
+  chunk_id text,
+  doc text,
+  query_embedding vector(384),
+  source text default null,
+  page int default null,
+  chunk_index int default null,
+  language text default null
+)
+returns void
+language sql
+as $$
+  insert into public.pdf_chunks
+    (id, document, embedding, source, page, chunk_index, language)
+  values
+    (chunk_id, doc, query_embedding, source, page, chunk_index, language)
+  on conflict (id) do nothing;
+$$;
+
+-- 12. RPC: search PDF chunks by cosine similarity
+create or replace function search_pdf_chunks(
+  query_embedding vector(384),
+  match_count int default 3
+)
+returns table(
+  id text,
+  document text,
+  source text,
+  page int,
+  chunk_index int,
+  language text,
+  similarity double precision
+)
+language sql
+as $$
+  select
+    pc.id,
+    pc.document,
+    pc.source,
+    pc.page,
+    pc.chunk_index,
+    pc.language,
+    1 - (pc.embedding <=> query_embedding) as similarity
+  from public.pdf_chunks pc
+  order by pc.embedding <=> query_embedding
+  limit match_count;
+$$;
+
+-- 13. RPC: count PDF chunks
+create or replace function count_pdf_chunks()
+returns bigint
+language sql
+as $$
+  select count(*) from public.pdf_chunks;
+$$;
