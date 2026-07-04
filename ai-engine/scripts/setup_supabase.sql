@@ -70,8 +70,12 @@ returns table(
   document text,
   name_en text,
   name_ar text,
+  specialist text,
   specialist_ar text,
+  symptoms_en text,
   symptoms_ar text,
+  severity text,
+  severity_ar text,
   similarity double precision
 )
 language sql
@@ -81,8 +85,12 @@ as $$
     de.document,
     de.name_en,
     de.name_ar,
+    de.specialist,
     de.specialist_ar,
+    de.symptoms_en,
     de.symptoms_ar,
+    de.severity,
+    de.severity_ar,
     1 - (de.embedding <=> query_embedding) as similarity
   from public.disease_embeddings de
   order by de.embedding <=> query_embedding
