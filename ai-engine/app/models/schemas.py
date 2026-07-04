@@ -15,3 +15,18 @@ class DiseaseItem(BaseModel):
     likelihoods: str = ""
     description: str = ""
     advice: str = ""
+
+
+class DiagnoseRequest(BaseModel):
+    symptoms: str
+    language: str = "auto"
+
+
+class DiagnoseResponse(BaseModel):
+    disease_name: str
+    disease_name_ar: str
+    confidence: str
+    specialist: str
+    specialist_ar: str
+    advice: str
+    reasoning: str

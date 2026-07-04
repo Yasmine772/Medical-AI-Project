@@ -17,13 +17,13 @@ def _insert_disease(disease: DiseaseItem):
     disease_id = disease.id or str(uuid.uuid4())
     symptoms_ar = "، ".join(disease.symptoms_ar)
     document = f"""
-المرض: {disease.name_ar}
-الأعراض: {symptoms_ar}
-الشدة: {disease.severity_ar}
-الوصف: {disease.description}
-النصيحة: {disease.advice}
+        المرض: {disease.name_ar}
+        الأعراض: {symptoms_ar}
+       الشدة: {disease.severity_ar}
+       الوصف: {disease.description}
+      النصيحة: {disease.advice}
 التخصص الطبي: {disease.specialist_ar}
-""".strip()
+    """.strip()
     embedding = embedder.encode(document)
     metadata = {
         "name_en": disease.name,
@@ -51,7 +51,9 @@ async def insert_json_file(file: UploadFile = File(...)):
     elif isinstance(data, dict) and "diseases" in data:
         diseases = [DiseaseItem(**d) for d in data["diseases"]]
     else:
-        raise HTTPException(400, "JSON must be an array of diseases or {diseases: [...]}")
+        raise HTTPException(
+            400, "JSON must be an array of diseases or {diseases: [...]}"
+        )
 
     for disease in diseases:
         _insert_disease(disease)
