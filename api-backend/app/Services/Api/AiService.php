@@ -17,17 +17,71 @@ class AiService
         $this->timeout = config('services.fastapi.timeout');
     }
 //------------------------------------------------------------------------------
-    public function searchSymptoms($request)
+
+    public function searchSymptoms($q)
     {
         try {
-            $response = Http::timeout($this->timeout)->get($this->fastApiUrl . '/symptoms',
-                                                        ['q' => $request['q'] ]);
+            $response = Http::timeout($this->timeout)
+                ->get($this->fastApiUrl . '/symptoms', ['q' => $q]);
 
             if ($response->successful()) {
                 return $response->json();
             }
 
             return 'No symptoms found';
+
+        } catch (ConnectionException $e) {
+            Log::error('FastAPI timeout: ' . $e->getMessage());
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('FastAPI error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function startDiagnose($symptom, $pastDiagnoses, $userId)
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->withHeaders(['X-User-Id' => $userId])
+                ->asForm()
+                ->post($this->fastApiUrl . '/diagnose/start', [
+                    'symptom' => $symptom,
+                    'past_diagnoses' => $pastDiagnoses,
+                ]);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+
+        } catch (ConnectionException $e) {
+            Log::error('FastAPI timeout: ' . $e->getMessage());
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('FastAPI error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function continueDiagnose($sessionId, $answer)
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->asForm()
+                ->post($this->fastApiUrl . '/diagnose/continue', [
+                    'session_id' => $sessionId,
+                    'answer' => $answer,
+                ]);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
 
         } catch (ConnectionException $e) {
             Log::error('FastAPI timeout: ' . $e->getMessage());

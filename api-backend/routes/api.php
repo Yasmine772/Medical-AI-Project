@@ -26,6 +26,9 @@ Route::prefix('v1/auth')->group(function () {
         Route::get('/search', [AiController::class, 'search']);
         // ->middleware('permission:searchSymptom');
 
+        Route::post('/diagnose/start', [AiController::class, 'start']);
+        Route::post('/diagnose/continue', [AiController::class, 'continue']);
+
         // Check if the user is authenticated
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
