@@ -226,6 +226,7 @@ Current axis to ask about:
 {axis_label}
 
 Rules:
+- Respond ONLY with valid JSON, no other text.
 - Ask ONE question about the current axis only
 - After the patient answers, the system will update probabilities automatically — you do NOT need to output updated probabilities
 - Only provide a final diagnosis when you are confident (probability > 70%)
