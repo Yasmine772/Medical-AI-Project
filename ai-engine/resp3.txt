@@ -1,0 +1,1 @@
+{"session_id":"ee734b2e-a991-475d-ad74-c043d8f1d91f","type":"question","question":"هل السعال يرافقه ألم في الصدر أو ضيق في التنفس؟","options":["نعم","لا"],"probs_per_option":{"Gastroenteritis":[0.1,0.9],"Chicken pox":[0.2,0.8],"Pneumonia":[0.8,0.2],"Peptic ulcer disease":[0.3,0.7],"GERD":[0.4,0.6]}}
