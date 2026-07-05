@@ -90,15 +90,10 @@ IMPORTANT: The "advice" field MUST be in Arabic only.
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         max_tokens=512,
+        response_format={"type": "json_object"},
     )
 
-    content = response.choices[0].message.content.strip()
-
-    # Extract JSON from possible markdown wrapping
-    start = content.find("{")
-    end = content.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        content = content[start:end+1]
+    content = response.choices[0].message.content
 
     try:
         data = json.loads(content)

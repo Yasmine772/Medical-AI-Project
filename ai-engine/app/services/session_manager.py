@@ -53,35 +53,16 @@ class SessionManager:
             session["candidates"] = json.loads(session["candidates"])
         return session
 
-    def update_conversation(self, session_id: str, conversation: List[Dict]):
-        self._rpc("update_diagnosis_session", {
-            "p_id": session_id,
-            "p_conversation": json.dumps(conversation),
-        })
-
-    def complete_session(
+    def update_conversation(
         self,
         session_id: str,
         conversation: List[Dict],
-        diagnosis: Dict,
+        status: Optional[str] = None,
     ):
-        self._rpc("complete_diagnosis_session", {
+        params = {
             "p_id": session_id,
             "p_conversation": json.dumps(conversation),
-            "p_disease_name": diagnosis.get("disease_name", ""),
-            "p_disease_name_ar": diagnosis.get("disease_name_ar", ""),
-            "p_confidence": diagnosis.get("confidence", "Low"),
-            "p_specialist": diagnosis.get("specialist", ""),
-            "p_specialist_ar": diagnosis.get("specialist_ar", ""),
-            "p_advice": diagnosis.get("advice", ""),
-            "p_reasoning": diagnosis.get("reasoning", ""),
-        })
-
-    def get_user_history(self, user_id: str) -> List[Dict]:
-        result = self._rpc("get_user_diagnosis_history", {"p_user_id": user_id})
-        if not result.data:
-            return []
-        data = result.data
-        if isinstance(data, str):
-            data = json.loads(data)
-        return data
+        }
+        if status:
+            params["p_status"] = status
+        self._rpc("update_diagnosis_session", params)

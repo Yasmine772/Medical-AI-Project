@@ -1,0 +1,130 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam participantPadding 20
+
+|#lightblue| Flutter |
+|#lightgreen| Laravel (MySQL) |
+|#lightyellow| FastAPI (pgvector) |
+
+' ─── Start Diagnosis ───
+Flutter -> Laravel: POST /api/diagnosis/start
+
+|Laravel|
+:Check auth token;
+:Fetch user medical profile
+from MySQL;
+
+|Laravel| -> Flutter: Static questions\n(age, smoker, etc.)\nOR "Start Diagnosis"
+
+|Flutter|
+:User submits answers
+(or skips if already known);
+
+Flutter -> Laravel: POST /api/user/medical-profile
+
+|Laravel|
+:Save to MySQL;
+
+|Laravel| -> Flutter: "Start Diagnosis" button
+
+' ─── Symptom Search ───
+|Flutter|
+:User types symptom;
+
+Flutter -> Laravel: GET /api/symptoms/search?q=...
+
+|Laravel|
+:Query symptoms list;
+
+|Laravel| -> Flutter: Symptom suggestions\n(autocomplete);
+
+|Flutter|
+:User taps a symptom;
+
+note right of Flutter
+  User can add
+  multiple symptoms
+end note
+
+Flutter -> Laravel: POST /api/diagnosis/start\n{symptoms: [...], profile: {...}}
+
+|Laravel|
+:Fetch past diagnoses
+from MySQL;
+
+Laravel -> FastAPI: POST /diagnose/start\n{symptoms, past_diagnoses,\n user_profile}
+
+|FastAPI|
+:Encode symptoms with
+embedding model;
+:Search pgvector →
+top 5 disease candidates;
+:Combine with user profile
++ past diagnoses;
+:Create Supabase session;
+:Loop: Build prompt
+with SOCRATES framework;
+
+|FastAPI| -> Laravel: {session_id, type: "question",\nquestion: "...", options: [...]}
+
+|Laravel| -> Flutter: {session_id, type: "question",\nquestion: "...", options: [...]}
+
+' ─── Q&A Loop ───
+|Flutter|
+:Show question with
+multiple choice options;
+:User selects answer;
+
+Flutter -> Laravel: POST /api/diagnosis/answer\n{session_id, answer}
+
+|Laravel| -> FastAPI: POST /diagnose/continue\n{session_id, answer}
+
+|FastAPI|
+:Append answer to
+conversation history;
+:Update Supabase session;
+:Bayesian probability
+update for each candidate;
+:Check stopping criteria:
+  - Highest P(D) > 70%?
+  - Top 3 sum > 85%?
+  - Max questions (10)?
+
+note right of FastAPI
+  SOCRATES question order:
+  1. Site
+  2. Onset
+  3. Character
+  4. Radiation
+  5. Associated
+  6. Timing
+  7. Exacerbating
+  8. Severity
+end note
+
+|FastAPI| -> Laravel: {type: "question"}\nOR {type: "diagnosis"}
+
+|Laravel| -> Flutter: {type: "question"}\nOR {type: "diagnosis"}
+
+|Flutter|
+:If type == "question" →
+  show next question;
+
+:If type == "diagnosis" →
+  show 3 possibilities
+  (Strong / Moderate / Less);
+
+|Flutter|
+:User taps "Download Report";
+
+Flutter -> Laravel: GET /api/report/{session_id}
+
+|Laravel|
+:Fetch diagnosis data
+from MySQL;
+:Generate PDF report;
+
+|Laravel| -> Flutter: PDF file
+
+@enduml
