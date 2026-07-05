@@ -20,7 +20,7 @@ class AiService
     public function searchSymptoms($request)
     {
         try {
-            $response = Http::timeout($this->timeout)->post($this->fastApiUrl . '/symptoms',
+            $response = Http::timeout($this->timeout)->get($this->fastApiUrl . '/symptoms',
                                                         ['q' => $request['q'] ]);
 
             if ($response->successful()) {
