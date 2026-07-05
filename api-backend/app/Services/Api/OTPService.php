@@ -30,7 +30,7 @@ class OTPService
             return 'UserNotFound!';
         }
 
-        if($user->otp !=$request['otp']) {
+        if($user->otp != $request['otp']) {
             return 'NotValidOTP';
         }
 

@@ -43,3 +43,6 @@ Thumbs.db
 # ChromaDB
 chroma_db/
 
+
+# Data files
+app/data/*.pdf

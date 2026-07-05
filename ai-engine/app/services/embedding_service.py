@@ -4,6 +4,8 @@ Converts text to numerical vectors using the all-MiniLM-L6-v2 model.
 Supports multiple languages, including Arabic.
 """
 
+from pydoc import text
+
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from typing import List
@@ -18,7 +20,7 @@ class EmbeddingService:
         embedding_dim (int): The dimension size of the vectors (typically 384 for all-MiniLM-L6-v2).
     """
 
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "intfloat/multilingual-e5-small"):
         """
         Initializes the embedding service.
 
@@ -33,8 +35,8 @@ class EmbeddingService:
         # Retrieve the embedding dimension
         # all-MiniLM-L6-v2 outputs 384-dimensional vectors
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
-        print(f"✓ Model loaded successfully!")
-        print(f"✓ Embedding Dimension: {self.embedding_dim}")
+        print(f"Model loaded successfully!")
+        print(f"Embedding Dimension: {self.embedding_dim}")
 
     def encode(self, text: str) -> np.ndarray:
         """
@@ -57,8 +59,8 @@ class EmbeddingService:
         if not text.strip():
             raise ValueError("Text cannot be empty")
             
-        # Convert text to embedding
-        embedding = self.model.encode(text, convert_to_numpy=True)
+        text_with_prefix = f"passage: {text}"
+        embedding = self.model.encode(text_with_prefix, convert_to_numpy=True)
         return embedding
 
     def encode_batch(self, texts: List[str], batch_size: int = 32) -> List[np.ndarray]:
@@ -94,11 +96,23 @@ class EmbeddingService:
             if not text.strip():
                 raise ValueError(f"Element at index {i} is empty")
                 
-        # Convert texts to embeddings
-        embeddings = self.model.encode(texts, batch_size=batch_size, convert_to_numpy=True)
+        texts_with_prefix = [f"passage: {t}" for t in texts]
+        embeddings = self.model.encode(texts_with_prefix, batch_size=batch_size, convert_to_numpy=True)
         
-        # Return as a list of individual vectors
         return [embeddings[i] for i in range(len(texts))]
+    
+    def embed(self, text: str) -> list:
+        return self.model.encode(f"passage: {text}", convert_to_numpy=True).tolist()
+
+    def embed_query(self, query: str) -> list:
+        return self.model.encode(f"query: {query}", convert_to_numpy=True).tolist()
+
+    def encode_query(self, text: str) -> np.ndarray:
+        if not isinstance(text, str):
+            raise TypeError(f"Text must be a string, not {type(text)}")
+        if not text.strip():
+            raise ValueError("Text cannot be empty")
+        return self.model.encode(f"query: {text}", convert_to_numpy=True)
 
     def get_embedding_dimension(self) -> int:
         """
@@ -189,5 +203,5 @@ if __name__ == "__main__":
     print(f"Similarity between A and C: {similarity_ac:.4f} (Different)")
     
     print("\n" + "=" * 60)
-    print("✓ All tests passed!")
+    print("All tests passed!")
     print("=" * 60)
