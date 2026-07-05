@@ -28,7 +28,7 @@ Route::prefix('v1/auth')->group(function (){
     Route::get('/profile',[AuthController::class,'viewProfile'])->middleware('permission:view-profile');
     Route::patch('/profile',[AuthController::class,'updateProfile'])->middleware('permission:edit-profile');
 
-    Route::post('/search', [AiController::class, 'search']);
+    Route::get('/search', [AiController::class, 'search']);
     //->middleware('permission:searchSymptom');
 
 
