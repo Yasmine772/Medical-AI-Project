@@ -45,4 +45,4 @@ chroma_db/
 
 
 # Data files
-/data/*.pdf
+app/data/*.pdf
