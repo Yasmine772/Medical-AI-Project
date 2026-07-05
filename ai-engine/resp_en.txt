@@ -1,1 +1,0 @@
-{"session_id":"6603bfb0-17c4-489a-88a3-afd4e4170f31","type":"question","question":"Where exactly is the cough located or felt?","options":["Chest","Throat","Abdomen","Other"],"probs_per_option":{"Gastroenteritis":[0.1,0.2,0.6,0.1],"Chicken pox":[0.2,0.3,0.4,0.1],"Pneumonia":[0.8,0.1,0.05,0.05],"Peptic ulcer disease":[0.2,0.1,0.6,0.1],"GERD":[0.4,0.2,0.3,0.1]}}

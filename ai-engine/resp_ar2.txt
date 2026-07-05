@@ -1,1 +1,0 @@
-{"session_id":"05477704-a1e1-4f44-842b-43c1627f6ab2","type":"question","question":"هل السعال الذي تعانيه مصحوب بألم في الصدر أو ضيق في التنفس؟","options":["نعم","لا"],"probs_per_option":{"Tuberculosis":[0.6,0.4],"Pneumonia":[0.7,0.3],"Gastroenteritis":[0.1,0.9],"Chicken pox":[0.2,0.8],"Peptic ulcer disease":[0.1,0.9]}}
