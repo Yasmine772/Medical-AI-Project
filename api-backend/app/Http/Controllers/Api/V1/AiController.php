@@ -29,5 +29,7 @@ class AiController extends Controller
             default => $this->successResponse($result , 'Success' , 200),
         };
     }
+
+    
     
 }
