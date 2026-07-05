@@ -202,14 +202,23 @@ def _parse_llm_response(content: str) -> dict:
         return {"type": "error", "raw": content[:300]}
 
 
+def _detect_lang(text: str) -> str:
+    for ch in text:
+        if '\u0600' <= ch <= '\u06ff' or '\u0750' <= ch <= '\u077f':
+            return "ar"
+    return "en"
+
 def _build_system_prompt(
     candidates_text: str,
     socrates_axis: int,
     probs_text: str,
+    language: str = "ar",
 ) -> str:
     axis_label = SOCRATES_AXES[socrates_axis] if socrates_axis < len(SOCRATES_AXES) else "Any remaining clarifying questions"
     covered = SOCRATES_AXES[:socrates_axis]
     covered_text = "\n".join(f"- {a}" for a in covered) if covered else "None yet"
+
+    lang_label = "Arabic" if language == "ar" else "English"
 
     return f"""You are a medical diagnosis assistant. Your job is to diagnose the patient by asking targeted follow-up questions based on the possible diseases retrieved from the database.
 
@@ -231,7 +240,7 @@ Rules:
 - After the patient answers, the system will update probabilities automatically — you do NOT need to output updated probabilities
 - Only provide a final diagnosis when you are confident (probability > 70%)
 - If you feel confident enough before all axes are covered, you may output a diagnosis early
-- Questions must be specific and in Arabic
+- Questions and options MUST be in {lang_label}
 - You may ask multiple questions on the same axis if needed
 
 IMPORTANT field rules:
@@ -239,15 +248,15 @@ IMPORTANT field rules:
 - "disease_name_ar" MUST be in Arabic only
 - "specialist" MUST be in English only
 - "specialist_ar" MUST be in Arabic only
-- "advice" MUST be in Arabic only
-- "question" MUST be in Arabic only
+- "advice" MUST be in {lang_label}
+- "question" MUST be in {lang_label}
 
 When asking a question, you MUST include per-option probabilities for each candidate disease.
 The "probs_per_option" values MUST sum to ~1.0 for each disease (they are P(option_i | disease)):
-{{"type": "question", "question": "question in Arabic", "options": ["option1", "option2", "option3"], "probs_per_option": {{"DiseaseName1": [0.7, 0.2, 0.1], "DiseaseName2": [0.3, 0.4, 0.3]}}}}
+{{"type": "question", "question": "question", "options": ["option1", "option2", "option3"], "probs_per_option": {{"DiseaseName1": [0.7, 0.2, 0.1], "DiseaseName2": [0.3, 0.4, 0.3]}}}}
 
 When providing a diagnosis, output the top 3 most likely conditions:
-{{"type": "diagnosis", "diagnoses": [{{"disease_name": "English name", "disease_name_ar": "اسم المرض", "confidence": "Strong", "probability": 0.72, "specialist": "English specialist", "specialist_ar": "التخصص", "advice": "نصيحة", "reasoning": "explanation"}}, {{"disease_name": "...", "confidence": "Moderate", "probability": 0.18}}, {{"disease_name": "...", "confidence": "Less Likely", "probability": 0.10}}]}}"""
+{{"type": "diagnosis", "diagnoses": [{{"disease_name": "English name", "disease_name_ar": "اسم المرض", "confidence": "Strong", "probability": 0.72, "specialist": "English specialist", "specialist_ar": "التخصص", "advice": "advice", "reasoning": "explanation"}}, {{"disease_name": "...", "confidence": "Moderate", "probability": 0.18}}, {{"disease_name": "...", "confidence": "Less Likely", "probability": 0.10}}]}}"""
 
 
 # ── Endpoints ──
@@ -323,10 +332,12 @@ async def _diagnose_start_impl(
     else:
         initial_msg = f"I have symptoms related to {symptom_en}."
 
+    lang = _detect_lang(symptom)
     session_data = {
         "diseases": results,
-        "socrates_axis": 1,  # start asked axis 0, so next continue asks axis 1
+        "socrates_axis": 1,
         "probabilities": priors,
+        "language": lang,
     } if results else None
 
     diseases_text = _format_candidates(results) if results else "No matching diseases found."
@@ -335,7 +346,7 @@ async def _diagnose_start_impl(
 
     probs_text = "\n".join(f"  {k}: {v*100:.0f}%" for k, v in sorted(priors.items(), key=lambda x: -x[1])) if priors else "  Equal priors"
 
-    system_prompt = _build_system_prompt(diseases_text, 0, probs_text)
+    system_prompt = _build_system_prompt(diseases_text, 0, probs_text, language=lang)
 
     session_id = sm.create_session(x_user_id, symptom, session_data)
 
@@ -422,6 +433,8 @@ async def _diagnose_continue_impl(session_id: str, answer: str):
     # ── Check stopping criteria (backend-enforced) ──
     can_stop = _check_stopping(probabilities, socrates_axis)
 
+    lang = candidates_raw.get("language", "ar")
+
     # Build prompt
     diseases_text = _format_candidates(diseases) if diseases else "No matching diseases found."
     probs_text = "\n".join(f"  {k}: {v*100:.0f}%" for k, v in sorted(probabilities.items(), key=lambda x: -x[1])) if probabilities else ""
@@ -430,10 +443,10 @@ async def _diagnose_continue_impl(session_id: str, answer: str):
     force = question_count >= MAX_QUESTIONS or can_stop
 
     if force:
-        system_prompt = _build_system_prompt(diseases_text, socrates_axis, probs_text)
+        system_prompt = _build_system_prompt(diseases_text, socrates_axis, probs_text, language=lang)
         system_prompt += f"\n\nYou MUST output a diagnosis NOW based on all the information gathered. Output the top 3 most likely conditions."
     else:
-        system_prompt = _build_system_prompt(diseases_text, socrates_axis, probs_text)
+        system_prompt = _build_system_prompt(diseases_text, socrates_axis, probs_text, language=lang)
 
     conversation.append({"role": "user", "content": answer})
     messages = [{"role": "system", "content": system_prompt}, *conversation]
