@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\User\Ai;
+namespace app\Http\Requests\User\Ai;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
