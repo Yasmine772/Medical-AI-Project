@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\AiController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -27,8 +28,12 @@ Route::prefix('v1/auth')->group(function (){
     Route::get('/profile',[AuthController::class,'viewProfile'])->middleware('permission:view-profile');
     Route::patch('/profile',[AuthController::class,'updateProfile'])->middleware('permission:edit-profile');
 
-    //Check if the user is authenticated
-    Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
+    Route::post('/search', [AiController::class, 'search']);
+    //->middleware('permission:searchSymptom');
+
+
+        //Check if the user is authenticated
+        Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
     });
 });

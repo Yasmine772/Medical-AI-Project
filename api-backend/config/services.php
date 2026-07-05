@@ -41,4 +41,9 @@ return [
     'redirect' => 'http://localhost:8000/api/v1/auth/google/callback',
     ],
 
+    'fastapi' => [
+        'url' => env('FASTAPI_URL', 'http://localhost:5000'),
+        'timeout' => env('FASTAPI_TIMEOUT', 30),
+    ],
+
 ];
