@@ -79,7 +79,8 @@ class PgVectorClient:
         return int(response.data)
 
     def delete_all(self):
-        self._rpc("delete_all_disease_embeddings")
+        client = self.connect()
+        client.table("disease_embeddings").delete().neq("id", "").execute()
         return None
 
     def close(self):

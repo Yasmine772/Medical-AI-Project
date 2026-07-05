@@ -8,10 +8,10 @@ from app.state import get_store, get_embedder
 
 router = APIRouter()
 
-API_KEY = os.environ.get("OPENROUTER_KEY")
+API_KEY = os.environ.get("GROQ_KEY")
 if API_KEY:
     _client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
+        base_url="https://api.groq.com/openai/v1",
         api_key=API_KEY,
     )
 else:
@@ -86,7 +86,7 @@ IMPORTANT: The "advice" field MUST be in Arabic only.
 }}"""
 
     response = _client.chat.completions.create(
-        model="openrouter/free",
+        model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         max_tokens=512,

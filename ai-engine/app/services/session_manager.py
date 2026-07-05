@@ -58,11 +58,11 @@ class SessionManager:
         session_id: str,
         conversation: List[Dict],
         status: Optional[str] = None,
+        candidates: Optional[Dict] = None,
     ):
-        params = {
-            "p_id": session_id,
-            "p_conversation": json.dumps(conversation),
-        }
+        data = {"conversation": json.dumps(conversation)}
         if status:
-            params["p_status"] = status
-        self._rpc("update_diagnosis_session", params)
+            data["status"] = status
+        if candidates:
+            data["candidates"] = json.dumps(candidates)
+        self.connect().table("diagnosis_sessions").update(data).eq("id", session_id).execute()
