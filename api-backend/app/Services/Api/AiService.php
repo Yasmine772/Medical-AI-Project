@@ -18,11 +18,11 @@ class AiService
     }
 //------------------------------------------------------------------------------
 
-    public function searchSymptoms($q)
+    public function searchSymptoms( string $query)
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl . '/symptoms', ['q' => $q]);
+                ->get($this->fastApiUrl . '/symptoms', ['q' => $query]);
 
             if ($response->successful()) {
                 return $response->json();
@@ -40,7 +40,7 @@ class AiService
         }
     }
 
-    public function startDiagnose($symptom, $pastDiagnoses, $userId)
+    public function startDiagnose(string $symptom, string $pastDiagnoses, string|int $userId)
     {
         try {
             $response = Http::timeout($this->timeout)
@@ -67,7 +67,7 @@ class AiService
         }
     }
 
-    public function continueDiagnose($sessionId, $answer)
+    public function continueDiagnose(string|int $sessionId, string $answer)
     {
         try {
             $response = Http::timeout($this->timeout)

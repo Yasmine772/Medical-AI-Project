@@ -16,7 +16,7 @@ class SymptomsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'q' => 'nullable|string|min:2',
+            'query' => 'nullable|string|min:2',
         ];
     }
 
