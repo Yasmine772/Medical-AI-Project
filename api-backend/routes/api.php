@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AiController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Reports\ReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')->group(function () {
@@ -28,6 +29,11 @@ Route::prefix('v1/auth')->group(function () {
 
         Route::post('/diagnose/start', [AiController::class, 'start']);
         Route::post('/diagnose/continue', [AiController::class, 'continue']);
+
+        // Report routes
+        Route::post('/reports/{sessionId}/generate', [ReportController::class, 'generate'])->middleware('permission:download-report');
+        Route::get('/reports/{sessionId}/download', [ReportController::class, 'download'])->middleware('permission:download-report');
+        Route::get('/reports/{sessionId}/preview', [ReportController::class, 'preview'])->middleware('permission:download-report');
 
         // Check if the user is authenticated
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);

@@ -1,0 +1,626 @@
+{
+  "info": {
+    "name": "Medical AI - Diagnosis & Reports",
+    "description": "مجموعة كاملة لاختبار التشخيص الطبي وتوليد التقارير\n\n🔧 Variables:\n- fastapi_url: http://localhost:5000\n- laravel_url: http://localhost:8000/api/v1\n- session_id: يتم تعبئته تلقائياً\n- token: أدخل التوكن بعد تسجيل الدخول",
+    "schema": "https://schema.postman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "fastapi_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "laravel_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1️⃣  الصحة والبيانات Health & Data",
+      "item": [
+        {
+          "name": "GET /health - فحص الاتصال",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Service healthy', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('healthy');",
+                  "    pm.expect(json.records).to.be.above(0);",
+                  "    console.log('عدد السجلات:', json.records);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{fastapi_url}}/health",
+              "host": ["{{fastapi_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "GET /search - بحث الأعراض",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Results found', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.results).to.be.an('array');",
+                  "    if(json.results.length > 0) {",
+                  "        console.log('أول نتيجة:', json.results[0].name_en, '/', json.results[0].name_ar);",
+                  "        // حفظ أول نتيجة كـ symptom للخطوات التالية",
+                  "        pm.collectionVariables.set('symptom_name', json.results[0].name_en);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{fastapi_url}}/search?q={{query}}",
+              "host": ["{{fastapi_url}}"],
+              "path": ["search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}"
+                }
+              ]
+            }
+          },
+          "variable": [
+            {
+              "key": "query",
+              "value": "صداع",
+              "description": "ابحث بالعربي أو الإنجليزي"
+            }
+          ]
+        },
+        {
+          "name": "GET /symptoms - أعراض للتشخيص التفاعلي",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if(json.results && json.results.length > 0) {",
+                  "    pm.collectionVariables.set('symptom_key', json.results[0].key);",
+                  "    console.log('Symptom key:', json.results[0].key);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{fastapi_url}}/symptoms?q={{query}}",
+              "host": ["{{fastapi_url}}"],
+              "path": ["symptoms"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{query}}"
+                }
+              ]
+            }
+          },
+          "variable": [
+            {
+              "key": "query",
+              "value": "headache"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2️⃣  التشخيص Diagnosis Flow",
+      "item": [
+        {
+          "name": "POST /diagnose - تشخيص مباشر (Single-shot)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has diagnosis', () => {",
+                  "    pm.expect(json.disease_name).to.not.eql('Unknown');",
+                  "    pm.expect(json.disease_name_ar).to.not.eql('غير معروف');",
+                  "});",
+                  "console.log('التشخيص:', json.disease_name_ar, '- الثقة:', json.confidence);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "symptoms",
+                  "value": "{{symptoms_text}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{fastapi_url}}/diagnose",
+              "host": ["{{fastapi_url}}"],
+              "path": ["diagnose"]
+            }
+          },
+          "variable": [
+            {
+              "key": "symptoms_text",
+              "value": "I have severe headache, nausea, and sensitivity to light",
+              "description": "صف الأعراض بالإنجليزي"
+            }
+          ]
+        },
+        {
+          "name": "POST /diagnose/start - بدء تشخيص تفاعلي",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has session_id', () => {",
+                  "    pm.expect(json.session_id).to.not.be.empty;",
+                  "    pm.collectionVariables.set('session_id', json.session_id);",
+                  "    console.log('Session ID:', json.session_id);",
+                  "    console.log('نوع الرد:', json.type);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "test-user-{{$randomUUID}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "symptom",
+                  "value": "{{symptom_for_diagnosis}}",
+                  "type": "text"
+                },
+                {
+                  "key": "past_diagnoses",
+                  "value": "",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{fastapi_url}}/diagnose/start",
+              "host": ["{{fastapi_url}}"],
+              "path": ["diagnose", "start"]
+            }
+          },
+          "variable": [
+            {
+              "key": "symptom_for_diagnosis",
+              "value": "Migraine",
+              "description": "اختر العرض من نتائج الـ search"
+            }
+          ]
+        },
+        {
+          "name": "POST /diagnose/continue - متابعة التشخيص (كرّر)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "",
+                  "if(json.type === 'diagnosis') {",
+                  "    console.log('✅ تم الانتهاء من التشخيص!');",
+                  "    console.log('التشخيصات:', JSON.stringify(json.diagnoses, null, 2));",
+                  "    pm.collectionVariables.set('diagnosis_complete', 'true');",
+                  "    // حفظ التشخيص الأول للاستخدام في التقرير",
+                  "    if(json.diagnoses && json.diagnoses.length > 0) {",
+                  "        pm.collectionVariables.set('top_diagnosis', json.diagnoses[0].disease_name_ar);",
+                  "    }",
+                  "} else if(json.type === 'question') {",
+                  "    console.log('❓ سؤال:', json.question);",
+                  "    console.log('الخيارات:', json.options);",
+                  "    console.log('💡 انسخ session_id وحطه بالطلب الجاي مع الاجابة');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "session_id",
+                  "value": "{{session_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "answer",
+                  "value": "{{answer_text}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{fastapi_url}}/diagnose/continue",
+              "host": ["{{fastapi_url}}"],
+              "path": ["diagnose", "continue"]
+            }
+          },
+          "variable": [
+            {
+              "key": "answer_text",
+              "value": "Yes, the pain is throbbing and on one side of my head",
+              "description": "جاوب على سؤال التشخيص"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3️⃣  التقارير Reports",
+      "item": [
+        {
+          "name": "GET /preview - معاينة التقرير (HTML)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is HTML', () => {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/html');",
+                  "});",
+                  "pm.test('Contains report structure', () => {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.include('تقرير التشخيص الطبي');",
+                  "    pm.expect(body).to.include('Medical Diagnosis Report');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{fastapi_url}}/reports/{{session_id}}/preview",
+              "host": ["{{fastapi_url}}"],
+              "path": ["reports", "{{session_id}}", "preview"]
+            }
+          }
+        },
+        {
+          "name": "POST /generate-report - توليد PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200){",
+                  "    const json = pm.response.json();",
+                  "    console.log('✅ PDF generated:', json.pdf_path);",
+                  "    pm.collectionVariables.set('pdf_path', json.pdf_path);",
+                  "}",
+                  "if(pm.response.code === 500){",
+                  "    const json = pm.response.json();",
+                  "    console.log('⚠️ خطأ في التوليد (متوقع على Windows without GTK):', json.detail);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{fastapi_url}}/generate-report/{{session_id}}",
+              "host": ["{{fastapi_url}}"],
+              "path": ["generate-report", "{{session_id}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /download - تحميل PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response is PDF', () => {",
+                  "    const ct = pm.response.headers.get('Content-Type');",
+                  "    console.log('Content-Type:', ct);",
+                  "    if(pm.response.code === 200) {",
+                  "        pm.expect(ct).to.include('application/pdf');",
+                  "        console.log('✅ PDF downloaded successfully');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{fastapi_url}}/reports/{{session_id}}/download",
+              "host": ["{{fastapi_url}}"],
+              "path": ["reports", "{{session_id}}", "download"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4️⃣  Laravel (عبر API Gateway)",
+      "item": [
+        {
+          "name": "POST /auth/login - تسجيل الدخول",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if(json.data && json.data.token) {",
+                  "    pm.collectionVariables.set('token', json.data.token);",
+                  "    console.log('✅ Token obtained');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "email",
+                  "value": "{{email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{laravel_url}}/auth/login",
+              "host": ["{{laravel_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "variable": [
+            {
+              "key": "email",
+              "value": "patient@test.com"
+            },
+            {
+              "key": "password",
+              "value": "password"
+            }
+          ]
+        },
+        {
+          "name": "POST /reports/generate - توليد عبر Laravel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) {",
+                  "    console.log('✅ Report generated via Laravel');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{laravel_url}}/auth/reports/{{session_id}}/generate",
+              "host": ["{{laravel_url}}"],
+              "path": ["auth", "reports", "{{session_id}}", "generate"]
+            }
+          }
+        },
+        {
+          "name": "GET /reports/download - تحميل عبر Laravel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or redirect', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 302]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{laravel_url}}/auth/reports/{{session_id}}/download",
+              "host": ["{{laravel_url}}"],
+              "path": ["auth", "reports", "{{session_id}}", "download"]
+            }
+          }
+        },
+        {
+          "name": "GET /reports/preview - معاينة عبر Laravel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('HTML response', () => {",
+                  "    pm.expect(pm.response.text()).to.include('تقرير التشخيص الطبي');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{laravel_url}}/auth/reports/{{session_id}}/preview",
+              "host": ["{{laravel_url}}"],
+              "path": ["auth", "reports", "{{session_id}}", "preview"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5️⃣  اختبار الحالات الطرفية Edge Cases",
+      "item": [
+        {
+          "name": "404 - جلسة غير موجودة",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "const json = pm.response.json();",
+                  "pm.expect(json.detail).to.include('not found');",
+                  "console.log('✅ 404 handled correctly:', json.detail);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{fastapi_url}}/reports/non-existent-session-12345/preview",
+              "host": ["{{fastapi_url}}"],
+              "path": ["reports", "non-existent-session-12345", "preview"]
+            }
+          }
+        },
+        {
+          "name": "Session Completed - محاولة continue بعد التشخيص",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "const json = pm.response.json();",
+                  "console.log('✅ Already completed error:', json.detail);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "session_id",
+                  "value": "{{session_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "answer",
+                  "value": "test",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{fastapi_url}}/diagnose/continue",
+              "host": ["{{fastapi_url}}"],
+              "path": ["diagnose", "continue"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

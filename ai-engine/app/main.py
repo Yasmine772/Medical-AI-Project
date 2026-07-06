@@ -7,6 +7,7 @@ from app.routes.search import router as search_router
 from app.routes.insert import router as insert_router
 from app.routes.diagnose import router as diagnose_router
 from app.routes.interactive import router as interactive_router
+from app.routes.report import router as report_router
 from app.state import init
 from app.services.pgvector_client import PgVectorClient
 from app.services.embedding_service import EmbeddingService
@@ -29,6 +30,7 @@ app.include_router(search_router)
 app.include_router(insert_router)
 app.include_router(diagnose_router)
 app.include_router(interactive_router)
+app.include_router(report_router)
 
 
 @app.on_event("startup")
