@@ -8,7 +8,8 @@ return [
         'view-doctors', 'accept-doctors', 'reject-doctors', 'edit-doctors', 'active-doctors',
         'non-active-doctors','delete-doctors','view-users','edit-users', 'ban-users','unban-users',
         'send-notifications', 'view-notifications','contact-user', 'review-report',
-        'edit-profile',  'view-profile',  'search-symptom', 'download-report',
+        'edit-profile',  'view-profile', 'search-symptom',
+        'start-diagnose', 'continue-diagnose','download-report',
         'contact-doctor', 'choose-option', 'cancel-diagnose-session', 'recieve-notifications',
         'make-notification-as-read','view-medical-history', 'logout'
     ],
@@ -25,7 +26,8 @@ return [
         ],
 
         'patient' => [
-            'edit-profile','view-profile', 'search-symptom', 'download-report', 'contact-doctor',
+            'edit-profile','view-profile', 'search-symptom',
+            'start-diagnose', 'continue-diagnose', 'download-report', 'contact-doctor',
             'choose-option', 'cancel-diagnose-session',
             'recieve-notifications', 'view-notifications',
             'make-notification-as-read', 'view-medical-history', 'logout'
