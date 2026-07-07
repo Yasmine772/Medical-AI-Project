@@ -16,8 +16,11 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LoginPage />} />
+        <Route path="/" element={<WelcomePage />} />
 
+        <Route path="/login" element={<LoginPage />} />
+        
+        {/* admin routes */}
         <Route path="/app" element={<DashboardLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="doctors" element={<DoctorsManagementPage />} />

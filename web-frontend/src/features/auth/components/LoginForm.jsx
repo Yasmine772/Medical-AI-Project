@@ -5,8 +5,9 @@ import { useNavigate } from "react-router-dom";
 const LoginForm = ({ role }) => {
   const navigate = useNavigate();
   const handleLoginSubmit = (e) => {
-    e.preventDefault();
+    e.preventDefault(); 
 
+   
     if (role === "doctor") {
       navigate("/doctor/dashboard");
     } else {
