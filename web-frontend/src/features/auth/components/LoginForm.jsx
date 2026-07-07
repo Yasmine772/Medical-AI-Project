@@ -1,25 +1,24 @@
 import Input from "../../../components/UI/Input";
 import Button from "../../../components/UI/Button";
 import { useNavigate } from "react-router-dom";
-const LoginForm = () => {
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Form Submitted");
-  };
-  const navigate = useNavigate();
 
-  const handleLogin = () => {
-    // confirm password
-    
-    navigate("/app/dashboard"); 
+const LoginForm = ({ role }) => {
+  const navigate = useNavigate();
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+
+    if (role === "doctor") {
+      navigate("/doctor/dashboard");
+    } else {
+      navigate("/app/dashboard");
+    }
   };
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={handleLoginSubmit}
       className="flex flex-col gap-4 w-full max-w-xs mx-auto font-sans"
     >
-      
       <h2 className="text-xl font-bold text-gray-800 tracking-tight mt-2">
         Login to your{" "}
         <span className="text-medical font-medium">diagnostic account</span>
@@ -27,11 +26,9 @@ const LoginForm = () => {
 
       <div className="flex flex-col gap-3">
         <Input label="Email Address" type="email" id="email" required />
-
         <Input label="Password" type="password" id="password" required />
       </div>
 
-      {/* forgot password */}
       <div className="text-left">
         <a
           href="#forgot"
@@ -41,7 +38,6 @@ const LoginForm = () => {
         </a>
       </div>
 
-      
       <div className="flex flex-col gap-2.5 mt-2">
         <Button
           type="button"
@@ -49,10 +45,7 @@ const LoginForm = () => {
         >
           confirm email
         </Button>
-
-        <Button type="submit" onClick={handleLogin}>
-          Login
-        </Button>
+        <Button type="submit">Login</Button>
       </div>
     </form>
   );
