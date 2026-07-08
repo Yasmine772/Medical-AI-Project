@@ -36,5 +36,9 @@ class UserSeeder extends Seeder
         //     'email_verified_at' => now(),
         // ]);
         // $doctor->assignRole('doctor');
+
+        User::factory(50)->create()->each(function ($user) {
+        $user->assignRole('patient');
+    });
     }
 }

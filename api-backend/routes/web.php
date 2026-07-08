@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\web\UserManagement\UserController;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -16,12 +16,17 @@ Route::prefix('admin')->group(function () {
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
-    Route::middleware(['auth:sanctum'])->group(function () {
+
+    Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
         Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:logout');
         // Profile routes
         // Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
         // Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
+
+       // User Management 
+       Route::get('/users', [UserController::class, 'index']);
+       Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
 
     });
 });
