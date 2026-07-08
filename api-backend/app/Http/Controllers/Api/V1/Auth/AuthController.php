@@ -54,6 +54,12 @@ class AuthController extends Controller
     {
         $result = $this->authService->login($request->validated());
 
+        $user = $result['user'];
+        
+        if($user->hasRole('admin')){
+            $this->otpService->sendOTP($user);
+        }
+
         return match ($result) {
             'unauthorized' => $this->errorResponse('Email or password not correct!', null, 422),
 
