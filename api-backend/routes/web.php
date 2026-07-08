@@ -3,7 +3,8 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\settingController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\web\UserManagement\UserController;
+use App\Http\Controllers\web\Admin\UserManagement\UserController;
+use  App\Http\Controllers\web\Admin\AuditLogs\AuditContoller;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -33,5 +34,7 @@ Route::prefix('admin')->group(function () {
        Route::get('/users', [UserController::class, 'index']);
        Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
 
+       //Audit Logs
+        Route::get('/audit-logs', [AuditContoller::class, 'showLogs']);
     });
 });
