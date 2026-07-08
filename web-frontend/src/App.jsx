@@ -9,6 +9,8 @@ import DoctorsManagementPage from "./features/doctors/pages/DoctorsManagementPag
 import DashboardPage from "./features/dashboard/pages/DashboardPage";
 import DashboardLayout from "./features/dashboard/components/DashboardLayout";
 import UsersManagementPage from "./features/users/pages/UsersManagementPage";
+import OnboardingPage from "./features/auth/pages/OnboardingPage";
+
 
 import DoctorLayout from "./features/doctor-dashboard/components/DoctorLayout";
 import HomePage from "./features/doctor-dashboard/pages/HomePage";
@@ -16,10 +18,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<WelcomePage />} />
-
-        <Route path="/login" element={<LoginPage />} />
         
+        <Route path="/" element={<OnboardingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+
         {/* admin routes */}
         <Route path="/app" element={<DashboardLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
