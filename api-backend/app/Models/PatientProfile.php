@@ -24,5 +24,12 @@ class PatientProfile extends Model
         return $this->belongsTo(User::class);
     }
 
+    protected $casts = [
+        'birth_date' => 'date',
+        'is_smoker' => 'boolean',
+        'has_diabetes' => 'boolean',
+        'has_hypertension' => 'boolean',
+        'is_pregnant' => 'boolean',
+    ];
 
 }

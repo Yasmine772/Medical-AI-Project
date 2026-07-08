@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnosis Flow</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'default' })</script>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+  h1 { color: #333; }
+  .mermaid { margin: 30px 0; }
+</style>
+</head>
+<body>
+<h1>Diagnosis Flow</h1>
+<div class="mermaid">
+sequenceDiagram
+    participant Flutter as Flutter (Mobile)
+    participant Laravel as Laravel (MySQL)
+    participant FastAPI as FastAPI (pgvector)
+
+    Note over Flutter: User taps "Start Diagnosis"
+
+    Flutter->>Laravel: POST /api/diagnosis/start
+    Laravel->>Laravel: Check auth, fetch user medical profile
+
+    alt Has existing medical data
+        Laravel-->>Flutter: "Start Diagnosis" button
+    else No data
+        Laravel-->>Flutter: Static questions (age, smoker, etc.)
+        Flutter->>Laravel: POST /api/user/medical-profile (answers)
+        Laravel->>Laravel: Save to MySQL
+        Laravel-->>Flutter: "Start Diagnosis" button
+    end
+
+    Note over Flutter: User types symptom
+
+    Flutter->>Laravel: GET /api/symptoms/search?q=...
+    Laravel->>Laravel: Query symptoms list
+    Laravel-->>Flutter: Autocomplete suggestions
+    Flutter->>Flutter: User taps symptom (adds to list)
+
+    Flutter->>Laravel: POST /api/diagnosis/start {symptoms, user_id}
+    Laravel->>Laravel: Fetch past diagnoses from MySQL
+    Laravel->>FastAPI: POST /diagnose/start {symptoms, past_diagnoses, profile}
+
+    FastAPI->>FastAPI: Encode symptoms → search pgvector → candidates
+    FastAPI->>FastAPI: Create Supabase session
+    FastAPI->>FastAPI: LLM generates first question (SOCRATES)
+
+    FastAPI-->>Laravel: {session_id, type: "question", question, options}
+    Laravel-->>Flutter: {session_id, type: "question", question, options}
+
+    loop Q&A Loop (up to 10 questions)
+        Flutter->>Flutter: User selects answer (multi-choice only)
+        Flutter->>Laravel: POST /api/diagnosis/answer {session_id, answer}
+        Laravel->>FastAPI: POST /diagnose/continue {session_id, answer}
+
+        FastAPI->>FastAPI: Append to conversation, Bayesian update
+        FastAPI->>FastAPI: Check stopping criteria
+
+        alt Confidence too low
+            FastAPI-->>Laravel: {type: "question", next question}
+            Laravel-->>Flutter: {type: "question", next question}
+        else Confidence reached -> exit loop
+            FastAPI-->>Laravel: {type: "diagnosis", top 3 conditions}
+            Laravel-->>Flutter: {type: "diagnosis", top 3 conditions}
+            Laravel->>Laravel: Save diagnosis to MySQL
+        end
+    end
+
+    Note over Flutter: Show 3 possibilities (Strong / Moderate / Less Likely)
+
+    Flutter->>Laravel: GET /api/report/{session_id}
+    Laravel->>Laravel: Generate PDF report
+    Laravel-->>Flutter: PDF file
+</div>
+</body>
+</html>
