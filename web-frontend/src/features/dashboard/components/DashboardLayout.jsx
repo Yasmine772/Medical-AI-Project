@@ -1,15 +1,32 @@
-import { useState } from "react"; 
+import { useState } from "react";
+// import { useNavigate } from "react-router-dom"; // استدعي useNavigate هنا
+import { useDispatch } from "react-redux";
+import { logout } from "../../../store/authSlice";
+import api from "../../../api/axios";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import LogoutModal from "../../auth/components/LogoutModal";
-import ConfirmationModal from "../../doctors/components/ConfirmationModal"; 
+import ConfirmationModal from "../../doctors/components/ConfirmationModal";
 const DashboardLayout = () => {
+  const dispatch = useDispatch();
+  // const navigate = useNavigate();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState({
     isOpen: false,
     type: "",
-    onConfirm: null, 
+    onConfirm: null,
   });
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/admin/logout");
+    } catch (error) {
+      console.error("Logout failed", error);
+    } finally {
+      dispatch(logout()); // هذا سيقوم بمسح التوكن و الـ persist و إعادة التحميل
+      window.location.href = "/login"; // التوجيه النهائي
+    }
+  };
 
   return (
     <div
@@ -23,18 +40,14 @@ const DashboardLayout = () => {
     >
       <Sidebar onLogoutClick={() => setIsLogoutModalOpen(true)} />
 
-      
       <main className="flex-1 h-full overflow-y-auto p-6">
         <Outlet context={{ setActionModal }} />
       </main>
 
-      
       <LogoutModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
-        onConfirm={() => {
-          window.location.href = "/login";
-        }}
+        onConfirm={handleLogout}
       />
 
       <ConfirmationModal

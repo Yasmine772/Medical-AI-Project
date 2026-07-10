@@ -2,23 +2,32 @@ import LoginForm from "../components/LoginForm";
 import logoImg from "../../../assets/medical-logo.png";
 import medicalImg from "../../../assets/medical-illustration.png";
 import { useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const role = searchParams.get("role");
+  const navigate = useNavigate();
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
-  const getWelcomeText = () => {
-    return role === "doctor"
-      ? "Welcome Back, Doctor"
-      : "Welcome Back, Administrator";
-  };
+  // const getWelcomeText = () => {
+  //   return role === "doctor"
+  //     ? "Welcome Back, Doctor"
+  //     : "Welcome Back, Administrator";
+  // };
 
-  const getSubText = () => {
-    return role === "doctor"
-      ? "Access your diagnostic dashboard"
-      : "Manage your system settings";
-  };
-
+  // const getSubText = () => {
+  //   return role === "doctor"
+  //     ? "Access your diagnostic dashboard"
+  //     : "Manage your system settings";
+  // };
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/app/dashboard"); // إذا كان مسجلاً دخول، لا تظهري له صفحة اللوج إن
+    }
+  }, [isAuthenticated, navigate]);
   return (
     <div className="min-h-screen w-full bg-[#BACED6] flex items-center justify-center p-6 antialiased font-sans relative overflow-hidden">
       <div
@@ -127,12 +136,12 @@ const LoginPage = () => {
             </div>
           </div>
 
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-800">
               {getWelcomeText()}
             </h1>
             <p className="text-gray-500 text-sm mt-1">{getSubText()}</p>
-          </div>
+          </div> */}
 
           <LoginForm role={role} />
         </div>
