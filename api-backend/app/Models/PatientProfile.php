@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable;
 
-
-class PatientProfile extends Model
+class PatientProfile extends Model implements Auditable
 {
+
+    use \OwenIt\Auditing\Auditable;
     protected $fillable = [
         'birth_date',
         'gender',
