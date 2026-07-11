@@ -11,5 +11,5 @@ async def search(q: str = Query(""), limit: int = Query(5)):
     store = get_store()
     embedder = get_embedder()
     query_vector = embedder.encode_query(q)
-    results = store.search(query_vector, limit=limit, filter_type="disease")
+    results = store.search(query_vector, limit=limit)
     return {"results": results}

@@ -73,12 +73,12 @@ async def insert_pdf(file: UploadFile = File(...)):
     doc = fitz.open(stream=content, filetype="pdf")
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=250,
-        chunk_overlap=50,
+        chunk_size=500,
+        chunk_overlap=100,
         separators=["\n\n", "\n", "، ", ". ", "؟ ", "! ", " "],
     )
 
-    added = 0
+    batch_rows = []
     for page_num in range(len(doc)):
         page = doc[page_num]
         text = page.get_text().strip()
@@ -92,17 +92,26 @@ async def insert_pdf(file: UploadFile = File(...)):
                 continue
             raw_id = f"pdf_api_{file.filename}_p{page_num}_c{idx}"
             chunk_id = hashlib.md5(raw_id.encode()).hexdigest()[:16]
-            embedding = embedder.encode(chunk_text)
             metadata = {
                 "source": file.filename,
                 "page": page_num,
                 "chunk_index": idx,
-                "chunk_size": len(chunk_text),
                 "language": None,
             }
-            store.insert(chunk_id, chunk_text, embedding, "pdf", metadata)
-            added += 1
+            batch_rows.append((chunk_id, chunk_text, metadata))
 
     page_count = len(doc)
     doc.close()
-    return {"filename": file.filename, "pages": page_count, "chunks_added": added}
+
+    if not batch_rows:
+        return {"filename": file.filename, "pages": page_count, "chunks_added": 0}
+
+    texts = [row[1] for row in batch_rows]
+    embeddings = embedder.encode_batch(texts)
+
+    store_rows = []
+    for (chunk_id, chunk_text, meta), emb in zip(batch_rows, embeddings):
+        store_rows.append((chunk_id, chunk_text, emb.tolist(), "pdf", meta))
+
+    store.insert_batch(store_rows)
+    return {"filename": file.filename, "pages": page_count, "chunks_added": len(batch_rows)}

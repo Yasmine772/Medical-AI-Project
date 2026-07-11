@@ -6,6 +6,7 @@ from app.routes.health import router as health_router
 from app.routes.search import router as search_router
 from app.routes.insert import router as insert_router
 from app.routes.diagnosis import router as diagnosis_router
+from app.routes.report import router as report_router
 from app.state import init
 from app.services.pgvector_client import PgVectorClient
 from app.services.embedding_service import EmbeddingService

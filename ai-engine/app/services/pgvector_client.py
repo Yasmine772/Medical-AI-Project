@@ -6,9 +6,6 @@ from supabase import Client, create_client
 from dotenv import load_dotenv
 load_dotenv()
 
-from app.services.logger import log
-
-
 class PgVectorClient:
 
     def __init__(self):
@@ -26,12 +23,12 @@ class PgVectorClient:
     def _to_list(self, embedding: np.ndarray) -> list:
         return embedding.tolist() if hasattr(embedding, "tolist") else embedding
 
-    def insert(self, record_id: str, document: str, embedding: np.ndarray,
-               type: str, metadata: dict):
+    def _build_payload(self, record_id: str, document: str, embedding: list,
+                       type: str, metadata: dict) -> dict:
         payload = {
             "id": record_id,
             "document": document,
-            "embedding": self._to_list(embedding),
+            "embedding": embedding,
             "type": type,
         }
         if type == "disease":
@@ -52,8 +49,21 @@ class PgVectorClient:
                 "chunk_index": metadata.get("chunk_index"),
                 "language": metadata.get("language"),
             })
+        return payload
+
+    def insert(self, record_id: str, document: str, embedding: np.ndarray,
+               type: str, metadata: dict):
+        payload = self._build_payload(record_id, document, self._to_list(embedding),
+                                      type, metadata)
         self.connect().table("embeddings").insert(payload).execute()
-        log("VECTOR", f"Inserted {type} id={record_id[:12]}")
+
+    def insert_batch(self, rows: list):
+        """rows: list of (record_id, document, embedding_list, type, metadata)"""
+        payloads = [
+            self._build_payload(rid, doc, emb, typ, meta)
+            for rid, doc, emb, typ, meta in rows
+        ]
+        self.connect().table("embeddings").insert(payloads).execute()
 
     def search(
         self,
@@ -61,27 +71,33 @@ class PgVectorClient:
         limit: int = 5,
         filter_type: str | None = None,
     ) -> List[dict]:
-        params = {
-            "query_embedding": self._to_list(query_embedding),
-            "match_count": limit,
-            "filter_type": filter_type,
-        }
-        response = self._rpc("search_embeddings", params)
-        results = response.data or []
-        log("VECTOR", f"search type={filter_type} limit={limit} -> {len(results)} results")
+        if filter_type is not None:
+            params = {
+                "query_embedding": self._to_list(query_embedding),
+                "match_count": 500,
+            }
+            response = self._rpc("search_embeddings", params)
+            results = [r for r in (response.data or []) if r.get("type") == filter_type][:limit]
+        else:
+            params = {
+                "query_embedding": self._to_list(query_embedding),
+                "match_count": limit,
+            }
+            response = self._rpc("search_embeddings", params)
+            results = response.data or []
         return results
 
     def count(self, filter_type: str | None = None) -> int:
-        response = self._rpc("count_embeddings", {"filter_type": filter_type})
-        if not response.data:
-            return 0
-        c = int(response.data)
-        log("VECTOR", f"count type={filter_type} -> {c}")
+        if filter_type is not None:
+            response = self.connect().table("embeddings").select("id", count="exact").eq("type", filter_type).execute()
+            c = response.count or 0
+        else:
+            response = self._rpc("count_embeddings", {"filter_type": None})
+            c = int(response.data) if response.data else 0
         return c
 
     def delete_all(self):
         self.connect().table("embeddings").delete().neq("id", "").execute()
-        log("VECTOR", "Deleted all embeddings")
 
     def close(self):
         self._supabase = None
