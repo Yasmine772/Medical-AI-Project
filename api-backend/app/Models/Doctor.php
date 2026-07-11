@@ -3,9 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class Doctor extends Model
+class Doctor extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
+    /**
+     * The attributes excluded from the audit.
+     */
+    protected $auditExclude = ['updated_at'];
+
     protected $fillable = [
         'full_name',
         'specialization',
