@@ -14,8 +14,8 @@ async def search_symptoms(q: str = Query(default="", description="Search query")
     if not q:
         return {"results": []}
 
-    query_vector = embedder.encode(q.strip())
-    results = store.search(query_vector, limit=10)
+    query_vector = embedder.encode_query(q.strip())
+    results = store.search(query_vector, limit=10, filter_type="disease")
 
     formatted = []
     for r in results:

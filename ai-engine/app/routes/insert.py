@@ -35,7 +35,7 @@ def _insert_disease(disease: DiseaseItem):
         "symptoms_en": ", ".join(disease.symptoms),
         "symptoms_ar": ", ".join(disease.symptoms_ar),
     }
-    store.insert_disease(disease_id, document, embedding, metadata)
+    store.insert(disease_id, document, embedding, "disease", metadata)
 
 
 @router.post("/insert/json-file")
@@ -73,8 +73,8 @@ async def insert_pdf(file: UploadFile = File(...)):
     doc = fitz.open(stream=content, filetype="pdf")
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=80,
+        chunk_size=250,
+        chunk_overlap=50,
         separators=["\n\n", "\n", "، ", ". ", "؟ ", "! ", " "],
     )
 
@@ -100,7 +100,7 @@ async def insert_pdf(file: UploadFile = File(...)):
                 "chunk_size": len(chunk_text),
                 "language": None,
             }
-            store.insert_pdf_chunk(chunk_id, chunk_text, embedding, metadata)
+            store.insert(chunk_id, chunk_text, embedding, "pdf", metadata)
             added += 1
 
     page_count = len(doc)
