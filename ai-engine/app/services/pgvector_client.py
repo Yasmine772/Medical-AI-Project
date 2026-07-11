@@ -57,13 +57,14 @@ class PgVectorClient:
                                       type, metadata)
         self.connect().table("embeddings").insert(payload).execute()
 
-    def insert_batch(self, rows: list):
+    def insert_batch(self, rows: list, batch_size: int = 500):
         """rows: list of (record_id, document, embedding_list, type, metadata)"""
         payloads = [
             self._build_payload(rid, doc, emb, typ, meta)
             for rid, doc, emb, typ, meta in rows
         ]
-        self.connect().table("embeddings").insert(payloads).execute()
+        for i in range(0, len(payloads), batch_size):
+            self.connect().table("embeddings").upsert(payloads[i:i + batch_size], on_conflict='id').execute()
 
     def search(
         self,

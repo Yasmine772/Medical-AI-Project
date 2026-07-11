@@ -23,22 +23,11 @@ class EmbeddingService:
     """
 
     def __init__(self, model_name: str = "intfloat/multilingual-e5-small"):
-        """
-        Initializes the embedding service.
-
-        Args:
-            model_name (str): The name of the model. Default is "all-MiniLM-L6-v2",
-                              which is a lightweight, fast, and multilingual model.
-        """
         print(f"Loading model: {model_name}...")
         self.model_name = model_name
         self.model = SentenceTransformer(model_name)
-        
-        # Retrieve the embedding dimension
-        # all-MiniLM-L6-v2 outputs 384-dimensional vectors
-        self.embedding_dim = self.model.get_sentence_embedding_dimension()
-        print(f"Model loaded successfully!")
-        print(f"Embedding Dimension: {self.embedding_dim}")
+        self.embedding_dim = self.model.get_embedding_dimension()
+        print(f"Model loaded! dim={self.embedding_dim}")
 
     def encode(self, text: str) -> np.ndarray:
         if not isinstance(text, str):
