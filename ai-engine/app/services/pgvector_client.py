@@ -6,6 +6,8 @@ from supabase import Client, create_client
 from dotenv import load_dotenv
 load_dotenv()
 
+from app.services.logger import log
+
 
 class PgVectorClient:
 
@@ -70,17 +72,22 @@ class PgVectorClient:
                 "match_count": limit,
             },
         )
-        return response.data or []
+        results = response.data or []
+        log("VECTOR", f"search_diseases limit={limit} -> {len(results)} results")
+        return results
 
     def count(self) -> int:
         response = self._rpc("count_disease_embeddings")
         if not response.data:
             return 0
-        return int(response.data)
+        c = int(response.data)
+        log("VECTOR", f"count_disease_embeddings -> {c}")
+        return c
 
     def delete_all(self):
         client = self.connect()
         client.table("disease_embeddings").delete().neq("id", "").execute()
+        log("VECTOR", f"Deleted all disease embeddings")
         return None
 
     def close(self):
@@ -108,6 +115,7 @@ class PgVectorClient:
             "language": metadata.get("language"),
         }
         self._rpc("insert_pdf_chunk", payload)
+        log("VECTOR", f"Inserted pdf chunk {metadata.get('source')} p.{metadata.get('page')}")
 
     def search_pdf(
         self,
@@ -123,10 +131,14 @@ class PgVectorClient:
                 "match_count": limit,
             },
         )
-        return response.data or []
+        results = response.data or []
+        log("VECTOR", f"search_pdf_chunks limit={limit} -> {len(results)} results")
+        return results
 
     def count_pdf(self) -> int:
         response = self._rpc("count_pdf_chunks")
         if not response.data:
             return 0
-        return int(response.data)
+        c = int(response.data)
+        log("VECTOR", f"count_pdf_chunks -> {c}")
+        return c
