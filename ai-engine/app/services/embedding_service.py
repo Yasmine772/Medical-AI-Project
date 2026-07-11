@@ -10,6 +10,8 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 from typing import List
 
+from app.services.logger import log
+
 class EmbeddingService:
     """
     A service for converting text to embeddings.
@@ -61,6 +63,7 @@ class EmbeddingService:
             
         text_with_prefix = f"passage: {text}"
         embedding = self.model.encode(text_with_prefix, convert_to_numpy=True)
+        log("EMBED", f"'{text[:50]}' -> {len(embedding)}d")
         return embedding
 
     def encode_batch(self, texts: List[str], batch_size: int = 32) -> List[np.ndarray]:
