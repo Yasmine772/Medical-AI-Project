@@ -6,18 +6,13 @@ from supabase import Client, create_client
 from dotenv import load_dotenv
 load_dotenv()
 
-
 class PgVectorClient:
 
     def __init__(self):
         self.supabase_url = os.environ.get("SUPABASE_URL")
         self.supabase_key = os.environ.get("SUPABASE_KEY")
-
         if not (self.supabase_url and self.supabase_key):
-            raise ValueError(
-                "Set SUPABASE_URL and SUPABASE_KEY in the environment."
-            )
-
+            raise ValueError("Set SUPABASE_URL and SUPABASE_KEY in .env")
         self._supabase: Optional[Client] = None
 
     def connect(self):
@@ -25,108 +20,82 @@ class PgVectorClient:
             self._supabase = create_client(self.supabase_url, self.supabase_key)
         return self._supabase
 
-    def _rpc(self, function_name: str, params: Dict[str, Any] | None = None):
-        client = self.connect()
-        return client.rpc(function_name, params or {}).execute()
+    def _to_list(self, embedding: np.ndarray) -> list:
+        return embedding.tolist() if hasattr(embedding, "tolist") else embedding
 
-    def ping(self) -> Any:
-        response = self._rpc("ping_pgvector")
-        return response.data
-
-    def insert_disease(
-        self,
-        disease_id: str,
-        document: str,
-        embedding: np.ndarray,
-        metadata: dict,
-    ):
+    def _build_payload(self, record_id: str, document: str, embedding: list,
+                       type: str, metadata: dict) -> dict:
         payload = {
-            "disease_id": disease_id,
-            "doc": document,
-            "query_embedding": embedding.tolist() if hasattr(embedding, "tolist") else embedding,
-            "name_en": metadata.get("name_en"),
-            "name_ar": metadata.get("name_ar"),
-            "severity": metadata.get("severity"),
-            "severity_ar": metadata.get("severity_ar"),
-            "specialist": metadata.get("specialist"),
-            "specialist_ar": metadata.get("specialist_ar"),
-            "symptoms_en": metadata.get("symptoms_en"),
-            "symptoms_ar": metadata.get("symptoms_ar"),
+            "id": record_id,
+            "document": document,
+            "embedding": embedding,
+            "type": type,
         }
-        self._rpc("insert_disease_embedding", payload)
-        return None
+        if type == "disease":
+            payload.update({
+                "name_en": metadata.get("name_en"),
+                "name_ar": metadata.get("name_ar"),
+                "severity": metadata.get("severity"),
+                "severity_ar": metadata.get("severity_ar"),
+                "specialist": metadata.get("specialist"),
+                "specialist_ar": metadata.get("specialist_ar"),
+                "symptoms_en": metadata.get("symptoms_en"),
+                "symptoms_ar": metadata.get("symptoms_ar"),
+            })
+        elif type == "pdf":
+            payload.update({
+                "source": metadata.get("source"),
+                "page": metadata.get("page"),
+                "chunk_index": metadata.get("chunk_index"),
+                "language": metadata.get("language"),
+            })
+        return payload
+
+    def insert(self, record_id: str, document: str, embedding: np.ndarray,
+               type: str, metadata: dict):
+        payload = self._build_payload(record_id, document, self._to_list(embedding),
+                                      type, metadata)
+        self.connect().table("embeddings").insert(payload).execute()
+
+    def insert_batch(self, rows: list, batch_size: int = 500):
+        """rows: list of (record_id, document, embedding_list, type, metadata)"""
+        payloads = [
+            self._build_payload(rid, doc, emb, typ, meta)
+            for rid, doc, emb, typ, meta in rows
+        ]
+        for i in range(0, len(payloads), batch_size):
+            self.connect().table("embeddings").upsert(payloads[i:i + batch_size], on_conflict='id').execute()
 
     def search(
         self,
         query_embedding: np.ndarray,
         limit: int = 5,
+        filter_type: str | None = None,
     ) -> List[dict]:
-        response = self._rpc(
-            "search_diseases",
-            {
-                "query_embedding": query_embedding.tolist()
-                if hasattr(query_embedding, "tolist")
-                else query_embedding,
-                "match_count": limit,
-            },
-        )
+        params = {
+            "query_embedding": self._to_list(query_embedding),
+            "match_count": limit,
+            "filter_type": filter_type,
+        }
+        response = self._rpc("search_embeddings", params)
         return response.data or []
 
-    def count(self) -> int:
-        response = self._rpc("count_disease_embeddings")
-        if not response.data:
-            return 0
-        return int(response.data)
+    def count(self, filter_type: str | None = None) -> int:
+        if filter_type is not None:
+            response = self.connect().table("embeddings").select("id", count="exact").eq("type", filter_type).execute()
+            c = response.count or 0
+        else:
+            response = self._rpc("count_embeddings", {"filter_type": None})
+            c = int(response.data) if response.data else 0
+        return c
 
     def delete_all(self):
-        client = self.connect()
-        client.table("disease_embeddings").delete().neq("id", "").execute()
-        return None
+        self.connect().table("embeddings").delete().neq("id", "").execute()
 
     def close(self):
         self._supabase = None
-        return None
 
-    # ── PDF chunks ─────────────────────────────────────────
+    # ── internal ──
 
-    def insert_pdf_chunk(
-        self,
-        chunk_id: str,
-        document: str,
-        embedding: np.ndarray,
-        metadata: dict,
-    ):
-        payload = {
-            "chunk_id": chunk_id,
-            "doc": document,
-            "query_embedding": embedding.tolist()
-            if hasattr(embedding, "tolist")
-            else embedding,
-            "source": metadata.get("source"),
-            "page": metadata.get("page"),
-            "chunk_index": metadata.get("chunk_index"),
-            "language": metadata.get("language"),
-        }
-        self._rpc("insert_pdf_chunk", payload)
-
-    def search_pdf(
-        self,
-        query_embedding: np.ndarray,
-        limit: int = 3,
-    ) -> List[dict]:
-        response = self._rpc(
-            "search_pdf_chunks",
-            {
-                "query_embedding": query_embedding.tolist()
-                if hasattr(query_embedding, "tolist")
-                else query_embedding,
-                "match_count": limit,
-            },
-        )
-        return response.data or []
-
-    def count_pdf(self) -> int:
-        response = self._rpc("count_pdf_chunks")
-        if not response.data:
-            return 0
-        return int(response.data)
+    def _rpc(self, function_name: str, params: Dict[str, Any] | None = None):
+        return self.connect().rpc(function_name, params or {}).execute()

@@ -4,7 +4,8 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\settingController;
 use App\Http\Controllers\Web\DoctorManagement\DoctorController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\web\UserManagement\UserController;
+use App\Http\Controllers\web\Admin\UserManagement\UserController;
+use  App\Http\Controllers\web\Admin\AuditLogs\AuditContoller;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -34,21 +35,9 @@ Route::prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:view-users');
         Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->middleware('permission:toggle-user');
 
-        // Doctor Requests Management
-        Route::get('/doctor-requests', [DoctorController::class, 'index']);
-        //->middleware('permission:show-doctor-requests');
-        Route::get('/doctor-requests/{id}', [DoctorController::class, 'show']);
-        //->middleware('permission:show-doctor-request-details');
-        Route::patch('/doctor-requests/approve/{id}', [DoctorController::class, 'approve']);
-        //->middleware('permission:approve-doctor-request');
-        Route::patch('/doctor-requests/reject/{id}', [DoctorController::class, 'reject']);
-        //->middleware('permission:reject-doctor-request');
-    }); 
+        //Audit Logs
+        Route::get('/audit-logs', [AuditContoller::class, 'showLogs']);
 });
 
-
-
-Route::prefix('doctor')->group(function () {
-    Route::post('/sendJoinRequest', [DoctorController::class, 'sendJoinRequest']);
 
 });

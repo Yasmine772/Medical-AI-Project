@@ -10,10 +10,17 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Carbon\Carbon;
 use Spatie\Permission\Traits\HasRoles;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements Auditable
 {
     use HasFactory, Notifiable , HasApiTokens, CanResetPassword , HasRoles;
+    use \OwenIt\Auditing\Auditable;
+
+    /**
+     * The attributes excluded from the audit.
+     */
+    protected $auditExclude = ['password', 'remember_token'];
     
     protected $fillable = [
         'full_name',
@@ -79,13 +86,4 @@ class User extends Authenticatable
         return $this->hasMany(DiagnosisSession::class);
     }
 
-    public function auditLogs()
-    {
-        return $this->hasMany(AuditLog::class);
-    }
-
-    public function doctor()
-    {
-        return $this->hasOne(Doctor::class);
-    }
 }
