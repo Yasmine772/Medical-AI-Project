@@ -126,8 +126,8 @@ def generate_report_html(session_id: str) -> str:
     html = template.render(
         generation_date=datetime.now().strftime("%Y-%m-%d %H:%M"),
         patient_name=data.get("user_id", "—"),
-        started_at=_format_timestamp(None),
-        completed_at=_format_timestamp(None),
+        started_at=_format_timestamp(data.get("created_at")),
+        completed_at=_format_timestamp(data.get("updated_at")),
         initial_symptoms=data.get("initial_symptoms", "—"),
         session_status=data.get("status", "COMPLETED"),
         top_diagnoses=diagnoses,
@@ -139,13 +139,13 @@ def generate_report_html(session_id: str) -> str:
 
 def generate_pdf(session_id: str) -> bytes:
     html = generate_report_html(session_id)
-    try:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=html).write_pdf()
-    except ImportError:
-        raise RuntimeError(
-            "weasyprint is not installed. Install it with: pip install weasyprint"
-        )
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.set_content(html, wait_until="networkidle")
+        pdf_bytes = page.pdf(format="A4", print_background=True)
+        browser.close()
     return pdf_bytes
 
 

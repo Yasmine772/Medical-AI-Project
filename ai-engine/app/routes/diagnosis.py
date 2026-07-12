@@ -19,11 +19,21 @@ async def search_symptoms(q: str = Query(default="", description="Search query")
 
     formatted = []
     for r in results:
+        rtype = r.get("type", "")
+        if rtype == "disease":
+            label_en = r.get("name_en") or ""
+            label_ar = r.get("name_ar") or ""
+            snippet = r.get("symptoms_en") or ""
+        else:
+            label_en = (r.get("document") or "")[:120]
+            label_ar = (r.get("document") or "")[:120]
+            snippet = r.get("document") or ""
         formatted.append({
-            "key": r.get("name_en") or r.get("id", ""),
-            "en": r.get("name_en") or "",
-            "ar": r.get("name_ar") or "",
-            "symptoms_en": r.get("symptoms_en") or "",
+            "key": r.get("id", ""),
+            "type": rtype,
+            "en": label_en,
+            "ar": label_ar,
+            "symptoms_en": snippet,
             "symptoms_ar": r.get("symptoms_ar") or "",
             "specialist": r.get("specialist") or "",
         })
