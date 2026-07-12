@@ -11,6 +11,14 @@ use Illuminate\Support\Facades\Storage;
 
 class AuthService
 {
+    // protected OTPService $otpService;
+
+    // public function __construct(OTPService $otpService)
+    // {
+    //     $this->otpService = $otpService;
+    // }
+
+    // -------------------------------------------------------------------------------------------
     public function register(array $data)
     {
         $user = User::create([
@@ -41,8 +49,18 @@ class AuthService
         $accessTokenExpiresAt = Carbon::now()->addDays(1);
 
         $accessToken = $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken;
-        
-        return [
+
+        // if ($user->hasRole('admin') && $user->otp_verified_at === null) {
+        //     $this->otpService->sendOTP($user);
+
+        //     return [
+        //         'user' => $user,
+        //         'access_token' =>  $accessToken,
+        //         'access_token_expires_at' => '1 day',
+        //         'token_type' => 'Bearer',] 
+        // }
+
+            return [
             'user' => $user,
             'access_token' =>  $accessToken,
             'access_token_expires_at' => '1 day',

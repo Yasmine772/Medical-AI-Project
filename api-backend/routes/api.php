@@ -25,7 +25,7 @@ Route::prefix('v1/auth')->group(function () {
 
     Route::middleware(['auth:sanctum'])->group(function () {
 
-        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:logout');
+        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:user-logout');
         // Profile routes
         Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
         Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');

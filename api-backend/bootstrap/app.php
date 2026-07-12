@@ -22,15 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Illuminate\Session\Middleware\StartSession::class,
         ]);
-<<<<<<< HEAD
 
-        $middleware->validateCsrfTokens(except : ['admin/*']);
+        $middleware->validateCsrfTokens(except : ['admin/*' , 'doctor/*']);
         
-=======
-        $middleware->validateCsrfTokens(except: [
-            'admin/*', 
-        ]);
->>>>>>> UserManagement
     })
     ->withExceptions(function (Exceptions $exceptions): void {
     $exceptions->render(function (AuthenticationException $e, $request) {
