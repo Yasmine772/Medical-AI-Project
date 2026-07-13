@@ -15,12 +15,26 @@ class Doctor extends Model implements Auditable
 
     protected $fillable = [
         'full_name',
+        'email',
+        'password',
+        'phone',
         'specialization',
         'years_of_experience',
-        'photo_path',
         'clinic_phone',
-        'is_active'
+        'clinic_address',
+        'license_number',
+        'biography',
+        'photo',
+        'cv_file',
+        'license_file',
+        'is_active',
+        'user_id'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function diseases()
     {

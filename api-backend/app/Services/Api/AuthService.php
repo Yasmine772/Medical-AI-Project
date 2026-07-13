@@ -11,6 +11,14 @@ use Illuminate\Support\Facades\Storage;
 
 class AuthService
 {
+    // protected OTPService $otpService;
+
+    // public function __construct(OTPService $otpService)
+    // {
+    //     $this->otpService = $otpService;
+    // }
+
+    // -------------------------------------------------------------------------------------------
     public function register(array $data)
     {
         $user = User::create([
@@ -41,8 +49,18 @@ class AuthService
         $accessTokenExpiresAt = Carbon::now()->addDays(1);
 
         $accessToken = $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken;
-        
-        return [
+
+        // if ($user->hasRole('admin') && $user->otp_verified_at === null) {
+        //     $this->otpService->sendOTP($user);
+
+        //     return [
+        //         'user' => $user,
+        //         'access_token' =>  $accessToken,
+        //         'access_token_expires_at' => '1 day',
+        //         'token_type' => 'Bearer',] 
+        // }
+
+            return [
             'user' => $user,
             'access_token' =>  $accessToken,
             'access_token_expires_at' => '1 day',
@@ -65,20 +83,22 @@ class AuthService
      *
      * @return User
      */
-    public function updateProfile(User $user, array $data, $avatarFile = null)
+    public function updateProfile(User $user, array $data, $avatarFile = null, bool $isMedicalOnly = false)
     {
         // dd($avatarFile);
-        if ($avatarFile instanceof UploadedFile) {
+        if (!$isMedicalOnly && $avatarFile instanceof UploadedFile) {
             if ($user->avatar) {
                 Storage::disk('public')->delete($user->avatar);
             }
             $user->avatar = $avatarFile->store('avatars', 'public');
         }
 
-        $user->update([
-            'full_name' => $data['full_name'] ?? $user->full_name,
-            'avatar' => $user->avatar ?? $user->avatar,
-        ]);
+        if (!$isMedicalOnly) {
+            $user->update([
+                'full_name' => $data['full_name'] ?? $user->full_name,
+                'avatar' => $user->avatar ?? $user->avatar,
+            ]);
+        }
         $medicalData = array_intersect_key($data, array_flip([
             'birth_date',
             'gender',

@@ -86,5 +86,4 @@ class User extends Authenticatable implements Auditable
         return $this->hasMany(DiagnosisSession::class);
     }
 
-
 }

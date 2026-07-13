@@ -8,6 +8,7 @@ import {
   LogOut,
 } from "lucide-react";
 
+
 const Sidebar = ({ onLogoutClick }) => {
   const location = useLocation();
 
@@ -20,11 +21,13 @@ const Sidebar = ({ onLogoutClick }) => {
     { icon: LogOut, path: "logout" },
   ];
 
-  
+  // داخل Sidebar.jsx
   return (
     <div className="w-20 bg-[#72A6BB]/60 backdrop-blur-xl border border-white/20 min-h-[90vh] flex flex-col items-center py-6 rounded-[32px]">
+      {/* نضع الأيقونات الأساسية في الأعلى */}
       <div className="flex flex-col gap-6 w-full items-center">
         {menuItems.slice(0, -1).map((item, index) => {
+          // كل العناصر ما عدا الأخير
           const isActive = location.pathname === item.path;
           return (
             <Link
@@ -42,6 +45,7 @@ const Sidebar = ({ onLogoutClick }) => {
         })}
       </div>
 
+      
       <div className="mt-auto">
         <button
           onClick={onLogoutClick}

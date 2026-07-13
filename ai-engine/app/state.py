@@ -1,4 +1,3 @@
-from threading import Lock
 from app.services.logger import log
 from app.services.pgvector_client import PgVectorClient
 from app.services.embedding_service import EmbeddingService
@@ -10,9 +9,6 @@ _store: PgVectorClient = None
 _embedder: EmbeddingService = None
 _session_mgr: SessionManager = None
 _llm: LLMService = None
-
-_insert_tasks: dict = {}
-_insert_tasks_lock = Lock()
 
 
 def init(store: PgVectorClient, embedder: EmbeddingService):
@@ -38,11 +34,3 @@ def get_session_manager() -> SessionManager:
 
 def get_llm() -> LLMService:
     return _llm
-
-def set_insert_progress(task_id: str, status: str, current: int = 0, total: int = 0, result: dict = None):
-    with _insert_tasks_lock:
-        _insert_tasks[task_id] = {"status": status, "current": current, "total": total, "result": result}
-
-def get_insert_progress(task_id: str) -> dict:
-    with _insert_tasks_lock:
-        return _insert_tasks.get(task_id)
