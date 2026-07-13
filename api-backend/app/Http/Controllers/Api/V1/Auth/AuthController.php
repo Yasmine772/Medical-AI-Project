@@ -42,10 +42,14 @@ class AuthController extends Controller
     {
         $result = $this->authService->login($request->validated());
 
-        return match($result){
-            'unauthorized' =>  $this->errorResponse('Email or password not correct!', null, 422),
-
-            'unVerifiedEmail' => $this->errorResponse('Email not verified!', null, 422),
+        // if ($result != 'unauthorized') {
+        //     $user = $result['user'];
+        //     if ($user->hasRole('admin')) {
+        //         $this->otpService->sendOTP($user);
+        //     }
+        // }
+        return match ($result) {
+            'unauthorized' => $this->errorResponse('Email or password not correct!', null, 422),
 
             default => $this->successResponse([
                         'user' => new UserResource($result['user']),

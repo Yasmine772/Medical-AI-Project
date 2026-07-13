@@ -1,7 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
-use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
+use App\Http\Controllers\Api\V1\Reports\ReportController;
+use App\Http\Controllers\Api\V1\settingController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -29,11 +30,19 @@ Route::prefix('v1/auth')->group(function (){
 
     Route::middleware(['auth:sanctum'])->group(function () {
 
-       Route::post('/logout', [AuthController::class, 'logout']);
-       //Profile routes
-       Route::get('/profile/',[AuthController::class,'viewProfile']);
-       Route::patch('/profile/',[AuthController::class,'updateProfile']);
+        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:user-logout');
+        // Profile routes
+        Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
+        Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
 
+        //AI routes
+        Route::post('/diagnosis/start', [AiController::class, 'startDiagnosis'])->middleware('permission:start-diagnose');
+        Route::get('/symptoms', [AiController::class, 'searchSymptoms'])->middleware('permission:search-symptom');
+        Route::get('/symptoms/questions/{sessionId}', [AiController::class, 'getSymptomQuestions'])->middleware('permission:view-symptom-questions');
+        Route::get('/follow-up/next/{sessionId}', [AiController::class, 'getNextDiagnosisQuestion'])->middleware('permission:continue-diagnose');
+        Route::post('/follow-up/answer/{sessionId}', [AiController::class, 'submitDiagnosisAnswer'])->middleware('permission:continue-diagnose');
+        Route::post('/symptoms/answers', [AiController::class, 'submitSymptomAnswers'])->middleware('permission:submit-symptom-answers');
+        Route::get('/diagnose/history', [AiController::class, 'getDiagnosisHistory'])->middleware('permission:view-diagnosis-history');
 
     });
 

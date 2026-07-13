@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Doctor extends Model
+class DoctorRequest extends Model
 {
     protected $fillable = [
         'full_name',
@@ -20,18 +20,9 @@ class Doctor extends Model
         'photo',
         'cv_file',
         'license_file',
-        'is_active',
-        'user_id'
+        'status',
+        'rejection_reason'
     ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function diseases()
-    {
-        return $this->belongsToMany(Disease::class, 'disease_specialists', 'doctor_id', 'disease_id');
-    }
+   
 
 }
