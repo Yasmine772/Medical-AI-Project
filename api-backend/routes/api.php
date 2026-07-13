@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Ai\AiController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Reports\ReportController;
+use App\Http\Controllers\Api\V1\settingController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')->group(function () {
@@ -31,9 +32,13 @@ Route::prefix('v1/auth')->group(function () {
         Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
 
         //AI routes
-        Route::get('/search', [AiController::class, 'search'])->middleware('permission:search-symptom');
-        Route::post('/diagnose/start', [AiController::class, 'start'])->middleware('permission:start-diagnose');
-        Route::post('/diagnose/continue', [AiController::class, 'continue'])->middleware('permission:continue-diagnose');
+        Route::post('/diagnosis/start', [AiController::class, 'startDiagnosis'])->middleware('permission:start-diagnose');
+        Route::get('/symptoms', [AiController::class, 'searchSymptoms'])->middleware('permission:search-symptom');
+        Route::get('/symptoms/questions/{sessionId}', [AiController::class, 'getSymptomQuestions'])->middleware('permission:view-symptom-questions');
+        Route::get('/follow-up/next/{sessionId}', [AiController::class, 'getNextDiagnosisQuestion'])->middleware('permission:continue-diagnose');
+        Route::post('/follow-up/answer/{sessionId}', [AiController::class, 'submitDiagnosisAnswer'])->middleware('permission:continue-diagnose');
+        Route::post('/symptoms/answers', [AiController::class, 'submitSymptomAnswers'])->middleware('permission:submit-symptom-answers');
+        Route::get('/diagnose/history', [AiController::class, 'getDiagnosisHistory'])->middleware('permission:view-diagnosis-history');
 
         // Report routes
         Route::post('/reports/{sessionId}/generate', [ReportController::class, 'generate'])->middleware('permission:download-report');

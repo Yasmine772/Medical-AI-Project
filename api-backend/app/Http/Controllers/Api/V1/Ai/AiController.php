@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api\V1\Ai;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\User\Ai\SymptomsRequest;
 use App\Http\Requests\User\Ai\StartDiagnoseRequest;
-use App\Http\Requests\User\Ai\ContinueDiagnoseRequest;
+use App\Http\Requests\User\Ai\SubmitDiagnosisAnswerRequest;
+use App\Http\Requests\User\Ai\SubmitSymptomAnswersRequest;
+use App\Http\Requests\User\Ai\SymptomQuestionsRequest;
+use App\Http\Requests\User\Ai\SymptomsRequest;
 use App\Services\Api\AiService;
 use App\Traits\ApiResponseTrait;
+
 
 class AiController extends Controller
 {
@@ -18,55 +21,171 @@ class AiController extends Controller
     {
         $this->aiService = $aiService;
     }
-
-    // -------------------------------------------------------------------------------------------
-
-    public function search(SymptomsRequest $request)
+//------------------------------------------------------------------------------------
+    public function startDiagnosis(StartDiagnoseRequest $request)
     {
-        $result = $this->aiService->searchSymptoms($request->query('query', ''));
+        $user = auth()->user();
 
-        return match($result) {
-            'No symptoms found' => $this->errorResponse('There are no symptoms found', null, 404),
-             null => $this->errorResponse('Search service error. Please check storage/logs/laravel.log for details', null, 503),
-            default => $this->successResponse($result, 'Success', 200),
-        };
-    }
-
-    public function start(StartDiagnoseRequest $request)
-    {
-        $userId = auth()->id() ?? 'anonymous';
-        $result = $this->aiService->startDiagnose(
-            $request->input('symptom'),
-            $request->input('past_diagnoses', ''),
-            $userId
-        );
+        $result = $this->aiService->startDiagnosis($user, $request->validated(), $request->input('assessment_for', 'myself'));
 
         if ($result === null) {
-            return $this->errorResponse('Diagnosis service error. Please check storage/logs/laravel.log for details', null, 503);
+            return $this->errorResponse(
+                'Diagnosis service error. Please check storage/logs/laravel.log for details',
+                null,
+                503
+            );
         }
 
-        if (isset($result['session_id'])) {
-            session(['ai_session_id' => $result['session_id']]);
+        if (isset($result['error'])) {
+            return $this->errorResponse('Error', $result['error'], 422);
         }
 
-        return $this->successResponse($result, 'Success', 200);
+        if (isset($result['data']['session_id'])) {
+            session(['ai_session_id' => $result['data']['session_id']]);
+        }
+
+        return $this->successResponse($result, 'Diagnosis started successfully', 200);
     }
-
-    public function continue(ContinueDiagnoseRequest $request)
+    //************************************************* */
+    public function searchSymptoms(SymptomsRequest $request)
     {
-        $result = $this->aiService->continueDiagnose(
-            session('ai_session_id'),
+        $result = $this->aiService->searchSymptoms($request->query('q', ''));
+
+        if ($result === null) {
+            return $this->errorResponse(
+                'Search service error. Please check storage/logs/laravel.log for details',
+                null,
+                503
+            );
+        }
+
+        if (isset($result['results']) && empty($result['results'])) {
+            return $this->errorResponse('No symptoms found', null, 404);
+        }
+
+        return $this->successResponse($result, 'Symptoms retrieved successfully', 200);
+    }
+//************************************************** */
+    public function getSymptomQuestions(SymptomQuestionsRequest $request , $sessionId = null)
+    {
+        $result = $this->aiService->getSymptomQuestions($request->validated(), $sessionId);
+
+        if ($result === null) {
+            return $this->errorResponse(
+                'Failed to get symptom questions. Please try again.',
+                null,
+                503
+            );
+        }
+
+        if (isset($result['status']) && $result['status'] === 'error') {
+            return $this->errorResponse(
+                $result['detail'] ?? 'Failed to get symptom questions',
+                null,
+                400
+            );
+        }
+        return $this->successResponse($result, 'Questions retrieved successfully', 200);
+    }
+//************************************************** */
+    public function submitSymptomAnswers(SubmitSymptomAnswersRequest $request, $sessionId = null)
+    {
+        $result = $this->aiService->submitSymptomAnswers($request->validated(),$sessionId);
+
+        if ($result === null) {
+            return $this->errorResponse(
+                'Failed to submit symptom answers. Please try again.',
+                null,
+                503
+            );
+        }
+
+        if (isset($result['status']) && $result['status'] === 'error') {
+            return $this->errorResponse(
+                $result['detail'] ?? 'Failed to submit symptom answers',
+                null,
+                400
+            );
+        }
+        return $this->successResponse($result, 'Answers submitted successfully', 200);
+    }
+//************************************************** */
+    public function getNextDiagnosisQuestion($sessionId)
+    {
+        $result = $this->aiService->getNextDiagnosisQuestion($sessionId);
+
+        if ($result === null) {
+            return $this->errorResponse(
+                'Failed to get next question. Please try again.',
+                null,
+                503
+            );
+        }
+
+        if (isset($result['status']) && $result['status'] === 'error') {
+            return $this->errorResponse(
+                $result['detail'] ?? 'Failed to get next question',
+                null,
+                400
+            );
+        }
+
+        return $this->successResponse($result, 'Next question retrieved successfully', 200);
+    }
+    //**************************************** */
+    public function submitDiagnosisAnswer(SubmitDiagnosisAnswerRequest $request)
+    {
+        $sessionId = $request->input('session_id') ?? session('ai_session_id');
+        $questionId = $request->input('question_id');
+        $answer = $request->input('answer');
+
+        if (!$sessionId) {
+            return $this->errorResponse('Session ID is required. Please start diagnosis first.', null, 400);
+        }
+
+        $result = $this->aiService->submitDiagnosisAnswer(
+            $sessionId,
+            $request->input('question_id'),
             $request->input('answer')
         );
 
         if ($result === null) {
-            return $this->errorResponse('Diagnosis service error. Please check storage/logs/laravel.log for details', null, 503);
+            return $this->errorResponse(
+                'Failed to submit answer. Please try again.',
+                null,
+                503
+            );
         }
 
-        if (($result['type'] ?? '') === 'diagnosis') {
+        if (isset($result['status']) && $result['status'] === 'error') {
+            return $this->errorResponse(
+                $result['detail'] ?? 'Failed to submit answer',
+                null,
+                400
+            );
+        }
+
+        if (isset($result['data']['type']) && $result['data']['type'] === 'diagnosis') {
             session()->forget('ai_session_id');
         }
 
-        return $this->successResponse($result, 'Success', 200);
+        return $this->successResponse($result, 'Answer submitted successfully', 200);
+    }
+//*************************************************************** */
+    public function getDiagnosisHistory()
+    {
+        $userId = auth()->user->id;
+
+        $result = $this->aiService->getDiagnosisHistory($userId);
+
+        if ($result === null) {
+            return $this->errorResponse(
+                'Failed to get diagnosis history. Please try again.',
+                null,
+                503
+            );
+        }
+
+        return $this->successResponse($result, 'Diagnosis history retrieved successfully', 200);
     }
 }

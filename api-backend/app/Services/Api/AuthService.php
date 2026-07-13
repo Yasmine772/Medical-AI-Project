@@ -83,20 +83,22 @@ class AuthService
      *
      * @return User
      */
-    public function updateProfile(User $user, array $data, $avatarFile = null)
+    public function updateProfile(User $user, array $data, $avatarFile = null, bool $isMedicalOnly = false)
     {
         // dd($avatarFile);
-        if ($avatarFile instanceof UploadedFile) {
+        if (!$isMedicalOnly && $avatarFile instanceof UploadedFile) {
             if ($user->avatar) {
                 Storage::disk('public')->delete($user->avatar);
             }
             $user->avatar = $avatarFile->store('avatars', 'public');
         }
 
-        $user->update([
-            'full_name' => $data['full_name'] ?? $user->full_name,
-            'avatar' => $user->avatar ?? $user->avatar,
-        ]);
+        if (!$isMedicalOnly) {
+            $user->update([
+                'full_name' => $data['full_name'] ?? $user->full_name,
+                'avatar' => $user->avatar ?? $user->avatar,
+            ]);
+        }
         $medicalData = array_intersect_key($data, array_flip([
             'birth_date',
             'gender',

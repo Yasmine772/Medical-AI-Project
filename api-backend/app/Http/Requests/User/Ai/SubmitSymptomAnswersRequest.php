@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class searchRequest extends FormRequest
+class SubmitSymptomAnswersRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,11 +25,20 @@ class searchRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'q' => 'nullable|string|max:255',
-            'limit' => 'nullable|integer|min:1|max:100',
+            'symptom_name'          => 'required|string|max:255',
+            'answers'               => 'required|array|min:1',
+            'answers.*.question_id' => 'required|string',
+            'answers.*.answer'      => 'required|string',
+            'symptoms_complete'     => 'nullable|boolean',
         ];
     }
 
+    protected function prepareForValidation()
+    {
+        if ($this->isJson()) {
+            $this->merge($this->json()->all());
+        }
+    }
 
     protected function failedValidation(Validator $validator)
     {
