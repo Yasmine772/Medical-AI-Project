@@ -18,11 +18,10 @@ Route::prefix('v1/auth')->group(function () {
     Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
     Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
 
-    //setting 
+    // setting
     Route::get('/latestUpdatesUrl', [settingController::class, 'latestUpdatesUrl']);
     Route::get('/termsOfUse', [settingController::class, 'termsOfUseUrl']);
     Route::get('/privacyPolicy', [settingController::class, 'privacyPolicyUrl']);
-
 
     Route::middleware(['auth:sanctum'])->group(function () {
 
@@ -31,7 +30,7 @@ Route::prefix('v1/auth')->group(function () {
         Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
         Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
 
-        //AI routes
+        // AI routes
         Route::post('/diagnosis/start', [AiController::class, 'startDiagnosis'])->middleware('permission:start-diagnose');
         Route::get('/symptoms', [AiController::class, 'searchSymptoms'])->middleware('permission:search-symptom');
         Route::get('/symptoms/questions/{sessionId}', [AiController::class, 'getSymptomQuestions'])->middleware('permission:view-symptom-questions');
@@ -48,6 +47,5 @@ Route::prefix('v1/auth')->group(function () {
         // Check if the user is authenticated
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
-       
     });
 });
