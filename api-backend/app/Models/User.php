@@ -2,25 +2,19 @@
 
 namespace App\Models;
 
-use App\Notifications\ResetPasswordOTPNotification;
+use App\Notifications\VerifyEmailCustom;
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Carbon\Carbon;
-use Spatie\Permission\Traits\HasRoles;
-use OwenIt\Auditing\Contracts\Auditable;
-
-class User extends Authenticatable implements Auditable
+class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable , HasApiTokens, CanResetPassword , HasRoles;
-    use \OwenIt\Auditing\Auditable;
-
-    /**
-     * The attributes excluded from the audit.
-     */
-    protected $auditExclude = ['password', 'remember_token'];
+    use HasFactory, Notifiable , HasApiTokens, CanResetPassword;
     
     protected $fillable = [
         'full_name',
@@ -29,10 +23,8 @@ class User extends Authenticatable implements Auditable
         'role',
         'status',
         'diagnose_num',
+        'google_id',
         'avatar',
-        'otp',
-        'otp_verified_at' ,
-        'expires_at',
         'created_at',
     ];
 
@@ -46,16 +38,18 @@ class User extends Authenticatable implements Auditable
     {
         return [
             'email_verified_at' => 'datetime',
-            'otp_verified_at' => 'datetime',
             'password' => 'hashed',
-            'expires_at' => 'datetime',
         ];
     }
 
+    public function sendEmailVerificationNotification()
+    {
+        $this->notify(new VerifyEmailCustom);
+    }
 
     public function sendPasswordResetNotification($token): void
     {
-       $this->notify(new ResetPasswordOTPNotification($token));
+       $this->notify(new ResetPasswordNotification($token));
     }
 
     public function profile()
@@ -86,5 +80,8 @@ class User extends Authenticatable implements Auditable
         return $this->hasMany(DiagnosisSession::class);
     }
 
-
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class);
+    }
 }

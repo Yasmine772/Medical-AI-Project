@@ -11,9 +11,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.28",
         "laravel/telescope": "^5.20",
-        "laravel/tinker": "^2.10.1",
-        "owen-it/laravel-auditing": "^14.0",
-        "spatie/laravel-permission": "^6.25"
+        "laravel/tinker": "^2.10.1"
     },
     "require-dev": {
         "dedoc/scramble": "^0.13.28",

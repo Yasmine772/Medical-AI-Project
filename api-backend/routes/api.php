@@ -1,48 +1,41 @@
 <?php
 
-use App\Http\Controllers\Api\V1\Ai\AiController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
-use App\Http\Controllers\Api\V1\Reports\ReportController;
+use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1/auth')->group(function () {
+
+
+
+
+Route::prefix('v1/auth')->group(function (){
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/refresh', [AuthController::class, 'refreshToken']);
 
-    // Forget and Reset Password
+    //email verification:
+    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verify'])->name('verification.verify')
+                                                                              ->middleware(['signed']);
+    Route::post('/email/resend', [AuthController::class, 'resend']);
+
+    // Google OAuth
+    Route::get('/auth/google/redirect',  [GoogleAuthController::class, 'redirectToGoogle']);
+    Route::get('/auth/google/callback',  [GoogleAuthController::class, 'handleGoogleCallback']);
+
+    //Forget and Reset Password
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-
-    // OTP
-    Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
-    Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
-
-    //setting 
-    Route::get('/latestUpdatesUrl', [settingController::class, 'latestUpdatesUrl']);
-    Route::get('/termsOfUse', [settingController::class, 'termsOfUseUrl']);
-    Route::get('/privacyPolicy', [settingController::class, 'privacyPolicyUrl']);
+    Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
 
 
     Route::middleware(['auth:sanctum'])->group(function () {
 
-        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:logout');
-        // Profile routes
-        Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
-        Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
+       Route::post('/logout', [AuthController::class, 'logout']);
+       //Profile routes
+       Route::get('/profile/',[AuthController::class,'viewProfile']);
+       Route::patch('/profile/',[AuthController::class,'updateProfile']);
 
-        //AI routes
-        Route::get('/search', [AiController::class, 'search'])->middleware('permission:search-symptom');
-        Route::post('/diagnose/start', [AiController::class, 'start'])->middleware('permission:start-diagnose');
-        Route::post('/diagnose/continue', [AiController::class, 'continue'])->middleware('permission:continue-diagnose');
 
-        // Report routes
-        Route::post('/reports/{sessionId}/generate', [ReportController::class, 'generate'])->middleware('permission:download-report');
-        Route::get('/reports/{sessionId}/download', [ReportController::class, 'download'])->middleware('permission:download-report');
-        Route::get('/reports/{sessionId}/preview', [ReportController::class, 'preview'])->middleware('permission:download-report');
-
-        // Check if the user is authenticated
-        Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
-
-       
     });
+
+ 
 });
