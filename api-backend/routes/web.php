@@ -2,13 +2,15 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\settingController;
-use App\Http\Controllers\Web\DoctorManagement\DoctorController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\web\Admin\UserManagement\UserController;
+use  App\Http\Controllers\web\Admin\AuditLogs\AuditContoller;
 Route::get('/', function () {
     return view('welcome');
 });
 
+//setting
+Route::get('/legal/terms-of-use', [settingController::class, 'termsOfUse']);
 Route::get('/legal/privacy-policy', [settingController::class, 'privacyPolicy']);
 Route::get('/app/updates/latest', [settingController::class, 'latestUpdates']);
 
@@ -23,18 +25,16 @@ Route::prefix('admin')->group(function () {
 
     Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
-        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:admin-logout');
+        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:logout');
         // Profile routes
         // Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
         // Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
 
        // User Management 
-        Route::get('/users', [UserController::class, 'index'])->middleware('permission:view-users');
-        Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->middleware('permission:toggle-user');
+       Route::get('/users', [UserController::class, 'index']);
+       Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
 
-        //Audit Logs
+       //Audit Logs
         Route::get('/audit-logs', [AuditContoller::class, 'showLogs']);
-});
-
-
+    });
 });

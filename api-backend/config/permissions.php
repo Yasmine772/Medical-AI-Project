@@ -11,13 +11,7 @@ return [
         'edit-profile',  'view-profile', 'search-symptom',
         'start-diagnose', 'continue-diagnose','download-report',
         'contact-doctor', 'choose-option', 'cancel-diagnose-session', 'recieve-notifications',
-        'make-notification-as-read','view-medical-history',
-        'user-logout',
-        'admin-logout',
-        'show-doctor-requests',
-        'show-doctor-request-details',
-        'approve-doctor-request',
-        'reject-doctor-request'
+        'make-notification-as-read','view-medical-history', 'logout'
     ],
 
     'roles' => [
@@ -28,11 +22,7 @@ return [
             'add-advices', 'edit-advices', 'delete-advices', 'view-doctors',  'accept-doctors',
             'reject-doctors', 'edit-doctors', 'active-doctors',  'non-active-doctors',
             'delete-doctors', 'view-users', 'edit-users','ban-users', 'unban-users',
-            'send-notifications', 'view-notifications',  'admin-logout',
-            'show-doctor-requests' ,
-            'show-doctor-request-details',
-            'approve-doctor-request',
-            'reject-doctor-request'
+            'send-notifications', 'view-notifications',  'logout'
         ],
 
         'patient' => [
@@ -40,12 +30,11 @@ return [
             'start-diagnose', 'continue-diagnose', 'download-report', 'contact-doctor',
             'choose-option', 'cancel-diagnose-session',
             'recieve-notifications', 'view-notifications',
-            'make-notification-as-read', 'view-medical-history',
-            'user-logout'
+            'make-notification-as-read', 'view-medical-history', 'logout'
         ],
 
         'doctor' => [
-            'contact-user', 'review-report'
+            'contact-user', 'review-report', 'logout'
         ],
     ],
 ];

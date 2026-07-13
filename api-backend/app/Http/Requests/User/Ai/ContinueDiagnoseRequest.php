@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class StartDiagnoseRequest extends FormRequest
+class ContinueDiagnoseRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,8 +16,7 @@ class StartDiagnoseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'symptom' => 'required|string',
-            'past_diagnoses' => 'nullable|string',
+            'answer' => 'required|string',
         ];
     }
 

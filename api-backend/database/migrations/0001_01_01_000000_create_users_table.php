@@ -16,13 +16,14 @@ return new class extends Migration
             $table->string('full_name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->enum('role', ['patient', 'doctor', 'admin'])->default('patient');
             $table->boolean('status')->default(true);
             $table->integer('diagnose_num')->default(0);
             $table->rememberToken();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('google_id')->nullable()->unique();
+            $table->timestamp('otp_verified_at')->nullable();
             $table->string('avatar')->nullable();
+            $table->integer('otp')->nullable(); 
+            $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
 

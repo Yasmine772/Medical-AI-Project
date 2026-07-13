@@ -14,18 +14,10 @@ return new class extends Migration
         Schema::create('doctors', function (Blueprint $table) {
             $table->id();
             $table->string('full_name');
-            $table->string('email')->unique();
-            $table->string('password');
-            $table->string('phone')->nullable();
             $table->string('specialization');
             $table->integer('years_of_experience');
-            $table->string('clinic_phone')->nullable();
-            $table->string('clinic_address')->nullable();
-            $table->string('license_number')->nullable();
-            $table->text('biography')->nullable();
-            $table->string('photo')->nullable();
-            $table->string('cv_file')->nullable();
-            $table->string('license_file')->nullable();
+            $table->string('photo_path')->nullable();
+            $table->string('clinic_phone');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
