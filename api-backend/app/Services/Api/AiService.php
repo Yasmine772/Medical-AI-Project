@@ -4,7 +4,6 @@ namespace App\Services\Api;
 
 use App\Models\DiagnosisSession;
 use App\Models\User;
-use App\Services\Api\AuthService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +11,9 @@ use Illuminate\Support\Facades\Log;
 class AiService
 {
     protected string $fastApiUrl;
+
     protected int $timeout;
+
     protected int $reportTimeout;
 
     public function __construct()
@@ -21,24 +22,27 @@ class AiService
         $this->timeout = config('services.fastapi.timeout');
         $this->reportTimeout = config('services.fastapi.report_timeout', 60);
     }
-    //------------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------------
     private function isProfileComplete(User $user): bool
     {
         $userService = app(AuthService::class);
         $userWithProfile = $userService->getUserProfile($user);
         $profile = $userWithProfile->profile;
 
-        if (!$profile) {
+        if (! $profile) {
             return false;
         }
-        return !empty($profile->gender)
-            && !is_null($profile->is_smoker)
-            && !is_null($profile->has_diabetes)
-            && !is_null($profile->has_hypertension)
-            && !is_null($profile->is_pregnant)
-            && !empty($profile->activity_level);
+
+        return ! empty($profile->gender)
+            && ! is_null($profile->is_smoker)
+            && ! is_null($profile->has_diabetes)
+            && ! is_null($profile->has_hypertension)
+            && ! is_null($profile->is_pregnant)
+            && ! empty($profile->activity_level);
     }
-        //*********************************** */
+
+    // *********************************** */
     private function getActiveDiagnosisData(User $user, array $requestData): array
     {
         $userService = app(AuthService::class);
@@ -69,7 +73,8 @@ class AiService
             'from_profile' => false,
         ];
     }
-        //*********************************** */
+
+    // *********************************** */
     private function saveDiagnosisData(User $user, array $data): void
     {
         $userService = app(AuthService::class);
@@ -83,19 +88,21 @@ class AiService
                 'is_pregnant' => $data['is_pregnant'] ?? false,
                 'activity_level' => $data['activity_level'] ?? 'moderate',
             ],
-            null,  
+            null,
             true   // isMedicalOnly = true
         );
     }
-        //*********************************** */
-    public function startDiagnosis(User $user, array $requestData, string $assessmentFor = 'myself'): ?array {
+
+    // *********************************** */
+    public function startDiagnosis(User $user, array $requestData, string $assessmentFor = 'myself'): ?array
+    {
 
         $activeData = $this->getActiveDiagnosisData($user, $requestData);
 
         if ($activeData['from_profile']) {
             $profileComplete = $this->isProfileComplete($user);
 
-            if (!$profileComplete) {
+            if (! $profileComplete) {
                 return [
                     'error' => 'Please complete your medical profile first before starting diagnosis.',
                 ];
@@ -107,7 +114,7 @@ class AiService
         try {
             $response = Http::timeout($this->timeout)
                 ->withHeaders(['x_user_id' => (string) $user->id])
-                ->post($this->fastApiUrl . '/diagnosis/start', [
+                ->post($this->fastApiUrl.'/diagnosis/start', [
                     'gender' => $activeData['gender'],
                     'is_smoker' => $activeData['is_smoker'],
                     'has_diabetes' => $activeData['has_diabetes'],
@@ -121,10 +128,10 @@ class AiService
                 $result = $response->json();
 
                 $diagnosisSession = DiagnosisSession::create([
-                    'status' => 'ACTIVE', 
+                    'status' => 'ACTIVE',
                     'pdf_file_path' => null,
                     'user_id' => $user->id,
-                    'started_at' => now()
+                    'started_at' => now(),
                 ]);
 
                 session(['ai_session_id' => $result['data']['session_id']]);
@@ -138,26 +145,30 @@ class AiService
                 return $result;
             }
 
-        Log::error('FastAPI start diagnosis failed', [
-            'status' => $response->status(),
-            'user_id' => $user->id,
-            'body' => $response->body(),
-        ]);
+            Log::error('FastAPI start diagnosis failed', [
+                'status' => $response->status(),
+                'user_id' => $user->id,
+                'body' => $response->body(),
+            ]);
+
             return null;
         } catch (ConnectionException $e) {
-            Log::error('FastAPI timeout (startDiagnosis): ' . $e->getMessage());
+            Log::error('FastAPI timeout (startDiagnosis): '.$e->getMessage());
+
             return null;
         } catch (\Exception $e) {
-            Log::error('FastAPI error (startDiagnosis): ' . $e->getMessage());
+            Log::error('FastAPI error (startDiagnosis): '.$e->getMessage());
+
             return null;
         }
     }
-    //*********************************************** */
+
+    // *********************************************** */
     public function searchSymptoms(string $query): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl . '/symptoms', ['q' => $query]);
+                ->get($this->fastApiUrl.'/symptoms', ['q' => $query]);
 
             if ($response->successful()) {
                 return $response->json();
@@ -168,22 +179,26 @@ class AiService
                 'query' => $query,
                 'body' => $response->body(),
             ]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI timeout (searchSymptoms): ' . $e->getMessage());
+            Log::error('FastAPI timeout (searchSymptoms): '.$e->getMessage());
+
             return null;
         } catch (\Exception $e) {
-            Log::error('FastAPI error (searchSymptoms): ' . $e->getMessage());
+            Log::error('FastAPI error (searchSymptoms): '.$e->getMessage());
+
             return null;
         }
     }
-    //*********************************************** */
-    public function getSymptomQuestions($data , string $sessionId): ?array
+
+    // *********************************************** */
+    public function getSymptomQuestions($data, string $sessionId): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl . '/symptoms/questions', [
+                ->get($this->fastApiUrl.'/symptoms/questions', [
                     'session_id' => $sessionId,
                     'symptom_name' => $data['symptom_name'],
                 ]);
@@ -196,21 +211,26 @@ class AiService
                 'session_id' => $sessionId,
                 'symptom_name' => $data['symptom_name'],
             ]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI timeout (getSymptomQuestions): ' . $e->getMessage());
+            Log::error('FastAPI timeout (getSymptomQuestions): '.$e->getMessage());
+
             return null;
         } catch (\Exception $e) {
-            Log::error('FastAPI error (getSymptomQuestions): ' . $e->getMessage());
+            Log::error('FastAPI error (getSymptomQuestions): '.$e->getMessage());
+
             return null;
         }
     }
-    //*********************************************** */
-    public function submitSymptomAnswers($data, $sessionId = null): ?array {
+
+    // *********************************************** */
+    public function submitSymptomAnswers($data, $sessionId = null): ?array
+    {
         try {
             $response = Http::timeout($this->timeout)
-                ->post($this->fastApiUrl . '/symptoms/answers', [
+                ->post($this->fastApiUrl.'/symptoms/answers', [
                     'session_id' => $sessionId,
                     'symptom_name' => $data['symptom_name'],
                     'answers' => $data['answers'],
@@ -227,22 +247,26 @@ class AiService
                 'symptom_name' => $data['symptom_name'],
                 'body' => $response->body(),
             ]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI timeout (submitSymptomAnswers): ' . $e->getMessage());
+            Log::error('FastAPI timeout (submitSymptomAnswers): '.$e->getMessage());
+
             return null;
         } catch (\Exception $e) {
-            Log::error('FastAPI error (submitSymptomAnswers): ' . $e->getMessage());
+            Log::error('FastAPI error (submitSymptomAnswers): '.$e->getMessage());
+
             return null;
         }
     }
-    //*********************************************** */
+
+    // *********************************************** */
     public function getNextDiagnosisQuestion(string $sessionId): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl . '/follow-up/next', [
+                ->get($this->fastApiUrl.'/follow-up/next', [
                     'session_id' => $sessionId,
                 ]);
 
@@ -254,24 +278,27 @@ class AiService
                 'session_id' => $sessionId,
                 'body' => $response->body(),
             ]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI timeout (getNextDiagnosisQuestion): ' . $e->getMessage());
+            Log::error('FastAPI timeout (getNextDiagnosisQuestion): '.$e->getMessage());
+
             return null;
         } catch (\Exception $e) {
-            Log::error('FastAPI error (getNextDiagnosisQuestion): ' . $e->getMessage());
+            Log::error('FastAPI error (getNextDiagnosisQuestion): '.$e->getMessage());
+
             return null;
         }
     }
 
-    //********************************************* */
+    // ********************************************* */
     public function submitDiagnosisAnswer(string $sessionId, string $questionId, string $answer): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
                 ->asForm()
-                ->post($this->fastApiUrl . '/follow-up/answer', [
+                ->post($this->fastApiUrl.'/follow-up/answer', [
                     'session_id' => $sessionId,
                     'question_id' => $questionId,
                     'answer' => $answer,
@@ -287,24 +314,27 @@ class AiService
                 'question_id' => $questionId,
                 'body' => $response->body(),
             ]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI timeout (submitDiagnosisAnswer): ' . $e->getMessage());
+            Log::error('FastAPI timeout (submitDiagnosisAnswer): '.$e->getMessage());
+
             return null;
         } catch (\Exception $e) {
-            Log::error('FastAPI error (submitDiagnosisAnswer): ' . $e->getMessage());
+            Log::error('FastAPI error (submitDiagnosisAnswer): '.$e->getMessage());
+
             return null;
         }
     }
 
- //************************************************************ */
+    // ************************************************************ */
     public function getDiagnosisHistory(string $userId): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
                 ->withHeaders(['x_user_id' => $userId])
-                ->get($this->fastApiUrl . '/diagnose/history');
+                ->get($this->fastApiUrl.'/diagnose/history');
 
             if ($response->successful()) {
                 return $response->json();
@@ -315,23 +345,26 @@ class AiService
                 'user_id' => $userId,
                 'body' => $response->body(),
             ]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI timeout (getDiagnosisHistory): ' . $e->getMessage());
+            Log::error('FastAPI timeout (getDiagnosisHistory): '.$e->getMessage());
+
             return null;
         } catch (\Exception $e) {
-            Log::error('FastAPI error (getDiagnosisHistory): ' . $e->getMessage());
+            Log::error('FastAPI error (getDiagnosisHistory): '.$e->getMessage());
+
             return null;
         }
     }
 
-////////////////////////////////////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////////////////////////////////////
     public function generateReport(string $sessionId)
     {
         try {
             $response = Http::timeout($this->reportTimeout)
-                ->post($this->fastApiUrl . "/generate-report/{$sessionId}");
+                ->post($this->fastApiUrl."/generate-report/{$sessionId}");
 
             if ($response->successful()) {
                 return $response->json();
@@ -341,14 +374,17 @@ class AiService
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI report timeout: ' . $e->getMessage());
+            Log::error('FastAPI report timeout: '.$e->getMessage());
+
             return null;
 
         } catch (\Exception $e) {
-            Log::error('FastAPI report error: ' . $e->getMessage());
+            Log::error('FastAPI report error: '.$e->getMessage());
+
             return null;
         }
     }
@@ -357,7 +393,7 @@ class AiService
     {
         try {
             $response = Http::timeout($this->reportTimeout)
-                ->get($this->fastApiUrl . "/reports/{$sessionId}/download");
+                ->get($this->fastApiUrl."/reports/{$sessionId}/download");
 
             if ($response->successful()) {
                 $filename = "diagnostic_report_{$sessionId}.pdf";
@@ -380,14 +416,17 @@ class AiService
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI download timeout: ' . $e->getMessage());
+            Log::error('FastAPI download timeout: '.$e->getMessage());
+
             return null;
 
         } catch (\Exception $e) {
-            Log::error('FastAPI download error: ' . $e->getMessage());
+            Log::error('FastAPI download error: '.$e->getMessage());
+
             return null;
         }
     }
@@ -396,7 +435,7 @@ class AiService
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl . "/reports/{$sessionId}/preview");
+                ->get($this->fastApiUrl."/reports/{$sessionId}/preview");
 
             if ($response->successful()) {
                 return response()->make(
@@ -409,11 +448,13 @@ class AiService
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI preview timeout: ' . $e->getMessage());
+            Log::error('FastAPI preview timeout: '.$e->getMessage());
+
             return null;
 
         } catch (\Exception $e) {
-            Log::error('FastAPI preview error: ' . $e->getMessage());
+            Log::error('FastAPI preview error: '.$e->getMessage());
+
             return null;
         }
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Ai\AiController;
+
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Reports\ReportController;
 use App\Http\Controllers\Api\V1\settingController;

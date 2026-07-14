@@ -67,8 +67,8 @@ class DiagnosisService:
         log("SYMPTOM", f"Getting questions for '{symptom_name}' session={session_id[:8]}")
 
         # Vector search for this symptom
-        query_vector = self.embedder.encode(symptom_name)
-        results = self.store.search(query_vector, limit=5)
+        query_vector = self.embedder.encode_query(symptom_name)
+        results = self.store.search(query_vector, limit=5, filter_type=None)
         log("VECTOR", f"'{symptom_name}' -> {len(results)} results", [r.get("name_en") for r in results])
 
         if not results:
@@ -194,8 +194,8 @@ class DiagnosisService:
                 combined_text_parts.append(f"  Conclusion: {s['conclusion']}")
         combined_text = "\n".join(combined_text_parts)
         log("VECTOR", f"Re-searching with combined text ({len(combined_text)} chars)")
-        query_vector = self.embedder.encode(combined_text)
-        results = self.store.search(query_vector, limit=5)
+        query_vector = self.embedder.encode_query(combined_text)
+        results = self.store.search(query_vector, limit=5, filter_type=None)
         log("VECTOR", f"Found {len(results)} disease candidates", [r.get("name_en") for r in results])
         priors = compute_priors(results) if results else {}
 
@@ -458,8 +458,8 @@ class DiagnosisService:
             return existing_probs
 
         query = " | ".join(user_texts[-5:])
-        query_vector = self.embedder.encode(query)
-        results = self.store.search(query_vector, limit=5)
+        query_vector = self.embedder.encode_query(query)
+        results = self.store.search(query_vector, limit=5, filter_type=None)
         log("RESEARCH", f"Re-search query ({len(user_texts)} user msgs) -> {len(results)} new candidates", [r.get("name_en") for r in results])
 
         existing_names = {d.get("name_en", "") for d in existing_diseases or []}
