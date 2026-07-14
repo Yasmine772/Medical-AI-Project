@@ -34,7 +34,11 @@ Route::prefix('admin')->group(function () {
        Route::get('/users', [UserController::class, 'index']);
        Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
 
-       //Audit Logs
+        //Audit Logs
         Route::get('/audit-logs', [AuditContoller::class, 'showLogs']);
-    });
+        //Count Audit Logs
+        Route::get('/audit-logs/count', [AuditContoller::class, 'countLogs']);
+        //Change Audit Logs
+        Route::get('/audit-logs/changes', [AuditContoller::class, 'changeLogs']);
+         });
 });
