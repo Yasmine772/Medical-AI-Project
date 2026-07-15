@@ -4,8 +4,9 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\settingController;
 use App\Http\Controllers\Web\DoctorManagement\DoctorController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\web\Admin\UserManagement\UserController;
-use  App\Http\Controllers\web\Admin\AuditLogs\AuditContoller;
+use App\Http\Controllers\Web\Admin\UserManagement\UserController;
+use App\Http\Controllers\web\Admin\AuditLogs\AuditContoller;
+use App\Http\Controllers\Web\Admin\Dashboard\DashboardController;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -35,9 +36,23 @@ Route::prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:view-users');
         Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->middleware('permission:toggle-user');
 
-        //Audit Logs
-        Route::get('/audit-logs', [AuditContoller::class, 'showLogs']);
-});
+        // Audit Logs
+        Route::prefix('audit-logs')->group(function () {
+            Route::get('/', [AuditContoller::class, 'showLogs']);
+            Route::get('/count', [AuditContoller::class, 'countLogs']);
+            Route::get('/changes', [AuditContoller::class, 'changeLogs']);
+        });
 
-
+        // Dashboard
+        Route::prefix('dashboard')->group(function () {
+            Route::get('/current-date', [DashboardController::class, 'currentDate']);
+            Route::get('/type-of-patient-count',[DashboardController::class, 'typeOfPatientCount']);
+            Route::get('/user-active-count', [DashboardController::class, 'userActiveCount']);
+            Route::get('/doctor-active-count', [DashboardController::class, 'DoctorActiveCount']);
+            Route::get('/daily-diagnoses-count', [DashboardController::class, 'dailyDiagnosesCount']);
+            Route::get('/new-content-items-count', [DashboardController::class, 'newContentItemsCount']);
+            Route::get('/top-specialties-by-diagnoses', [DashboardController::class, 'getTopDiseasesByDiagnoses']);
+            Route::get('/diagnosis-sessions-status-count', [DashboardController::class, 'diagnosisSessionsStatusCount']);
+        });
+    });
 });
