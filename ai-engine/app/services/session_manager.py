@@ -7,6 +7,8 @@ from supabase import Client, create_client
 from dotenv import load_dotenv
 load_dotenv()
 
+from app.services.logger import log
+
 
 class SessionManager:
 
@@ -38,11 +40,13 @@ class SessionManager:
             "p_initial_symptoms": initial_symptoms,
             "p_candidates": json.dumps(candidates) if candidates else None,
         })
+        log("DB", f"Created session {session_id[:8]} for {user_id}")
         return session_id
 
     def get_session(self, session_id: str) -> Optional[Dict]:
         result = self._rpc("get_diagnosis_session", {"p_id": session_id})
         if not result.data:
+            log("DB", f"Session {session_id[:8]} not found")
             return None
         session = result.data
         if isinstance(session, str):
@@ -51,6 +55,7 @@ class SessionManager:
             session["conversation"] = json.loads(session["conversation"])
         if session.get("candidates") and isinstance(session["candidates"], str):
             session["candidates"] = json.loads(session["candidates"])
+        log("DB", f"Got session {session_id[:8]} phase={session.get('candidates',{}).get('phase','?') if isinstance(session.get('candidates'), dict) else session.get('candidates')}")
         return session
 
     def update_conversation(
@@ -66,3 +71,4 @@ class SessionManager:
         if candidates:
             data["candidates"] = json.dumps(candidates)
         self.connect().table("diagnosis_sessions").update(data).eq("id", session_id).execute()
+        log("DB", f"Updated session {session_id[:8]} status={status or '-'} candidates_keys={list(candidates.keys()) if candidates else 'none'}")

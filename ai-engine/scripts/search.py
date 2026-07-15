@@ -19,7 +19,7 @@ def main():
     store.connect()
 
     embedder = EmbeddingService()
-    query_vector = embedder.encode(query)
+    query_vector = embedder.encode_query(query)
 
     results = store.search(query_vector, limit=5)
 

@@ -12,6 +12,8 @@ class Advice extends Model
         'category'
     ];
 
+    protected $table = 'advices';
+
     public function diseases()
     {
         return $this->belongsToMany(Disease::class, 'disease_advice', 'advice_id', 'disease_id');

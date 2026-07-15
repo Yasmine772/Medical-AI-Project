@@ -16,6 +16,8 @@ return new class extends Migration
             $table->enum('status', ['ACTIVE', 'COMPLETED', 'CANCELED'])->default('ACTIVE');
             $table->string('pdf_file_path')->nullable();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('disease_id')->nullable()->constrained('diseases')->cascadeOnDelete();
+            $table->foreignId('doctor_id')->nullable()->constrained('doctors')->cascadeOnDelete();
             $table->timestamp('started_at')->useCurrent();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();

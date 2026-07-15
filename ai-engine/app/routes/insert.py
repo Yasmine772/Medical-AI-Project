@@ -1,12 +1,13 @@
 import hashlib
 import json
 import uuid
+import threading
 from fastapi import APIRouter, File, UploadFile, HTTPException
 import fitz
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.models.schemas import DiseaseItem
-from app.state import get_store, get_embedder
+from app.state import get_store, get_embedder, set_insert_progress, get_insert_progress
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ def _insert_disease(disease: DiseaseItem):
        الشدة: {disease.severity_ar}
        الوصف: {disease.description}
       النصيحة: {disease.advice}
-التخصص الطبي: {disease.specialist_ar}
+ التخصص الطبي: {disease.specialist_ar}
     """.strip()
     embedding = embedder.encode(document)
     metadata = {
@@ -35,7 +36,7 @@ def _insert_disease(disease: DiseaseItem):
         "symptoms_en": ", ".join(disease.symptoms),
         "symptoms_ar": ", ".join(disease.symptoms_ar),
     }
-    store.insert_disease(disease_id, document, embedding, metadata)
+    store.insert(disease_id, document, embedding, "disease", metadata)
 
 
 @router.post("/insert/json-file")
@@ -61,48 +62,94 @@ async def insert_json_file(file: UploadFile = File(...)):
     return {"filename": file.filename, "added": len(diseases)}
 
 
+def _process_pdf(task_id: str, content: bytes, filename: str):
+    try:
+        store = get_store()
+        embedder = get_embedder()
+
+        doc = fitz.open(stream=content, filetype="pdf")
+
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=100,
+            separators=["\n\n", "\n", "، ", ". ", "؟ ", "! ", " "],
+        )
+
+        set_insert_progress(task_id, "extracting", 0, 1)
+        batch_rows = []
+        total_pages = len(doc)
+        for page_num in range(total_pages):
+            text = doc[page_num].get_text().strip()
+            if not text:
+                continue
+            chunks = splitter.split_text(text)
+            for idx, chunk_text in enumerate(chunks):
+                chunk_text = chunk_text.strip()
+                if not chunk_text:
+                    continue
+                raw_id = f"pdf_api_{filename}_p{page_num}_c{idx}"
+                chunk_id = hashlib.md5(raw_id.encode()).hexdigest()[:16]
+                metadata = {
+                    "source": filename,
+                    "page": page_num,
+                    "chunk_index": idx,
+                    "language": None,
+                }
+                batch_rows.append((chunk_id, chunk_text, metadata))
+
+        page_count = total_pages
+        doc.close()
+
+        if not batch_rows:
+            set_insert_progress(task_id, "done", 0, 0, result={"filename": filename, "pages": page_count, "chunks_added": 0})
+            return
+
+        total_chunks = len(batch_rows)
+        texts = [row[1] for row in batch_rows]
+
+        set_insert_progress(task_id, "encoding", 0, total_chunks)
+        batch_size = 128
+        embeddings = []
+        for i in range(0, total_chunks, batch_size):
+            batch_texts = texts[i:i + batch_size]
+            batch_embs = embedder.encode_batch(batch_texts, batch_size=batch_size)
+            embeddings.extend(batch_embs)
+            set_insert_progress(task_id, "encoding", min(i + batch_size, total_chunks), total_chunks)
+
+        store_rows = []
+        for (chunk_id, chunk_text, meta), emb in zip(batch_rows, embeddings):
+            store_rows.append((chunk_id, chunk_text, emb.tolist(), "pdf", meta))
+
+        set_insert_progress(task_id, "inserting", 0, total_chunks)
+        insert_bs = 500
+        for i in range(0, len(store_rows), insert_bs):
+            store.insert_batch(store_rows[i:i + insert_bs], batch_size=insert_bs)
+            set_insert_progress(task_id, "inserting", min(i + insert_bs, total_chunks), total_chunks)
+
+        result = {"filename": filename, "pages": page_count, "chunks_added": total_chunks}
+        set_insert_progress(task_id, "done", total_chunks, total_chunks, result=result)
+    except Exception as ex:
+        set_insert_progress(task_id, "error", 0, 0, result={"error": str(ex)})
+
+
 @router.post("/insert/pdf")
 async def insert_pdf(file: UploadFile = File(...)):
     if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(400, "Only PDF files are accepted")
 
-    store = get_store()
-    embedder = get_embedder()
-
     content = await file.read()
-    doc = fitz.open(stream=content, filetype="pdf")
+    task_id = str(uuid.uuid4())
+    set_insert_progress(task_id, "starting", 0, 0)
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=80,
-        separators=["\n\n", "\n", "، ", ". ", "؟ ", "! ", " "],
-    )
+    thread = threading.Thread(target=_process_pdf, args=(task_id, content, file.filename), daemon=True)
+    thread.start()
 
-    added = 0
-    for page_num in range(len(doc)):
-        page = doc[page_num]
-        text = page.get_text().strip()
-        if not text:
-            continue
+    return {"task_id": task_id, "status": "started", "filename": file.filename}
 
-        chunks = splitter.split_text(text)
-        for idx, chunk_text in enumerate(chunks):
-            chunk_text = chunk_text.strip()
-            if not chunk_text:
-                continue
-            raw_id = f"pdf_api_{file.filename}_p{page_num}_c{idx}"
-            chunk_id = hashlib.md5(raw_id.encode()).hexdigest()[:16]
-            embedding = embedder.encode(chunk_text)
-            metadata = {
-                "source": file.filename,
-                "page": page_num,
-                "chunk_index": idx,
-                "chunk_size": len(chunk_text),
-                "language": None,
-            }
-            store.insert_pdf_chunk(chunk_id, chunk_text, embedding, metadata)
-            added += 1
 
-    page_count = len(doc)
-    doc.close()
-    return {"filename": file.filename, "pages": page_count, "chunks_added": added}
+@router.get("/insert/progress/{task_id}")
+async def insert_progress(task_id: str):
+    task = get_insert_progress(task_id)
+    if task is None:
+        raise HTTPException(404, "Task not found")
+    return {"task_id": task_id, **task}

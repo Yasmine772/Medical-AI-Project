@@ -30,3 +30,38 @@ class DiagnoseResponse(BaseModel):
     specialist_ar: str
     advice: str
     reasoning: str
+
+
+class QuestionOption(BaseModel):
+    id: str
+    label: str
+
+
+class SymptomQuestion(BaseModel):
+    id: str
+    text: str
+    type: str
+    options: List[QuestionOption]
+
+
+class SymptomAnswers(BaseModel):
+    session_id: str
+    symptom_name: str
+    answers: List[dict]
+    symptoms_complete: bool = False
+
+
+class FollowUpAnswer(BaseModel):
+    session_id: str
+    question_id: str
+    answer: str
+
+
+class DiagnosisRequest(BaseModel):
+    gender: str = ""
+    is_smoker: bool = False
+    has_diabetes: bool = False
+    has_hypertension: bool = False
+    is_pregnant: Optional[bool] = None
+    activity_level: str = "moderate"
+    assessment_for: str = "myself"

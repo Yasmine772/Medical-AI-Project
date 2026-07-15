@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 2cm 1.5cm;
+    @top-center {
+      content: element(header);
+    }
+    @bottom-center {
+      content: counter(page);
+      font-size: 9pt;
+      color: #666;
+    }
+  }
+  body {
+    font-family: 'DejaVu Sans', 'Arial', sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+  }
+  .header {
+    position: running(header);
+    font-size: 0;
+  }
+  .watermark {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-size: 80pt;
+    color: rgba(200, 200, 200, 0.15);
+    font-weight: bold;
+    z-index: -1;
+    white-space: nowrap;
+  }
+  .report-header {
+    text-align: center;
+    border-bottom: 3px solid #1a5c7a;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+  }
+  .report-header h1 {
+    color: #1a5c7a;
+    font-size: 20pt;
+    margin: 0 0 5px 0;
+  }
+  .report-header .subtitle {
+    color: #555;
+    font-size: 10pt;
+  }
+  .report-header .date {
+    color: #888;
+    font-size: 9pt;
+    margin-top: 5px;
+  }
+  .section {
+    margin-bottom: 18px;
+    page-break-inside: avoid;
+  }
+  .section-title {
+    background-color: #1a5c7a;
+    color: white;
+    padding: 6px 12px;
+    font-size: 12pt;
+    font-weight: bold;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+  }
+  .info-table td {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    font-size: 10pt;
+  }
+  .info-table td:first-child {
+    font-weight: bold;
+    background-color: #f5f9fc;
+    width: 30%;
+  }
+  .diagnosis-card {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    page-break-inside: avoid;
+  }
+  .diagnosis-card .rank {
+    display: inline-block;
+    background-color: #1a5c7a;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    line-height: 24px;
+    font-size: 10pt;
+    font-weight: bold;
+    margin-left: 8px;
+  }
+  .diagnosis-card .disease-name {
+    font-size: 13pt;
+    font-weight: bold;
+    color: #1a5c7a;
+  }
+  .diagnosis-card .disease-name-ar {
+    font-size: 12pt;
+    color: #444;
+  }
+  .diagnosis-card .meta {
+    margin-top: 6px;
+    font-size: 10pt;
+    color: #555;
+  }
+  .diagnosis-card .meta span {
+    display: inline-block;
+    margin-left: 15px;
+  }
+  .diagnosis-card .meta .label {
+    font-weight: bold;
+    color: #1a5c7a;
+  }
+  .diagnosis-card.top1 {
+    border-right: 4px solid #1a5c7a;
+    background-color: #f5f9fc;
+  }
+  .diagnosis-card.top2 {
+    border-right: 4px solid #5a9bb5;
+  }
+  .diagnosis-card.top3 {
+    border-right: 4px solid #a0c4d4;
+  }
+  .conversation-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+  .conversation-table td {
+    padding: 6px 10px;
+    vertical-align: top;
+    border-bottom: 1px solid #eee;
+  }
+  .conversation-table .q {
+    background-color: #f0f7fb;
+    font-weight: bold;
+    width: 60px;
+    color: #1a5c7a;
+  }
+  .conversation-table .a {
+    background-color: #fafafa;
+    width: 60px;
+    color: #2d7a2d;
+  }
+  .advice-box {
+    background-color: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 10pt;
+    color: #2e7d32;
+  }
+  .disclaimer {
+    margin-top: 30px;
+    padding-top: 10px;
+    border-top: 1px solid #ccc;
+    font-size: 8pt;
+    color: #999;
+    text-align: center;
+  }
+  .probability-bar {
+    display: inline-block;
+    height: 8px;
+    border-radius: 4px;
+    background-color: #1a5c7a;
+    margin-left: 5px;
+    vertical-align: middle;
+  }
+  .footer {
+    text-align: center;
+    font-size: 8pt;
+    color: #aaa;
+    margin-top: 20px;
+  }
+  .en {
+    direction: ltr;
+    text-align: left;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 9pt;
+    font-weight: bold;
+  }
+  .badge-strong { background-color: #c8e6c9; color: #2e7d32; }
+  .badge-moderate { background-color: #fff3e0; color: #e65100; }
+  .badge-likely { background-color: #ffebee; color: #c62828; }
+</style>
+</head>
+<body>
+
+<div class="watermark">تقرير تشخيصي</div>
+
+<div class="report-header">
+  <h1>تقرير التشخيص الطبي</h1>
+  <div class="subtitle">Medical Diagnosis Report</div>
+  <div class="date">تاريخ التقرير: {{ generation_date }} | Report Date: {{ generation_date }}</div>
+</div>
+
+<div class="section">
+  <div class="section-title">معلومات عامة | General Information</div>
+  <table class="info-table">
+    <tr>
+      <td>المريض | Patient</td>
+      <td>{{ patient_name }}</td>
+    </tr>
+    <tr>
+      <td>تاريخ البدء | Start Date</td>
+      <td>{{ started_at }}</td>
+    </tr>
+    <tr>
+      <td>تاريخ الإكمال | Completion Date</td>
+      <td>{{ completed_at }}</td>
+    </tr>
+    <tr>
+      <td>الأعراض الأولية | Initial Symptoms</td>
+      <td>{{ initial_symptoms }}</td>
+    </tr>
+    <tr>
+      <td>حالة الجلسة | Session Status</td>
+      <td>{{ session_status }}</td>
+    </tr>
+  </table>
+</div>
+
+{% if top_diagnoses %}
+<div class="section">
+  <div class="section-title">نتائج التشخيص | Diagnosis Results</div>
+  {% for diag in top_diagnoses %}
+  <div class="diagnosis-card {{ 'top1' if loop.index == 1 else 'top2' if loop.index == 2 else 'top3' }}">
+    <div>
+      <span class="rank">{{ loop.index }}</span>
+      <span class="disease-name">{{ diag.disease_name }}</span>
+      {% if diag.disease_name_ar %}
+      <span class="disease-name-ar">({{ diag.disease_name_ar }})</span>
+      {% endif %}
+    </div>
+    <div class="meta">
+      <span><span class="label">نسبة الثقة | Confidence:</span> <span class="badge {{ 'badge-strong' if diag.confidence == 'Strong' else 'badge-moderate' if diag.confidence == 'Moderate' else 'badge-likely' }}">{{ diag.confidence }}</span></span>
+      {% if diag.probability %}
+      <span><span class="label">الاحتمالية | Probability:</span> {{ "%.0f" % (diag.probability * 100) }}%
+        <div class="probability-bar" style="width: {{ diag.probability * 100 }}px;"></div>
+      </span>
+      {% endif %}
+      <span><span class="label">الاختصاص | Specialist:</span> {{ diag.specialist_ar or diag.specialist }}</span>
+    </div>
+    {% if diag.reasoning %}
+    <div class="meta" style="margin-top:8px; font-size:10pt; color:#333;">
+      <span class="label">ملخص الاستنتاج | Reasoning:</span><br>
+      {{ diag.reasoning }}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if advice %}
+<div class="section">
+  <div class="section-title">التوصيات الطبية | Medical Advice</div>
+  <div class="advice-box">{{ advice }}</div>
+</div>
+{% endif %}
+
+{% if conversation %}
+<div class="section">
+  <div class="section-title">تفاصيل الجلسة التشخيصية | Diagnosis Session Details</div>
+  <table class="conversation-table">
+    <tr>
+      <td style="width:100%; padding:0;">
+        <table style="width:100%; border-collapse:collapse;">
+          {% for msg in conversation %}
+          {% if msg.role == 'user' %}
+          <tr>
+            <td class="q" style="width:50px;">المستخدم<br><small>User</small></td>
+            <td style="padding:6px 10px;">{{ msg.content }}</td>
+          </tr>
+          {% elif msg.role == 'assistant' %}
+          <tr>
+            <td class="a" style="width:50px;">النظام<br><small>Assistant</small></td>
+            <td style="padding:6px 10px;">{{ msg.content }}</td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+{% endif %}
+
+<div class="disclaimer">
+  هذا التقرير هو تقرير تشخيصي أولي تم إنشاؤه بواسطة نظام الذكاء الاصطناعي ولا يغني عن استشارة الطبيب المختص.<br>
+  This is a preliminary AI-generated diagnostic report and does not substitute professional medical consultation.<br>
+  <strong>نظام التشخيص الطبي بالذكاء الاصطناعي | Medical AI Diagnosis System</strong>
+</div>
+
+</body>
+</html>
