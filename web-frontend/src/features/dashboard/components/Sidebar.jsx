@@ -16,7 +16,7 @@ const Sidebar = ({ onLogoutClick }) => {
     { icon: Stethoscope, path: "/app/doctors" },
     { icon: UserCog, path: "/app/users" },
     { icon: HeartPulse, path: "/app/patients" },
-    { icon: MessageSquare, path: "/app/messages" },
+    { icon: MessageSquare, path: "/app/audit-logs" },
     { icon: LogOut, path: "logout" },
   ];
 

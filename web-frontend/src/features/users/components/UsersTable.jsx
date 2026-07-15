@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { toggleUserStatus } from "../../../features/users/usersSlice";
 import { useSelector, useDispatch } from "react-redux";
-// import Switch from "react-switch";
+
 const UsersTable = () => {
-  // const [users, setUsers] = useState(initialUsers);
   const [filterCount, setFilterCount] = useState(0);
   const dispatch = useDispatch();
   const users = useSelector((state) => state.users.list);
@@ -11,16 +10,6 @@ const UsersTable = () => {
   const handleToggle = (id) => {
     dispatch(toggleUserStatus(id));
   };
-
-  // const toggleStatus = (id) => {
-  //   setUsers(
-  //     users.map((user) =>
-  //       user.id === id
-  //         ? { ...user, status: user.status === 1 ? 0 : 1 }
-  //         : user
-  //     )
-  //   );
-  // };
 
   const filteredUsers = users.filter(
     (user) => user.diagnose_num >= filterCount,
@@ -36,7 +25,7 @@ const UsersTable = () => {
 
   return (
     <div className="p-6 bg-white/80 backdrop-blur-xl shadow-lg rounded-[24px] border border-white/20 overflow-x-auto">
-      {/* فلتر الـ Diagnose */}
+      {/* Diagnose filter */}
       <div className="mb-6 flex items-center gap-4">
         <div className="flex items-center gap-2">
           <label className="text-gray-600 font-medium">Min Diagnosis:</label>
@@ -56,7 +45,7 @@ const UsersTable = () => {
         </button>
       </div>
 
-      {/* الجدول */}
+      {/* table*/}
       <table className="w-full text-left border-collapse min-w-[1200px]">
         <thead>
           <tr className="text-gray-500 border-b border-gray-200">
@@ -122,18 +111,18 @@ const UsersTable = () => {
               <td className="py-4 px-4">
                 <label className="flex items-center cursor-pointer">
                   <div className="relative">
-                    {/* الـ Input المخفي */}
+                    {/* hidden Input  */}
                     <input
                       type="checkbox"
                       className="sr-only"
                       checked={user.status === 1}
                       onChange={() => handleToggle(user.id)}
                     />
-                    {/* خلفية الـ Switch (تتغير بين الأحمر والأخضر) */}
+
                     <div
                       className={`block w-12 h-6 rounded-full transition ${user.status === 1 ? "bg-green-500" : "bg-red-500"}`}
                     ></div>
-                    {/* "السهم" أو الدائرة التي تتحرك */}
+
                     <div
                       className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition ${user.status === 1 ? "transform translate-x-6" : ""}`}
                     ></div>

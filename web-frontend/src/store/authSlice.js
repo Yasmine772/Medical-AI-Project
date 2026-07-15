@@ -8,7 +8,7 @@ const authSlice = createSlice({
   },
   reducers: {
     loginSuccess: (state, action) => {
-      console.log("Token received in slice:", action.payload); // أضيفي هذا السطر للـ debug
+      console.log("Token received in slice:", action.payload); 
       if (action.payload) {
         state.token = action.payload;
         state.isAuthenticated = true;
@@ -20,9 +20,8 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       localStorage.removeItem("token");
-      // مسح بيانات الـ persist الخاصة بـ doctors
       localStorage.removeItem("persist:root");
-      // إجبار المتصفح على إعادة التحميل لمسح ذاكرة الـ Redux
+      // clean local storage to ensure no persisted state remains
       window.location.reload();
     },
   },

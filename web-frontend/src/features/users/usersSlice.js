@@ -1,31 +1,30 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-import api from "../../api/axios"; // استيراد الـ Axios instance مع الـ interceptor
+import api from "../../api/axios";
 
-// 1. إنشاء الـ Thunk لجلب البيانات
+// 1.Thunk function to fetch users from the backend
 export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
-  console.log("Debug: Starting fetchUsers request..."); // نقطة فحص 4
+  console.log("Debug: Starting fetchUsers request...");
   console.log(
     "Token being sent to /admin/users:",
     localStorage.getItem("token"),
   );
   try {
     const response = await api.get("/admin/users");
-    console.log("Debug: Request successful:", response.data); // نقطة فحص 5
+    console.log("Debug: Request successful:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Debug: Request failed with error:", error.response || error); // نقطة فحص 6
+    console.error("Debug: Request failed with error:", error.response || error);
     throw error;
   }
 });
 
-// في ملف usersSlice.js
+// usersSlice.js
 export const toggleUserStatus = createAsyncThunk(
   "users/toggleUserStatus",
   async (userId, { rejectWithValue }) => {
     try {
       const response = await api.patch(`/admin/users/${userId}/toggle-status`);
-      // نرجع الـ ID مع الـ status الجديدة لنستخدمهم في التحديث
       return { userId, new_status: response.data.new_status };
     } catch (error) {
       return rejectWithValue(error.response.data);
@@ -48,19 +47,17 @@ const usersSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.loading = false;
-        state.list = action.payload; // تخزين البيانات القادمة من الـ API
+        state.list = action.payload; // store data from API
       })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message;
       })
-      // داخل extraReducers في usersSlice.js
+
       .addCase(toggleUserStatus.fulfilled, (state, action) => {
-        // لاحظي هنا استخدمنا state.list
         const user = state.list.find((u) => u.id === action.meta.arg);
 
         if (user) {
-          // تحديث الحالة بناءً على النتيجة القادمة من API
           user.status = action.payload.new_status ? 1 : 0;
         }
       });

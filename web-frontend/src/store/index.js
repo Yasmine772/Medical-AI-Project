@@ -9,7 +9,6 @@ import {
   PURGE,
   REGISTER,
 } from "redux-persist";
-// إذا كان الملف داخل مجلد store:
 import authReducer from "./authSlice";
 const storage = {
   getItem: (key) => Promise.resolve(localStorage.getItem(key)),
@@ -18,6 +17,8 @@ const storage = {
 };
 import doctorsReducer from "../features/doctors/doctorsSlice";
 import usersReducer from "../features/users/usersSlice";
+import auditLogsReducer from "../features/audit-logs/auditLogsSlice";
+
 const persistConfig = {
   key: "root",
   storage,
@@ -26,8 +27,12 @@ const persistConfig = {
 
 const persistedReducer = persistReducer(
   persistConfig,
-  combineReducers({ doctors: doctorsReducer, auth: authReducer ,
-      users: usersReducer}),
+  combineReducers({
+    doctors: doctorsReducer,
+    auth: authReducer,
+    users: usersReducer,
+    auditLogs: auditLogsReducer,
+  }),
 );
 
 export const store = configureStore({

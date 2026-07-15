@@ -10,7 +10,7 @@ import DashboardPage from "./features/dashboard/pages/DashboardPage";
 import DashboardLayout from "./features/dashboard/components/DashboardLayout";
 import UsersManagementPage from "./features/users/pages/UsersManagementPage";
 import OnboardingPage from "./features/auth/pages/OnboardingPage";
-
+import AuditLogsPage from "./features/audit-logs/pages/AuditLogsPage";
 
 import DoctorLayout from "./features/doctor-dashboard/components/DoctorLayout";
 import HomePage from "./features/doctor-dashboard/pages/HomePage";
@@ -27,6 +27,7 @@ function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="doctors" element={<DoctorsManagementPage />} />
           <Route path="users" element={<UsersManagementPage />} />
+          <Route path="audit-logs" element={<AuditLogsPage />} />
         </Route>
 
         {/* doctors routes*/}

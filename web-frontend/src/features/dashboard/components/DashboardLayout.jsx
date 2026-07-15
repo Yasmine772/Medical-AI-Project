@@ -1,5 +1,5 @@
 import { useState } from "react";
-// import { useNavigate } from "react-router-dom"; // استدعي useNavigate هنا
+// import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logout } from "../../../store/authSlice";
 import api from "../../../api/axios";
@@ -23,8 +23,8 @@ const DashboardLayout = () => {
     } catch (error) {
       console.error("Logout failed", error);
     } finally {
-      dispatch(logout()); // هذا سيقوم بمسح التوكن و الـ persist و إعادة التحميل
-      window.location.href = "/login"; // التوجيه النهائي
+      dispatch(logout()); // remove token and reload the page
+      window.location.href = "/login"; 
     }
   };
 
