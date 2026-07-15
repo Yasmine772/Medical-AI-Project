@@ -23,11 +23,11 @@ class DashboardController extends Controller
     {
         $this->dashboardService = $dashboardService;
     }
+
     /**
      * Display the current date.
      * @return current date in 'Y-m-d' format.
      */
-
     public function currentDate()
     {
         return now()->toDateString();
@@ -66,7 +66,6 @@ class DashboardController extends Controller
      * Display the count of diagnoses made today.
      * @return \Illuminate\Http\JsonResponse
      */
-
     public function dailyDiagnosesCount()
     {
      try {
@@ -84,7 +83,6 @@ class DashboardController extends Controller
      * Display the count of new content items (diseases, symptoms, advices) added in the last 24 hours.
      * @return int
      */
-
     public function newContentItemsCount()
     {
 
@@ -141,11 +139,11 @@ class DashboardController extends Controller
        try{
           $diagnosisSessions = $this->dashboardService->getSessionStatusStats();
           return $this->successResponse($diagnosisSessions , 'Diagnosis sessions status count retrieved successfully');
-
        }
        catch(Exception $e)
        {
         return response()->json(['error' => 'Failed to retrieve diagnosis sessions status count'], 500);
        }
      }
+     
 }

@@ -1,18 +1,25 @@
 <?php
 namespace App\Services\Web;
 
-use OwenIt\Auditing\Models\Audit;
+use App\Models\AuditLog;
 
 class AuditService
 {
     /**
-     * Get the latest audit logs.
-     * @param int $limit
+     * Get the latest audit logs with optional filters for event and category.
+     * @param array $filters
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getLatestLogs(int $limit = 50)
+    public function getLatestLogs(array $filters = [])
     {
-        return Audit::with('user')->latest()->take($limit)->get();
+       return AuditLog::query()
+        ->with('user')
+        ->latest()
+        ->byEvent($filters['event'] ?? null)
+        ->byCategory($filters['category'] ?? null)
+        ->today()
+        ->take(50)
+        ->get();
     }
     /**
      * Get the total count of audit logs.
@@ -21,7 +28,7 @@ class AuditService
 
     public function getTotalCount(): int
     {
-        return Audit::count();
+        return AuditLog::count();
     }
     /**
      * Get the total count of change logs(event:created, updated, deleted).
@@ -29,7 +36,7 @@ class AuditService
      */
     public function changeLogs()
     {
-        $dataChanges = Audit::whereIn('event', ['created', 'updated', 'deleted'])->count();
+        $dataChanges = AuditLog::whereIn('event', ['created', 'updated', 'deleted'])->count();
         return $dataChanges;
     }
 }

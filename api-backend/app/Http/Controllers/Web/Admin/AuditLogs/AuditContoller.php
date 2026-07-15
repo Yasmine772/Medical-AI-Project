@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Web\AuditService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
 class AuditContoller extends Controller
 { 
@@ -20,13 +21,19 @@ class AuditContoller extends Controller
     }
 
     /**
-     * Display the audit logs.
+     * Display the audit logs with optional filters for event and category.
      * @return \Illuminate\Http\JsonResponse
      */
-    public function showLogs()
+    public function showLogs(Request $request)
     {
     try {
-        $logs = $this->auditService->getLatestLogs();
+      $filters = [
+            'event' => $request->query('operation'),
+            'category' => $request->query('category'),
+             'date' => $request->query('date_range')
+        ];
+
+        $logs = $this->auditService->getLatestLogs($filters);
         return $this->successResponse($logs, 'Logs retrieved successfully');
     } catch (\Exception $e) {
 
