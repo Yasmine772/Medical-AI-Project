@@ -3,8 +3,7 @@
 namespace App\Services\Api;
 
 use App\Models\DiagnosisSession;
-use App\Models\User;
-use App\Services\Api\AuthService;
+use App\Models\PatientProfile;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -22,128 +21,51 @@ class AiService
         $this->reportTimeout = config('services.fastapi.report_timeout', 60);
     }
     //------------------------------------------------------------------------------
-    private function isProfileComplete(User $user): bool
+    public function startDiagnosis($request): ?array 
     {
-        $userService = app(AuthService::class);
-        $userWithProfile = $userService->getUserProfile($user);
-        $profile = $userWithProfile->profile;
+        $user = auth()->user();
 
-        if (!$profile) {
-            return false;
-        }
-        return !empty($profile->gender)
-            && !is_null($profile->is_smoker)
-            && !is_null($profile->has_diabetes)
-            && !is_null($profile->has_hypertension)
-            && !is_null($profile->is_pregnant)
-            && !empty($profile->activity_level);
-    }
-        //*********************************** */
-    private function getActiveDiagnosisData(User $user, array $requestData): array
-    {
-        $userService = app(AuthService::class);
-        $userWithProfile = $userService->getUserProfile($user);
-        $profile = $userWithProfile->profile;
-        $profileComplete = $this->isProfileComplete($user);
+        if($request && $request['assessment_for'] === 'myself'){
 
-        if ($profile && $profileComplete) {
-
-            return [
-                'gender' => $profile->gender,
-                'is_smoker' => (bool) $profile->is_smoker,
-                'has_diabetes' => (bool) $profile->has_diabetes,
-                'has_hypertension' => (bool) $profile->has_hypertension,
-                'is_pregnant' => (bool) $profile->is_pregnant,
-                'activity_level' => $profile->activity_level,
-                'from_profile' => true,
-            ];
-        }
-
-        return [
-            'gender' => $requestData['gender'],
-            'is_smoker' => (bool) $requestData['is_smoker'],
-            'has_diabetes' => (bool) $requestData['has_diabetes'],
-            'has_hypertension' => (bool) $requestData['has_hypertension'],
-            'is_pregnant' => (bool) $requestData['is_pregnant'],
-            'activity_level' => $requestData['activity_level'],
-            'from_profile' => false,
-        ];
-    }
-        //*********************************** */
-    private function saveDiagnosisData(User $user, array $data): void
-    {
-        $userService = app(AuthService::class);
-        $userService->updateProfile(
-            $user,
-            [
-                'gender' => $data['gender'] ?? null,
-                'is_smoker' => $data['is_smoker'] ?? false,
-                'has_diabetes' => $data['has_diabetes'] ?? false,
-                'has_hypertension' => $data['has_hypertension'] ?? false,
-                'is_pregnant' => $data['is_pregnant'] ?? false,
-                'activity_level' => $data['activity_level'] ?? 'moderate',
-            ],
-            null,  
-            true   // isMedicalOnly = true
-        );
-    }
-        //*********************************** */
-    public function startDiagnosis(User $user, array $requestData, string $assessmentFor = 'myself'): ?array {
-
-        $activeData = $this->getActiveDiagnosisData($user, $requestData);
-
-        if ($activeData['from_profile']) {
-            $profileComplete = $this->isProfileComplete($user);
-
-            if (!$profileComplete) {
-                return [
-                    'error' => 'Please complete your medical profile first before starting diagnosis.',
-                ];
-            }
-        } else {
-            $this->saveDiagnosisData($user, $activeData);
+            PatientProfile::updateOrCreate(['user_id' => $user->id], [ 
+                'gender'           => $request['gender'],
+                'is_smoker'        => $request['is_smoker'],
+                'has_diabetes'     => $request['has_diabetes'],
+                'has_hypertension' => $request['has_hypertension'],
+                'is_pregnant'      => $request['is_pregnant'],
+                'activity_level'   => $request['activity_level']
+            ]);
         }
 
         try {
-            $response = Http::timeout($this->timeout)
-                ->withHeaders(['x_user_id' => (string) $user->id])
+                $response = Http::timeout($this->timeout)
+                ->asForm()
                 ->post($this->fastApiUrl . '/diagnosis/start', [
-                    'gender' => $activeData['gender'],
-                    'is_smoker' => $activeData['is_smoker'],
-                    'has_diabetes' => $activeData['has_diabetes'],
-                    'has_hypertension' => $activeData['has_hypertension'],
-                    'is_pregnant' => $activeData['is_pregnant'],
-                    'activity_level' => $activeData['activity_level'],
-                    'assessment_for' => $assessmentFor,
-                ]);
-
-            if ($response->successful()) {
-                $result = $response->json();
-
-                $diagnosisSession = DiagnosisSession::create([
-                    'status' => 'ACTIVE', 
-                    'pdf_file_path' => null,
                     'user_id' => $user->id,
-                    'started_at' => now()
+                    'gender' => $request['gender'],
+                    'is_smoker' => $request['is_smoker'],
+                    'has_diabetes' => $request['has_diabetes'],
+                    'has_hypertension' => $request['has_hypertension'],
+                    'is_pregnant' => $request['is_pregnant'],
+                    'activity_level' => $request['activity_level'],
+                    'assessment_for' =>  $request['assessment_for'],
                 ]);
 
-                session(['ai_session_id' => $result['data']['session_id']]);
-                session(['diagnosis_session_id' => $diagnosisSession->id]);
+                if ($response->successful()) {
+                    $result = $response->json();
 
-                if (isset($result['data'])) {
-                    $result['data']['profile_source'] = $activeData['from_profile'] ? 'saved' : 'new';
-                    $result['data']['profile_complete'] = $this->isProfileComplete($user);
+                    DiagnosisSession::create([
+                        'status' => 'ACTIVE', 
+                        'pdf_file_path' => null,
+                        'user_id' => $user->id,
+                        'started_at' => now()
+                    ]);
+
+                    return $result;
                 }
+                Log::error('FastAPI start diagnosis failed', ['body' => $response->body()]);
+                return null;
 
-                return $result;
-            }
-
-        Log::error('FastAPI start diagnosis failed', [
-            'status' => $response->status(),
-            'user_id' => $user->id,
-            'body' => $response->body(),
-        ]);
-            return null;
         } catch (ConnectionException $e) {
             Log::error('FastAPI timeout (startDiagnosis): ' . $e->getMessage());
             return null;
@@ -163,11 +85,7 @@ class AiService
                 return $response->json();
             }
 
-            Log::error('FastAPI search symptoms failed', [
-                'status' => $response->status(),
-                'query' => $query,
-                'body' => $response->body(),
-            ]);
+            Log::error('FastAPI search symptoms failed', ['query' => $query, 'body' => $response->body()]);
             return null;
 
         } catch (ConnectionException $e) {

@@ -43,6 +43,7 @@ async def search_symptoms(q: str = Query(default="", description="Search query")
 
 @router.post("/diagnosis/start")
 async def start_diagnosis(
+    user_id: str = Form(...),
     gender: str = Form(default=""),
     is_smoker: bool = Form(default=False),
     has_diabetes: bool = Form(default=False),
@@ -63,7 +64,7 @@ async def start_diagnosis(
             "activity_level": activity_level,
             "assessment_for": assessment_for,
         }
-        session_id = svc.create_session(baseline, x_user_id)
+        session_id = svc.create_session(baseline, user_id)
         return {"status": "success", "data": {"session_id": session_id}}
     except Exception as e:
         import traceback

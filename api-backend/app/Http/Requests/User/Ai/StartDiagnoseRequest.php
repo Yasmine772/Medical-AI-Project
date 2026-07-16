@@ -2,17 +2,26 @@
 
 namespace App\Http\Requests\User\Ai;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class StartDiagnoseRequest extends FormRequest
 {
+    /**
+     * Determine if the user is authorized to make this request.
+     */
     public function authorize(): bool
     {
         return true;
     }
 
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [
@@ -22,7 +31,7 @@ class StartDiagnoseRequest extends FormRequest
             'has_hypertension' => 'required|boolean',
             'is_pregnant'      => 'required|boolean',
             'activity_level'   => 'required|string|in:sedentary,moderate,active',
-            'assessment_for'   => 'nullable|string|in:myself,child,elderly,other',
+            'assessment_for'   => 'required|string|in:myself,other',
         ];
     }
 
@@ -31,7 +40,7 @@ class StartDiagnoseRequest extends FormRequest
         $validator->after(function ($validator) {
             $data = $validator->getData();
 
-            if (($data['gender']) === 'male' && ($data['is_pregnant'] ?? false) === true) {
+            if (($data['gender']) === 'male' && ($data['is_pregnant']) == 1) {
                 $validator->errors()->add('is_pregnant', 'A man cannot be pregnant.');
             }
         });
@@ -46,4 +55,8 @@ class StartDiagnoseRequest extends FormRequest
             ], 422)
         );
     }
+
+
 }
+
+
