@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Medical AI — API Flow</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:960px;margin:auto;padding:2em;background:#f8f9fa;color:#111}
+h1{border-bottom:2px solid #666;padding-bottom:.3em}
+h2{color:#2c3e50;margin-top:1.5em}
+h3{color:#34495e;margin-top:1.2em}
+code{background:#e7e9ed;padding:.15em .4em;border-radius:3px;font-size:.9em}
+pre{background:#1e1e1e;color:#d4d4d4;padding:1em;border-radius:6px;overflow-x:auto;font-size:.85em}
+.method{display:inline-block;padding:2px 8px;border-radius:3px;font-weight:bold;font-size:.8em;margin-right:6px}
+.get{background:#61affe;color:#fff}
+.post{background:#49cc90;color:#fff}
+.field{margin:.3em 0;font-size:.9em}
+.field-name{font-weight:bold;display:inline-block;width:140px}
+.arrow{color:#666;font-size:1.2em;margin:0 .3em}
+.box{border:1px solid #ddd;border-radius:6px;padding:1em;margin:1em 0;background:#fff}
+.diagram{font-family:monospace;background:#f0f0f0;padding:1em;border-radius:6px;line-height:1.6;white-space:pre}
+</style>
+</head>
+<body>
+
+<h1>Medical Diagnosis API — Full Flow</h1>
+<p>FastAPI backend (localhost:5000). All requests use <code>application/x-www-form-urlencoded</code> (form-data, not JSON body).</p>
+
+<div class="diagram">
+    1. START ──┬── POST /diagnosis/start ──→ session_id
+               │
+    2. SEARCH ──┴── GET  /symptoms?q=       ──→ results[]
+               │
+               │       ┌─ for each picked symptom ─┐
+    3. SELECT ──┼──────┤ POST /symptom/select       │──→ first question
+               │       └────────────────────────────┘
+               │
+    4. LOOP  ───┼────── GET  /follow-up/next        ──→ question (or null)
+               │       POST /follow-up/answer        ──→ next question / diagnosis / need_more
+               │       │ loop until type=diagnosis or need_more_symptoms
+               │       │
+               │       └─ if need_more_symptoms ──→ back to step 2
+               │
+    5. REPORT ──┴── GET  /report?session_id= ──→ named diagnosis
+</div>
+
+<!-- ============================================================ -->
+<h2>1. Start a session</h2>
+<div class="box">
+<p><span class="method post">POST</span> <code>/diagnosis/start</code></p>
+<p><strong>Form fields (all optional except form):</strong></p>
+<div class="field"><span class="field-name">gender</span> string — "male" / "female" / ""</div>
+<div class="field"><span class="field-name">is_smoker</span> bool — "true" / "false"</div>
+<div class="field"><span class="field-name">has_diabetes</span> bool</div>
+<div class="field"><span class="field-name">has_hypertension</span> bool</div>
+<div class="field"><span class="field-name">is_pregnant</span> bool|null</div>
+<div class="field"><span class="field-name">activity_level</span> string — "sedentary" / "moderate" / "active"</div>
+<div class="field"><span class="field-name">assessment_for</span> string — "myself" / "other"</div>
+<hr>
+<div class="field"><span class="field-name">Header: x-user-id</span> string — optional, for Laravel linking</div>
+</div>
+
+<p><strong>Response:</strong></p>
+<pre>{
+  "status": "success",
+  "data": {
+    "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  }
+}</pre>
+
+<!-- ============================================================ -->
+<h2>2. Search symptoms</h2>
+<div class="box">
+<p><span class="method get">GET</span> <code>/symptoms?q=</code></p>
+<div class="field"><span class="field-name">q</span> string (query) — symptom/illness in any language</div>
+</div>
+
+<p><strong>Response:</strong></p>
+<pre>{
+  "status": "success",
+  "data": {
+    "query": "صداع",
+    "results": [
+      {
+        "name_en": "Migraine",
+        "name_local": "صداع نصفي",
+        "type": "illness",
+        "summary": "A type of severe headache that affects one half of the head.",
+        "source_id": "12",
+        "similarity": 0.845
+      },
+      {
+        "name_en": "Stroke",
+        "name_local": "سكتة دماغية",
+        "type": "illness",
+        "summary": "A condition where blood supply to the brain is interrupted.",
+        "source_id": "14",
+        "similarity": 0.844
+      }
+    ]
+  }
+}</pre>
+<p><em>Notes:</em></p>
+<ul>
+<li><code>name_local</code> = <code>name_en</code> translated to the query's language (passthrough for English).</li>
+<li><code>summary</code> = the extracted item's description in the query's language.</li>
+<li><code>source_id</code> = the PDF chunk ID that best matches this item (name-based lookup, not the LLM's unreliable index).</li>
+<li>If Groq 70b quota is exhausted, falls back to the 8b model automatically.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>3. Select a symptom</h2>
+<div class="box">
+<p><span class="method post">POST</span> <code>/symptom/select</code></p>
+<div class="field"><span class="field-name">session_id</span> string (required)</div>
+<div class="field"><span class="field-name">name</span> string (required) — the <code>name_en</code> from search results</div>
+</div>
+
+<p><strong>What happens server-side:</strong></p>
+<ol>
+<li>Detects the user's language (if not English, stores it on the session).</li>
+<li>Translates <code>name</code> to English (if needed).</li>
+<li>Vector-searches Supabase embeddings with the English name.</li>
+<li>Initializes Bayesian priors (or merges with existing ones if this is a second/third symptom).</li>
+<li>Generates and returns the <strong>first SOCRATES question</strong>.</li>
+</ol>
+
+<p><strong>Response:</strong></p>
+<pre>{
+  "status": "success",
+  "data": {
+    "phase": "diagnosis",
+    "question": {
+      "type": "question",
+      "question": "Where exactly is the headache located?",
+      "options": ["One side of the head", "Both sides", "Forehead", "Back of the head"],
+      "probs_per_option": {
+        "Migraine": [0.8, 0.1, 0.05, 0.05],
+        "Stroke": [0.2, 0.3, 0.2, 0.3]
+      },
+      "question_id": "uuid-here",
+      "question_index": 1
+    },
+    "type": "question",
+    "probabilities": { "chunk-id-1": 0.33, "chunk-id-2": 0.33, "chunk-id-3": 0.34 },
+    "total": 20
+  }
+}</pre>
+
+<!-- ============================================================ -->
+<h2>4. Follow-up loop</h2>
+
+<h3>4a. Get current question</h3>
+<div class="box">
+<p><span class="method get">GET</span> <code>/follow-up/next?session_id=</code></p>
+<div class="field"><span class="field-name">session_id</span> string (query)</div>
+</div>
+
+<p><strong>Response:</strong></p>
+<pre>{
+  "status": "success",
+  "data": {
+    "question": {
+      "type": "question",
+      "question": "When did the headache start? Sudden or gradual?",
+      "options": ["Sudden", "Gradual"],
+      "question_id": "uuid-here",
+      "question_index": 2
+    },
+    "total": 20
+  }
+}</pre>
+<p>If <code>question</code> is null, the session is waiting for you to pick a symptom (after <code>need_more_symptoms</code>).</p>
+
+<h3>4b. Submit an answer</h3>
+<div class="box">
+<p><span class="method post">POST</span> <code>/follow-up/answer</code></p>
+<div class="field"><span class="field-name">session_id</span> string (required)</div>
+<div class="field"><span class="field-name">question_id</span> string (required) — echoed back, currently unused by logic</div>
+<div class="field"><span class="field-name">answer</span> string (required) — user's answer in any language</div>
+</div>
+
+<p><strong>What happens server-side:</strong></p>
+<ol>
+<li>Translates the answer to English (if needed).</li>
+<li>Bayesian update using the previous question's <code>probs_per_option</code>.</li>
+<li>If &ge; 3 SOCRATES axes covered, optionally re-searches for new disease candidates.</li>
+<li>Checks stopping criteria (question cap, per-symptom cap, LLM confidence).</li>
+<li>Generates the next question / diagnosis / "need more symptoms" via LLM.</li>
+</ol>
+
+<p><strong>Response type 1 — another question:</strong></p>
+<pre>{
+  "status": "success",
+  "data": {
+    "question": {
+      "type": "question",
+      "question": "Does the pain radiate to your neck or face?",
+      "options": ["Yes, to the neck", "Yes, to the face", "No"],
+      "probs_per_option": { ... },
+      "question_id": "uuid",
+      "question_index": 3
+    },
+    "type": "question",
+    "probabilities": { "chunk-id-1": 0.5, "chunk-id-2": 0.3, "chunk-id-3": 0.2 },
+    "total": 20
+  }
+}</pre>
+
+<p><strong>Response type 2 — need more symptoms:</strong></p>
+<pre>{
+  "status": "success",
+  "data": {
+    "type": "need_more_symptoms",
+    "message": "Please search for another symptom to improve the diagnosis.",
+    "probabilities": { "chunk-id-1": 0.5, "chunk-id-2": 0.3, "chunk-id-3": 0.2 }
+  }
+}</pre>
+<p>The user should go back to step 2 (search) and pick another symptom via step 3.</p>
+
+<p><strong>Response type 3 — diagnosis:</strong></p>
+<pre>{
+  "status": "success",
+  "data": {
+    "type": "diagnosis",
+    "diagnoses": [
+      {
+        "disease_name": "Migraine",
+        "disease_name_local": "صداع نصفي",
+        "probability": 0.55,
+        "confidence": "Strong",
+        "specialist": "Neurologist",
+        "specialist_local": "طبيب أعصاب",
+        "advice": "Consult a neurologist for proper diagnosis and treatment.",
+        "advice_local": "استشر طبيب أعصاب للتشخيص والعلاج المناسبين."
+      },
+      {
+        "disease_name": "Cluster Headache",
+        "disease_name_local": "الصداع العنقودي",
+        "probability": 0.28,
+        "confidence": "Moderate",
+        "specialist": "Neurologist",
+        "specialist_local": "طبيب أعصاب",
+        "advice": "Neurological evaluation recommended."
+      }
+    ],
+    "probabilities": { ... }
+  }
+}</pre>
+
+<!-- ============================================================ -->
+<h2>5. Report</h2>
+<div class="box">
+<p><span class="method get">GET</span> <code>/report?session_id=</code></p>
+<div class="field"><span class="field-name">session_id</span> string (query)</div>
+</div>
+
+<p><strong>Response:</strong> same diagnosis shape as above.</p>
+
+<!-- ============================================================ -->
+<h2>Key Notes</h2>
+<ul>
+<li><strong>All endpoints use form-data</strong> (not JSON body).</li>
+<li><strong>No auth</strong> on FastAPI — Laravel handles auth and proxies requests.</li>
+<li><strong>Language is detected automatically</strong> from the user's first input. English = passthrough (zero cost). Arabic or any other = Google-translated at the edges only. The LLM operates 100% in English.</li>
+<li><strong>Bayesian priors</strong> are initialized from vector search similarity. Evidence accumulates via the LLM's <code>probs_per_option</code> per question.</li>
+<li><strong>Max 20 questions</strong> hard cap. Per-symptom cap is dynamic (2–8 questions) based on uncertainty.</li>
+<li><strong>Groq models:</strong> <code>llama-3.3-70b-versatile</code> for extraction (search), <code>llama-3.1-8b-instant</code> for the SOCRATES loop. Falls back to 8b on quota exceeded.</li>
+<li><strong>Session data</strong> stored in Supabase (<code>diagnosis_sessions</code> + <code>diagnosis_questions</code> tables). Laravel saves completed diagnoses to MySQL.</li>
+</ul>
+
+<hr>
+<p style="color:#666;font-size:.85em">Generated 2026-07-17</p>
+
+</body>
+</html>

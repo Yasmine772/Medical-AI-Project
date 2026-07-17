@@ -72,3 +72,42 @@ class SessionManager:
             data["candidates"] = json.dumps(candidates)
         self.connect().table("diagnosis_sessions").update(data).eq("id", session_id).execute()
         log("DB", f"Updated session {session_id[:8]} status={status or '-'} candidates_keys={list(candidates.keys()) if candidates else 'none'}")
+
+    def insert_question(
+        self,
+        session_id: str,
+        question_index: int,
+        question_jsonb: Dict,
+    ) -> Optional[str]:
+        try:
+            result = self._rpc("insert_diagnosis_question", {
+                "p_session_id": session_id,
+                "p_question_index": question_index,
+                "p_question_jsonb": json.dumps(question_jsonb),
+            })
+            qid = result.data
+            if isinstance(qid, list) and qid:
+                qid = qid[0]
+            log("DB", f"Inserted question {qid} for session {session_id[:8]} idx={question_index}")
+            return qid
+        except Exception as e:
+            log("DB", f"insert_question failed (non-fatal): {e}")
+            return None
+
+    def get_question(self, question_id: str) -> Optional[Dict]:
+        result = self._rpc("get_diagnosis_question", {"p_id": question_id})
+        if not result.data:
+            return None
+        q = result.data
+        if isinstance(q, str):
+            q = json.loads(q)
+        return q
+
+    def list_questions(self, session_id: str) -> List[Dict]:
+        result = self._rpc("list_diagnosis_questions", {"p_session_id": session_id})
+        if not result.data:
+            return []
+        data = result.data
+        if isinstance(data, str):
+            data = json.loads(data)
+        return data if isinstance(data, list) else []
