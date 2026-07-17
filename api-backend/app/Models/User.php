@@ -9,13 +9,13 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Carbon\Carbon;
-use Spatie\Permission\Traits\HasRoles;
 use OwenIt\Auditing\Contracts\Auditable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements Auditable
 {
     use HasFactory, Notifiable , HasApiTokens, CanResetPassword , HasRoles;
-    use \OwenIt\Auditing\Auditable;
+    use  \OwenIt\Auditing\Auditable;
 
     /**
      * The attributes excluded from the audit.
@@ -29,6 +29,7 @@ class User extends Authenticatable implements Auditable
         'role',
         'status',
         'diagnose_num',
+        'email_verified_at',
         'avatar',
         'otp',
         'otp_verified_at' ,
