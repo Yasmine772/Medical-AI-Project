@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class searchRequest extends FormRequest
+class DiagnosisAnswerRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,11 +25,11 @@ class searchRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'q' => 'nullable|string|max:255',
-            'limit' => 'nullable|integer|min:1|max:100',
+            'session_id'  => 'required|string',
+            'question_id' => 'required|string',
+            'answer'      => 'required|string',
         ];
     }
-
 
     protected function failedValidation(Validator $validator)
     {
@@ -40,4 +40,6 @@ class searchRequest extends FormRequest
             ], 422)
         );
     }
+
+
 }

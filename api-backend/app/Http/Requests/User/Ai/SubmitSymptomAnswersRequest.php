@@ -25,19 +25,11 @@ class SubmitSymptomAnswersRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'session_id'            => 'required|string',
             'symptom_name'          => 'required|string|max:255',
             'answers'               => 'required|array|min:1',
-            'answers.*.question_id' => 'required|string',
-            'answers.*.answer'      => 'required|string',
             'symptoms_complete'     => 'nullable|boolean',
         ];
-    }
-
-    protected function prepareForValidation()
-    {
-        if ($this->isJson()) {
-            $this->merge($this->json()->all());
-        }
     }
 
     protected function failedValidation(Validator $validator)

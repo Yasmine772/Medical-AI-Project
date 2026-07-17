@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class SubmitDiagnosisAnswerRequest extends FormRequest
+class GetNextQuestionRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,11 +25,10 @@ class SubmitDiagnosisAnswerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'session_id' => 'nullable|string',
-            'question_id' => 'required|string|max:255',
-            'answer' => 'required|string|max:65535',
+            'session_id' => 'required|string',
         ];
     }
+
 
     protected function failedValidation(Validator $validator)
     {
@@ -40,6 +39,4 @@ class SubmitDiagnosisAnswerRequest extends FormRequest
             ], 422)
         );
     }
-
-
 }
