@@ -54,9 +54,8 @@ def build_system_prompt(
     axis_label = SOCRATES_AXES[socrates_axis] if socrates_axis < len(SOCRATES_AXES) else "Any remaining clarifying questions"
     covered = SOCRATES_AXES[:socrates_axis]
     covered_text = "\n".join(f"- {a}" for a in covered) if covered else "None yet"
-    lang_label = "Arabic" if language == "ar" else "English"
 
-    prompt = f"""You are a medical diagnosis assistant. Your job is to diagnose the patient by asking targeted follow-up questions based on the possible diseases retrieved from the database.
+    prompt = f"""You are a medical diagnosis assistant. All output MUST be in English only — the system translates for the patient.
 
 Possible diseases from database:
 {candidates_text}
@@ -73,32 +72,24 @@ Current axis to ask about:
 Rules:
 - Respond ONLY with valid JSON, no other text.
 - Ask ONE question about the current axis only
-- After the patient answers, the system will update probabilities automatically — you do NOT need to output updated probabilities
+- After the patient answers, the system will update probabilities automatically
 - Only provide a final diagnosis when you are confident (probability > 70%)
-- If you feel confident enough before all axes are covered, you may output a diagnosis early
-- Questions and options MUST be in {lang_label}
 - You may ask multiple questions on the same axis if needed
-
-IMPORTANT field rules:
-- "disease_name" MUST be in English only
-- "specialist" MUST be in English only
-- "advice" MUST be in English only
-- The system translates all user-facing text into the patient's language afterwards — do NOT output any non-English text.
-- "question" MUST be in English only
+- ALL text fields (question, options, message, disease_name, specialist, advice) MUST be in English only
 
 You MUST respond with ONE of these three JSON shapes:
 
-1) Ask a SOCRATES question (include per-option probabilities for each candidate disease; "probs_per_option" values MUST sum to ~1.0 for each disease, they are P(option_i | disease)):
-{{"type": "question", "question": "question", "options": ["option1", "option2", "option3"], "probs_per_option": {{"DiseaseName1": [0.7, 0.2, 0.1], "DiseaseName2": [0.3, 0.4, 0.3]}}}}
+1) Ask a SOCRATES question:
+{{"type": "question", "question": "question in English", "options": ["option1", "option2"], "probs_per_option": {{"DiseaseName1": [0.7, 0.3], "DiseaseName2": [0.4, 0.6]}}}}
 
-2) If you need the patient to provide ANOTHER symptom to improve the diagnosis (do not guess — ask them to search), respond:
-{{"type": "need_more_symptoms", "message": "brief instruction in {lang_label}, e.g. Search for associated symptoms such as nausea"}}
+2) If you need more symptoms:
+{{"type": "need_more_symptoms", "message": "instruction in English"}}
 
-3) When providing a final diagnosis, output the top 3 most likely conditions:
-{{"type": "diagnosis", "diagnoses": [{{"disease_name": "English name", "disease_name_ar": "اسم المرض", "confidence": "Strong", "probability": 0.72, "specialist": "English specialist", "specialist_ar": "التخصص", "advice": "advice", "reasoning": "explanation"}}, {{"disease_name": "...", "confidence": "Moderate", "probability": 0.18}}, {{"disease_name": "...", "confidence": "Less Likely", "probability": 0.10}}]}}"""
+3) Final diagnosis (English only):
+{{"type": "diagnosis", "diagnoses": [{{"disease_name": "English name", "probability": 0.72, "confidence": "Strong", "specialist": "English specialist", "advice": "advice in English"}}]}}"""
 
     if force:
-        prompt += "\n\nYou MUST output a diagnosis NOW based on all the information gathered. Output the top 3 most likely conditions."
+        prompt += "\n\nYou MUST output a diagnosis NOW based on all the information gathered."
 
     return prompt
 
