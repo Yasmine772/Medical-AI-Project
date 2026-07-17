@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class StartDiagnoseRequest extends FormRequest
+class SubmitSymptomAnswersRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,25 +25,19 @@ class StartDiagnoseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'gender'           => 'required|string|in:male,female',
-            'is_smoker'        => 'required|boolean',
-            'has_diabetes'     => 'required|boolean',
-            'has_hypertension' => 'required|boolean',
-            'is_pregnant'      => 'required|boolean',
-            'activity_level'   => 'required|string|in:sedentary,moderate,active',
-            'assessment_for'   => 'required|string|in:myself,other',
+            'symptom_name'          => 'required|string|max:255',
+            'answers'               => 'required|array|min:1',
+            'answers.*.question_id' => 'required|string',
+            'answers.*.answer'      => 'required|string',
+            'symptoms_complete'     => 'nullable|boolean',
         ];
     }
 
-    public function withValidator($validator)
+    protected function prepareForValidation()
     {
-        $validator->after(function ($validator) {
-            $data = $validator->getData();
-
-            if (($data['gender']) === 'male' && ($data['is_pregnant']) == 1) {
-                $validator->errors()->add('is_pregnant', 'A man cannot be pregnant.');
-            }
-        });
+        if ($this->isJson()) {
+            $this->merge($this->json()->all());
+        }
     }
 
     protected function failedValidation(Validator $validator)
@@ -55,8 +49,4 @@ class StartDiagnoseRequest extends FormRequest
             ], 422)
         );
     }
-
-
 }
-
-

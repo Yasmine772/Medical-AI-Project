@@ -1,22 +1,31 @@
 <?php
 
-namespace App\Http\Requests\User\Ai;
+namespace App\Http\Requests\Web\Doctor;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class ContinueDiagnoseRequest extends FormRequest
+class RejectDoctorRequest extends FormRequest
 {
+    /**
+     * Determine if the user is authorized to make this request.
+     */
     public function authorize(): bool
     {
         return true;
     }
 
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [
-            'answer' => 'required|string',
+            'rejection_reason' => 'string|max:255',
         ];
     }
 

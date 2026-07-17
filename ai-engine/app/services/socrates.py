@@ -124,7 +124,7 @@ Return a JSON object:
 
 
 def build_conclusion_prompt(symptom_name: str, qa_text: str, candidates_text: str, language: str) -> str:
-    lang_label = "Arabic" if language == "ar" else "Arabic"
+    lang_label = "Arabic" if language == "ar" else "English"
     return f"""Based on the patient's symptom and their answers, write a brief medical conclusion.
 
 Symptom: {symptom_name}

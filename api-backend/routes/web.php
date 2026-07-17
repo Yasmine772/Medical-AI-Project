@@ -3,9 +3,11 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\settingController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Web\Admin\UserManagement\UserController;
 use App\Http\Controllers\web\Admin\AuditLogs\AuditContoller;
 use App\Http\Controllers\Web\Admin\Dashboard\DashboardController;
+use App\Http\Controllers\web\Admin\UserManagement\UserController;
+use App\Http\Controllers\Web\Auth\AuthController as AdminAuthController;
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -17,7 +19,7 @@ Route::get('/app/updates/latest', [settingController::class, 'latestUpdates']);
 
 
 Route::prefix('admin')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AdminAuthController::class, 'adminLogin']);
     Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
     Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
 
@@ -27,14 +29,14 @@ Route::prefix('admin')->group(function () {
 
     Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
-        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:logout');
+        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:admin-logout');
         // Profile routes
         Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
         Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
 
        // User Management 
-       Route::get('/users', [UserController::class, 'index']);
-       Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+        Route::get('/users', [UserController::class, 'index'])->middleware('permission:view-users');
+        Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->middleware('permission:toggle-user');
 
         // Audit Logs
         Route::prefix('audit-logs')->group(function () {

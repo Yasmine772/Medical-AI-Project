@@ -72,21 +72,13 @@ class PgVectorClient:
         limit: int = 5,
         filter_type: str | None = None,
     ) -> List[dict]:
-        if filter_type is not None:
-            params = {
-                "query_embedding": self._to_list(query_embedding),
-                "match_count": 500,
-            }
-            response = self._rpc("search_embeddings", params)
-            results = [r for r in (response.data or []) if r.get("type") == filter_type][:limit]
-        else:
-            params = {
-                "query_embedding": self._to_list(query_embedding),
-                "match_count": limit,
-            }
-            response = self._rpc("search_embeddings", params)
-            results = response.data or []
-        return results
+        params = {
+            "query_embedding": self._to_list(query_embedding),
+            "match_count": limit,
+            "filter_type": filter_type,
+        }
+        response = self._rpc("search_embeddings", params)
+        return response.data or []
 
     def count(self, filter_type: str | None = None) -> int:
         if filter_type is not None:
