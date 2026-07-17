@@ -5,6 +5,8 @@ from supabase import Client, create_client
 
 from dotenv import load_dotenv
 load_dotenv()
+from app.services.logger import log
+
 
 class PgVectorClient:
 
@@ -95,7 +97,37 @@ class PgVectorClient:
     def close(self):
         self._supabase = None
 
+    # ── PDF chunks (legacy, uses embeddings table internally) ──
+
+    def insert_pdf_chunk(
+        self,
+        chunk_id: str,
+        document: str,
+        embedding: np.ndarray,
+        metadata: dict,
+    ):
+        self.insert(chunk_id, document, embedding, "pdf", metadata)
+        log("VECTOR", f"Inserted pdf chunk {metadata.get('source')} p.{metadata.get('page')}")
+
+    def search_pdf(
+        self,
+        query_embedding: np.ndarray,
+        limit: int = 3,
+    ) -> List[dict]:
+        return self.search(query_embedding, limit=limit, filter_type="pdf")
+
+    def count_pdf(self) -> int:
+        return self.count(filter_type="pdf")
+
     # ── internal ──
 
     def _rpc(self, function_name: str, params: Dict[str, Any] | None = None):
-        return self.connect().rpc(function_name, params or {}).execute()
+        try:
+            return self.connect().rpc(function_name, params or {}).execute()
+        except Exception as e:
+            reset_errors = ("RemoteProtocolError", "ConnectionReset", "StreamReset", "APIError")
+            if any(name in type(e).__name__ or name in str(e) for name in reset_errors):
+                log("SUPABASE", f"RPC {function_name} connection reset, reconnecting: {e}")
+                self._supabase = None
+                return self.connect().rpc(function_name, params or {}).execute()
+            raise
