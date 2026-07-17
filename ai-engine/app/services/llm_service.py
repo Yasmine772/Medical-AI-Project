@@ -5,7 +5,7 @@ from app.services.logger import log
 
 class LLMService:
 
-    def __init__(self, api_key: str = None, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, api_key: str = None, model: str = "llama-3.1-8b-instant"):
         key = api_key or os.environ.get("GROQ_KEY")
         if not key:
             raise ValueError("GROQ_KEY not set")
@@ -15,10 +15,11 @@ class LLMService:
         )
         self._model = model
 
-    def ask(self, messages: list, temperature: float = 0.2, max_tokens: int = 1024) -> str:
-        log("LLM", f"API call model={self._model} temp={temperature} max={max_tokens} msgs={len(messages)}")
+    def ask(self, messages: list, temperature: float = 0.2, max_tokens: int = 1024, model: str = None) -> str:
+        actual = model or self._model
+        log("LLM", f"API call model={actual} temp={temperature} max={max_tokens} msgs={len(messages)}")
         resp = self._client.chat.completions.create(
-            model=self._model,
+            model=actual,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,

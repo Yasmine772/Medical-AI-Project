@@ -81,17 +81,20 @@ Rules:
 
 IMPORTANT field rules:
 - "disease_name" MUST be in English only
-- "disease_name_ar" MUST be in Arabic only
 - "specialist" MUST be in English only
-- "specialist_ar" MUST be in Arabic only
-- "advice" MUST be in {lang_label}
-- "question" MUST be in {lang_label}
+- "advice" MUST be in English only
+- The system translates all user-facing text into the patient's language afterwards — do NOT output any non-English text.
+- "question" MUST be in English only
 
-When asking a question, you MUST include per-option probabilities for each candidate disease.
-The "probs_per_option" values MUST sum to ~1.0 for each disease (they are P(option_i | disease)):
+You MUST respond with ONE of these three JSON shapes:
+
+1) Ask a SOCRATES question (include per-option probabilities for each candidate disease; "probs_per_option" values MUST sum to ~1.0 for each disease, they are P(option_i | disease)):
 {{"type": "question", "question": "question", "options": ["option1", "option2", "option3"], "probs_per_option": {{"DiseaseName1": [0.7, 0.2, 0.1], "DiseaseName2": [0.3, 0.4, 0.3]}}}}
 
-When providing a diagnosis, output the top 3 most likely conditions:
+2) If you need the patient to provide ANOTHER symptom to improve the diagnosis (do not guess — ask them to search), respond:
+{{"type": "need_more_symptoms", "message": "brief instruction in {lang_label}, e.g. Search for associated symptoms such as nausea"}}
+
+3) When providing a final diagnosis, output the top 3 most likely conditions:
 {{"type": "diagnosis", "diagnoses": [{{"disease_name": "English name", "disease_name_ar": "اسم المرض", "confidence": "Strong", "probability": 0.72, "specialist": "English specialist", "specialist_ar": "التخصص", "advice": "advice", "reasoning": "explanation"}}, {{"disease_name": "...", "confidence": "Moderate", "probability": 0.18}}, {{"disease_name": "...", "confidence": "Less Likely", "probability": 0.10}}]}}"""
 
     if force:
@@ -134,6 +137,61 @@ Questions and answers:
 Possible diseases:
 {candidates_text}
 
-Respond ONLY with valid JSON, no other text.
-Return:
-{{"conclusion": "brief conclusion text in {lang_label}"}}"""
+    Respond ONLY with valid JSON, no other text.
+    Return:
+    {{"conclusion": "brief conclusion text in {lang_label}"}}"""
+
+
+def build_extract_prompt(query: str, context_blocks: str, language: str) -> str:
+    return f"""You are a medical information extractor. A user searched for the medical term: "{query}".
+
+Below are excerpted passages from a medical knowledge base (PDF documents) that matched the search.
+
+{context_blocks}
+
+Your job: extract a clean, human-readable list of distinct medical items mentioned in the passages that are relevant to the search. Each item must be classified as exactly one of:
+- "illness": a disease, disorder, or medical condition (e.g. Migraine, Tension-type headache)
+- "symptom": a sign, complaint, or manifestation (e.g. nausea, photophobia)
+
+For each item provide:
+- "name_en": the English name (required)
+- "name_ar": an EMPTY string (the system will translate later — do NOT write Arabic yourself)
+- "type": "illness" or "symptom"
+- "summary": one short sentence (<= 20 words) describing it, IN ENGLISH
+- "source_chunk": the 1-based index of the passage it came from
+
+Rules:
+- Do NOT invent items not supported by the passages.
+- Deduplicate; merge the same illness/symptom mentioned in multiple passages.
+- Prefer specific illness names over vague ones.
+- ALL text fields (name_en, summary) MUST be in English only. Never output Arabic or any non-English text.
+-     Respond ONLY with valid JSON, no other text, of this exact shape:
+{{"results": [{{"name_en": string, "name_ar": string, "type": "illness"|"symptom", "summary": string, "source_chunk": int}}]}}
+- If a passage is irrelevant, ignore it. If nothing relevant is found, return {{"results": []}}."""
+
+
+def build_diagnosis_naming_prompt(candidates_text: str, probs_text: str, language: str) -> str:
+    lang_label = "Arabic" if language == "ar" else "English"
+    return f"""You are a medical diagnosis assistant. Below are the top retrieved medical-text passages (evidence) and the current Bayesian probability estimates for each passage's associated condition.
+
+Retrieved evidence passages:
+{candidates_text}
+
+Current probability estimates (per passage id):
+{probs_text}
+
+Your job: produce the top 3 most likely specific ILLNESSES (named conditions) supported by the evidence. Different passages may point to different illnesses — do NOT collapse them into one name.
+
+Respond ONLY with valid JSON, no other text:
+{{"diagnoses": [
+  {{"disease_name": "English illness name", "probability": <number 0-1 matching the evidence weight>, "confidence": "Strong"|"Moderate"|"Less Likely", "specialist": "English specialist", "advice": "brief advice in English"}}
+]}}
+
+Rules:
+- disease_name MUST be English only.
+- specialist MUST be English only.
+- advice MUST be English only.
+- The system translates all user-facing text into the patient's language afterwards — do NOT output any non-English text (no Arabic, no other languages).
+- Give 3 distinct named illnesses when the evidence supports them.
+- probability values should reflect the relative Bayesian weights above (top one highest), and the three should sum to ~1.0.
+- Do not invent illnesses not supported by the passages."""

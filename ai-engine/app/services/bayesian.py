@@ -14,6 +14,7 @@ MAX_QUESTIONS = 10
 
 def compute_priors(diseases: list) -> dict:
     scores = {}
+    used_similarity = False
     for d in diseases:
         doc = d.get("document") or ""
         likelihoods = ""
@@ -22,11 +23,18 @@ def compute_priors(diseases: list) -> dict:
                 likelihoods = line.split(":", 1)[-1].strip()
                 break
         label = ((d.get("name_en") or "") + " " + likelihoods).lower()
-        score = 0.05
+        score = None
         for keywords, val in _PRIOR_KEYWORDS:
             if any(kw in label for kw in keywords):
                 score = val
                 break
+        if score is None:
+            sim = d.get("similarity")
+            if isinstance(sim, (int, float)) and sim > 0:
+                score = max(0.05, min(0.95, float(sim)))
+                used_similarity = True
+            else:
+                score = 0.05
         name_en = d.get("name_en") or d.get("id") or "?"
         scores[name_en] = score
     total = sum(scores.values())
@@ -74,7 +82,7 @@ def check_stopping(probs: dict, socrates_axis: int = 0) -> bool:
     return top1 >= CONFIDENCE_THRESHOLD or top3_sum >= TOP3_THRESHOLD
 
 
-def force_top3(probs: dict, diseases: list = None) -> list:
+def force_top3(probs: dict, diseases: list = None, labels: dict = None) -> list:
     disease_map = {}
     if diseases:
         for d in diseases:
@@ -87,9 +95,12 @@ def force_top3(probs: dict, diseases: list = None) -> list:
     for i, (name, prob) in enumerate(sorted_probs[:3]):
         conf = "Strong" if i == 0 else "Moderate" if i == 1 else "Less Likely"
         info = disease_map.get(name, {})
+        label = (labels or {}).get(name, {})
+        display_en = label.get("name_en") or info.get("name_en") or name
+        display_ar = label.get("name_ar") or info.get("name_ar") or ""
         result.append({
-            "disease_name": name,
-            "disease_name_ar": info.get("name_ar") or "",
+            "disease_name": display_en,
+            "disease_name_ar": display_ar,
             "confidence": conf,
             "probability": round(prob, 2),
             "specialist": info.get("specialist") or "",
