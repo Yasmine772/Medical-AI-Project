@@ -24,26 +24,11 @@ class AiController extends Controller
 //------------------------------------------------------------------------------------
     public function startDiagnosis(StartDiagnoseRequest $request)
     {
-        $user = auth()->user();
-
-        $result = $this->aiService->startDiagnosis($user, $request->validated(), $request->input('assessment_for', 'myself'));
+        $result = $this->aiService->startDiagnosis($request->validated());
 
         if ($result === null) {
-            return $this->errorResponse(
-                'Diagnosis service error. Please check storage/logs/laravel.log for details',
-                null,
-                503
-            );
+            return $this->errorResponse('Diagnosis service error. Please check storage/logs/laravel.log for details', null, 503);
         }
-
-        if (isset($result['error'])) {
-            return $this->errorResponse('Error', $result['error'], 422);
-        }
-
-        if (isset($result['data']['session_id'])) {
-            session(['ai_session_id' => $result['data']['session_id']]);
-        }
-
         return $this->successResponse($result, 'Diagnosis started successfully', 200);
     }
     //************************************************* */
@@ -52,17 +37,12 @@ class AiController extends Controller
         $result = $this->aiService->searchSymptoms($request->query('q', ''));
 
         if ($result === null) {
-            return $this->errorResponse(
-                'Search service error. Please check storage/logs/laravel.log for details',
-                null,
-                503
-            );
+            return $this->errorResponse('Diagnosis service error. Please check storage/logs/laravel.log for details', null, 503);
         }
 
         if (isset($result['results']) && empty($result['results'])) {
             return $this->errorResponse('No symptoms found', null, 404);
         }
-
         return $this->successResponse($result, 'Symptoms retrieved successfully', 200);
     }
 //************************************************** */
