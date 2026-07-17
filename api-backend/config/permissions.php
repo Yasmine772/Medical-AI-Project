@@ -28,15 +28,12 @@ return [
             'add-advices', 'edit-advices', 'delete-advices', 'view-doctors',  'accept-doctors',
             'reject-doctors', 'edit-doctors', 'active-doctors',  'non-active-doctors',
             'delete-doctors', 'view-users', 'edit-users','ban-users', 'unban-users',
-<<<<<<< HEAD
-            'send-notifications', 'view-notifications',  'logout','edit-profile', 'view-profile'
-=======
+            'edit-profile', 'view-profile',
             'send-notifications', 'view-notifications',  'admin-logout',
             'show-doctor-requests' ,
             'show-doctor-request-details',
             'approve-doctor-request',
             'reject-doctor-request'
->>>>>>> Rama
         ],
 
         'patient' => [
