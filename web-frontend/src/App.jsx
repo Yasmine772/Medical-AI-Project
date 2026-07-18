@@ -11,14 +11,13 @@ import DashboardLayout from "./features/dashboard/components/DashboardLayout";
 import UsersManagementPage from "./features/users/pages/UsersManagementPage";
 import OnboardingPage from "./features/auth/pages/OnboardingPage";
 import AuditLogsPage from "./features/audit-logs/pages/AuditLogsPage";
-
+import DiseasesPage from "./features/diseases/pages/DiseasesPage";
 import DoctorLayout from "./features/doctor-dashboard/components/DoctorLayout";
 import HomePage from "./features/doctor-dashboard/pages/HomePage";
 function App() {
   return (
     <Router>
       <Routes>
-        
         <Route path="/" element={<OnboardingPage />} />
         <Route path="/login" element={<LoginPage />} />
 
@@ -28,6 +27,7 @@ function App() {
           <Route path="doctors" element={<DoctorsManagementPage />} />
           <Route path="users" element={<UsersManagementPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
+          <Route path="/app/diseases" element={<DiseasesPage />} />
         </Route>
 
         {/* doctors routes*/}

@@ -15,12 +15,11 @@ const Sidebar = ({ onLogoutClick }) => {
     { icon: LayoutDashboard, path: "/app/dashboard" },
     { icon: Stethoscope, path: "/app/doctors" },
     { icon: UserCog, path: "/app/users" },
-    { icon: HeartPulse, path: "/app/patients" },
+    { icon: HeartPulse, path: "/app/diseases" },
     { icon: MessageSquare, path: "/app/audit-logs" },
     { icon: LogOut, path: "logout" },
   ];
 
-  
   return (
     <div className="w-20 bg-[#72A6BB]/60 backdrop-blur-xl border border-white/20 min-h-[90vh] flex flex-col items-center py-6 rounded-[32px]">
       <div className="flex flex-col gap-6 w-full items-center">

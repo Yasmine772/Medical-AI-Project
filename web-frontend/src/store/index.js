@@ -10,6 +10,7 @@ import {
   REGISTER,
 } from "redux-persist";
 import authReducer from "./authSlice";
+import dashboardReducer from "../features/dashboard/dashboardSlice";
 const storage = {
   getItem: (key) => Promise.resolve(localStorage.getItem(key)),
   setItem: (key, value) => Promise.resolve(localStorage.setItem(key, value)),
@@ -22,7 +23,7 @@ import auditLogsReducer from "../features/audit-logs/auditLogsSlice";
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["doctors", "users"],
+  whitelist: ["doctors", "users","auth"],
 };
 
 const persistedReducer = persistReducer(
@@ -32,6 +33,8 @@ const persistedReducer = persistReducer(
     auth: authReducer,
     users: usersReducer,
     auditLogs: auditLogsReducer,
+    dashboard: dashboardReducer,
+    
   }),
 );
 

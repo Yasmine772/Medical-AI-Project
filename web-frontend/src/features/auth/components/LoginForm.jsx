@@ -17,11 +17,7 @@ const LoginForm = ({ role }) => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // if (isVerifying) {
-    //   return (
-    //     <OtpVerification email={email} onBack={() => setIsVerifying(false)} />
-    //   );
-    // }
+    
 
     try {
       // نرسل الطلب للباك إند
@@ -32,7 +28,7 @@ const LoginForm = ({ role }) => {
         response.data.access_token || response.data.data?.access_token;
 
       if (token) {
-        dispatch(loginSuccess(token));
+        dispatch(loginSuccess({ token, email }));
         navigate(role === "doctor" ? "/doctor/dashboard" : "/app/dashboard");
       } else {
         alert(

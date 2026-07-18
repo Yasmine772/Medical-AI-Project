@@ -1,31 +1,54 @@
-const AuditFilters = () => {
+import { useState } from "react";
+
+const AuditFilters = ({ onFilterChange }) => {
+  const [filters, setFilters] = useState({
+    operation: "",
+    category: "",
+    date: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const newFilters = { ...filters, [name]: value };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
+
   return (
     <div className="flex flex-wrap gap-4 p-4 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-sm items-center">
-      <input
-        type="text"
-        placeholder="Search in details..."
-        className="flex-[2] min-w-[200px] bg-white/60 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-[#72A6BB] outline-none"
-      />
+      {/* 1. Category */}
+      <select
+        name="category"
+        className="flex-1 bg-white/60 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-700 outline-none cursor-pointer"
+        onChange={handleChange}
+      >
+        <option value="">All Categories</option>
+        <option value="App\Models\User">Users</option>
 
-      {/* 2.Categories */}
-      <select className="flex-1 bg-white/60 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-700 outline-none cursor-pointer">
-        <option>All Categories</option>
-        <option>Database</option>
-        <option>Doctors</option>
+        {/* أضف باقي الموديلات هنا بنفس طريقة الـ value */}
       </select>
 
-      {/* 3.Operations */}
-      <select className="flex-1 bg-white/60 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-700 outline-none cursor-pointer">
-        <option>All Operations</option>
-        <option>Create</option>
-        <option>Update</option>
+      {/* 2. Operation */}
+      <select
+        name="operation"
+        className="flex-1 bg-white/60 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-700 outline-none cursor-pointer"
+        onChange={handleChange}
+      >
+        <option value="">All Operations</option>
+        <option value="created">Create</option>
+        <option value="updated">Update</option>
+        <option value="deleted">Delete</option>
       </select>
 
-      {/* 4.Date */}
-      <select className="flex-1 bg-white/60 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-700 outline-none cursor-pointer">
-        <option>Today</option>
-        <option>Last 7 Days</option>
-        <option>Last Month</option>
+      {/* 3. Date */}
+      <select
+        name="date"
+        className="flex-1 bg-white/60 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-700 outline-none cursor-pointer"
+        onChange={handleChange}
+      >
+        <option value="">Select Date</option>
+        <option value="today">Today</option>
+        <option value="last_7_days">Last 7 Days</option>
       </select>
     </div>
   );
