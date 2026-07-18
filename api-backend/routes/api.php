@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Reports\ReportController;
 use App\Http\Controllers\Api\V1\settingController;
 use Illuminate\Support\Facades\Route;
+use Kreait\Laravel\Firebase\Facades\Firebase;
 
 Route::prefix('v1/auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -48,6 +49,12 @@ Route::prefix('v1/auth')->group(function () {
         // Check if the user is authenticated
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
-       
+
     });
+    
+});
+
+    Route::get('/test-firebase', function () {
+    $messaging = Firebase::messaging();
+    return "Firebase connection is successful!";
 });

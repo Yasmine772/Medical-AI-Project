@@ -38,6 +38,11 @@ class Doctor extends Model implements Auditable
         return $this->belongsTo(User::class);
     }
 
+    public function getPhotoPathAttribute(): ?string
+    {
+        return $this->photo;
+    }
+
     public function diseases()
     {
         return $this->belongsToMany(Disease::class, 'disease_specialists', 'doctor_id', 'disease_id');

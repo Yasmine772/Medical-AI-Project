@@ -21,15 +21,16 @@ class AuditService
         ->take(50)
         ->get();
     }
+
     /**
      * Get the total count of audit logs.
      * @return int
      */
-
     public function getTotalCount(): int
     {
         return AuditLog::count();
     }
+    
     /**
      * Get the total count of change logs(event:created, updated, deleted).
      * @return int

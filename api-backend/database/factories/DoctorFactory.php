@@ -22,7 +22,7 @@ class DoctorFactory extends Factory
         'is_active' => $this->faker->boolean(80), 
         'specialization' => $this->faker->word(), 
         'years_of_experience'=> $this->faker->numberBetween(1, 30),
-        'photo_path' => $this->faker->imageUrl(640, 480),
+        'photo' => $this->faker->imageUrl(640, 480),
         'clinic_phone' => $this->faker->phoneNumber(),
         ];
     }
