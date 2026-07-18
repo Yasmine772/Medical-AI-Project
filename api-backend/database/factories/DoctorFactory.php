@@ -18,11 +18,14 @@ class DoctorFactory extends Factory
     public function definition(): array
     {
         return [
-        'full_name' => $this->faker->name(),          
+        'full_name' => $this->faker->name(),     
+        'email' => $this->faker->unique()->safeEmail(),
+        'password' => bcrypt('password'),
+        'phone' => $this->faker->phoneNumber(),
         'is_active' => $this->faker->boolean(80), 
         'specialization' => $this->faker->word(), 
         'years_of_experience'=> $this->faker->numberBetween(1, 30),
-        'photo_path' => $this->faker->imageUrl(640, 480),
+        'photo' => $this->faker->imageUrl(640, 480),
         'clinic_phone' => $this->faker->phoneNumber(),
         ];
     }
