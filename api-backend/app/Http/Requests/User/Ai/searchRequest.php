@@ -25,7 +25,8 @@ class searchRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'query' => 'required|string|min:2'
+            'q' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:100',
         ];
     }
 
