@@ -49,6 +49,8 @@ class AiService
                     'has_diabetes' => $request['has_diabetes'],
                     'has_hypertension' => $request['has_hypertension'],
                     'is_pregnant' => $request['is_pregnant'],
+                    'is_alcoholic'     => $request['is_alcoholic'],
+                    'patient_job'      => $request['patient_job'],
                     'activity_level' => $request['activity_level'],
                     'assessment_for' => $request['assessment_for'],
                 ]);
