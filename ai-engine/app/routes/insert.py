@@ -11,6 +11,10 @@ from app.state import get_store, get_embedder, set_insert_progress, get_insert_p
 
 router = APIRouter()
 
+# Serialize PDF insertion so only one PDF is processed at a time (avoids
+# spawning a thread per file and burning RAM when many are uploaded at once).
+_pdf_lock = threading.Lock()
+
 
 def _insert_disease(disease: DiseaseItem):
     store = get_store()
@@ -141,7 +145,11 @@ async def insert_pdf(file: UploadFile = File(...)):
     task_id = str(uuid.uuid4())
     set_insert_progress(task_id, "starting", 0, 0)
 
-    thread = threading.Thread(target=_process_pdf, args=(task_id, content, file.filename), daemon=True)
+    def _run():
+        with _pdf_lock:
+            _process_pdf(task_id, content, file.filename)
+
+    thread = threading.Thread(target=_run, daemon=True)
     thread.start()
 
     return {"task_id": task_id, "status": "started", "filename": file.filename}
