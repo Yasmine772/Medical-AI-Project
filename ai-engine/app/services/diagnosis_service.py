@@ -16,6 +16,7 @@ from app.services.socrates import (
     parse_llm_response,
     build_system_prompt,
     build_diagnosis_naming_prompt,
+    build_extract_prompt,
 )
 from app.services.i18n import (
     to_english,
@@ -110,21 +111,17 @@ class DiagnosisService:
         results = self.store.search(query_vector, limit=5, filter_type=None)
         log("VECTOR", f"'{name_en}' -> {len(results)} results", [r.get("name_en") for r in results])
 
-        if not results:
-            log("VECTOR", f"No results for '{name_en}', falling back to web search")
+        if len(results) < 3:
+            log("VECTOR", f"Only {len(results)} vector results for '{name_en}', supplementing with web search")
             web_results = search_web(f"{name_en} medical condition symptoms", limit=5)
-            if not web_results:
-                return {"error": "No matching diseases found for this symptom"}
-            results = [
-                {
-                    "name_en": r["title"],
-                    "name_local": r["title"],
-                    "symptoms_en": r.get("content") or r.get("snippet") or "",
+            for wr in web_results:
+                results.append({
+                    "name_en": wr["title"],
+                    "name_local": wr["title"],
+                    "symptoms_en": wr.get("content") or "",
                     "specialist": "General",
-                    "similarity": 0.5,
-                }
-                for r in web_results
-            ]
+                    "similarity": 0.3,
+                })
 
         selected_entry = {
             "query": query_text,
@@ -549,6 +546,15 @@ class DiagnosisService:
         conversation = candidates.pop("conversation", [])
         self.session_mgr.update_conversation(session_id, conversation, candidates=candidates)
 
+    def _result_name(self, r: dict) -> str:
+        name = (r.get("name_en") or "").strip()
+        if name:
+            return name
+        doc = (r.get("document") or "").strip()
+        if doc:
+            return doc[:80].rsplit(" ", 1)[0] if len(doc) > 80 else doc
+        return ""
+
     def _re_search(self, conversation: list, existing_diseases: list, existing_probs: dict) -> dict:
         user_texts = [m.get("content", "") for m in conversation if m.get("role") == "user"]
         if not user_texts or len(user_texts) < 2:
@@ -557,15 +563,67 @@ class DiagnosisService:
         query = " | ".join(user_texts[-5:])
         query_vector = self.embedder.encode(query)
         results = self.store.search(query_vector, limit=5)
-        log("RESEARCH", f"Re-search query ({len(user_texts)} user msgs) -> {len(results)} new candidates", [r.get("name_en") for r in results])
+        if not results:
+            return existing_probs
 
-        existing_names = {d.get("name_en", "") for d in existing_diseases or []}
-        for r in results:
-            name = r.get("name_en", "")
-            if name and name not in existing_names:
-                existing_diseases.append(r)
-                existing_probs[name] = 0.01
-                existing_names.add(name)
+        # Build English-only context (never feed Arabic document text to the LLM)
+        context_blocks = []
+        for i, r in enumerate(results):
+            parts = []
+            ne = (r.get("name_en") or "").strip()
+            if ne:
+                parts.append(f"name: {ne}")
+            se = (r.get("symptoms_en") or "").strip()
+            if se:
+                parts.append(f"symptoms: {se}")
+            sp = (r.get("specialist") or "").strip()
+            if sp:
+                parts.append(f"specialist: {sp}")
+            if not parts:
+                doc = (r.get("document") or "").strip()[:200]
+                if doc and not any("\u0600" <= c <= "\u06ff" for c in doc):
+                    parts.append(f"text: {doc}")
+                else:
+                    continue
+            context_blocks.append(f"[PASSAGE {i+1}]\n" + "; ".join(parts))
+        context = "\n\n".join(context_blocks)
+        if not context:
+            return existing_probs
+
+        # Extract clean named items (same step as /symptoms)
+        system_prompt = build_extract_prompt(query, context, "en")
+        items = []
+        try:
+            raw = self.llm.ask([
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {query}"},
+            ], temperature=0, max_tokens=1024)
+            parsed = parse_llm_response(raw)
+            items = parsed.get("results", []) if isinstance(parsed, dict) else []
+        except Exception as e:
+            log("RESEARCH", f"Extraction failed (non-fatal): {e}")
+
+        if not items:
+            return existing_probs
+
+        existing_names = {self._result_name(d) for d in existing_diseases or []}
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            name_en = (it.get("name_en") or "").strip()
+            if not name_en or name_en in existing_names:
+                continue
+            existing_diseases.append({
+                "name_en": name_en,
+                "type": it.get("type", "illness"),
+                "symptoms_en": it.get("summary", ""),
+                "specialist": "",
+                "similarity": 0.5,
+            })
+            existing_probs[name_en] = 0.01
+            existing_names.add(name_en)
+
+        log("RESEARCH", f"Re-search extracted {len(items)} items, {len(existing_names)} total candidates")
 
         total = sum(existing_probs.values()) or 1
         for k in existing_probs:

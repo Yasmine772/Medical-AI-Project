@@ -3,7 +3,7 @@ from fastapi import APIRouter, Form, Query, Header
 from app.state import get_store, get_embedder, get_session_manager, get_llm
 from app.services.logger import log
 from app.services.socrates import build_extract_prompt, parse_llm_response
-from app.services.i18n import detect_lang, translate_batch
+from app.services.i18n import detect_lang, translate_batch, to_english
 
 router = APIRouter()
 
@@ -23,37 +23,53 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
     if not results:
         return {"status": "success", "data": {"query": q, "results": []}}
 
-    # Build context from search results using ONLY English fields
+    # Supplement with web search when the vector DB returns too few matches
+    if len(results) < 3:
+        from app.services.web_search import search_web
+        log("SYMPTOMS", f"Only {len(results)} vector results, supplementing with web search")
+        for wr in search_web(q, limit=5):
+            results.append({
+                "name_en": wr["title"],
+                "name_local": wr["title"],
+                "symptoms_en": wr.get("content") or "",
+                "specialist": "General",
+                "similarity": 0.3,
+                "document": wr.get("content") or "",
+            })
+
+    # Build context: translate every chunk to English first so the LLM
+    # only ever sees English (consistent extraction across all languages).
+    # The multilingual embedding already found the right chunks; we just
+    # normalize their text to English before asking the LLM to extract.
     context_blocks = []
     for i, r in enumerate(results):
-        parts = []
         ne = (r.get("name_en") or "").strip()
-        if ne:
-            parts.append(f"name: {ne}")
         se = (r.get("symptoms_en") or "").strip()
-        if se:
-            parts.append(f"symptoms: {se}")
         sp = (r.get("specialist") or "").strip()
+        doc = (r.get("document") or "").strip()
+        # Prefer already-English fields; otherwise translate the document
+        en_text = ne
+        if se:
+            en_text += f"\nSymptoms: {se}"
         if sp:
-            parts.append(f"specialist: {sp}")
-        if not parts:
-            doc = (r.get("document") or "").strip()[:200]
-            if doc and not any('\u0600' <= c <= '\u06ff' for c in doc):
-                parts.append(f"text: {doc}")
-            else:
-                parts.append(f"name: Chunk-{i+1}")
-        context_blocks.append(f"[PASSAGE {i+1}]\n" + "; ".join(parts))
-
+            en_text += f"\nSpecialist: {sp}"
+        if not ne and doc:
+            en_text = to_english(doc[:600])
+        if not en_text.strip():
+            continue
+        context_blocks.append(f"[PASSAGE {i+1}]\n{en_text[:800]}")
     context = "\n\n".join(context_blocks)
+
+    q_en = to_english(q.strip())
     lang = detect_lang(q)
 
-    system_prompt = build_extract_prompt(q, context, lang)
+    system_prompt = build_extract_prompt(q_en, context, "en")
     items = []
     for attempt, mdl in enumerate(["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]):
         try:
             raw = llm.ask([
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {q}"},
+                {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {q_en}"},
             ], temperature=0, max_tokens=1024, model=mdl)
             parsed = parse_llm_response(raw)
             items = parsed.get("results", []) if isinstance(parsed, dict) else []
@@ -123,6 +139,7 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         name_en_list.append(name_en)
         summary_en_list.append(summary_text)
 
+    # Translate ONLY at the output edge
     if lang != "en":
         names_ar = translate_batch(name_en_list, lang)
         summaries_ar = translate_batch(summary_en_list, lang)
@@ -165,6 +182,8 @@ async def start_diagnosis(
     has_diabetes: bool = Form(default=False),
     has_hypertension: bool = Form(default=False),
     is_pregnant: bool = Form(default=None),
+    is_alcoholic: bool = Form(default=None),
+    patient_job: str = Form(default=None),
     activity_level: str = Form(default="moderate"),
     assessment_for: str = Form(default="myself"),
     x_user_id: str = Header(default="anonymous"),
@@ -177,6 +196,8 @@ async def start_diagnosis(
             "has_diabetes": has_diabetes,
             "has_hypertension": has_hypertension,
             "is_pregnant": is_pregnant,
+            "is_alcoholic": is_alcoholic,
+            "patient_job": patient_job,
             "activity_level": activity_level,
             "assessment_for": assessment_for,
         }

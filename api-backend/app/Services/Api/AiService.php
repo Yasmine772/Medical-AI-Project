@@ -3,7 +3,6 @@
 namespace App\Services\Api;
 
 use App\Models\DiagnosisSession;
-use App\Models\User;
 use App\Models\PatientProfile;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -23,27 +22,28 @@ class AiService
         $this->timeout = config('services.fastapi.timeout');
         $this->reportTimeout = config('services.fastapi.report_timeout', 60);
     }
-    //------------------------------------------------------------------------------
-    public function startDiagnosis($request): ?array 
+
+    // ------------------------------------------------------------------------------
+    public function startDiagnosis($request): ?array
     {
         $user = auth()->user();
 
-        if($request && $request['assessment_for'] === 'myself'){
+        if ($request && $request['assessment_for'] === 'myself') {
 
-            PatientProfile::updateOrCreate(['user_id' => $user->id], [ 
-                'gender'           => $request['gender'],
-                'is_smoker'        => $request['is_smoker'],
-                'has_diabetes'     => $request['has_diabetes'],
+            PatientProfile::updateOrCreate(['user_id' => $user->id], [
+                'gender' => $request['gender'],
+                'is_smoker' => $request['is_smoker'],
+                'has_diabetes' => $request['has_diabetes'],
                 'has_hypertension' => $request['has_hypertension'],
-                'is_pregnant'      => $request['is_pregnant'],
-                'activity_level'   => $request['activity_level']
+                'is_pregnant' => $request['is_pregnant'],
+                'activity_level' => $request['activity_level'],
             ]);
         }
 
         try {
-                $response = Http::timeout($this->timeout)
+            $response = Http::timeout($this->timeout)
                 ->asForm()
-                ->post($this->fastApiUrl . '/diagnosis/start', [
+                ->post($this->fastApiUrl.'/diagnosis/start', [
                     'user_id' => $user->id,
                     'gender' => $request['gender'],
                     'is_smoker' => $request['is_smoker'],
@@ -51,23 +51,24 @@ class AiService
                     'has_hypertension' => $request['has_hypertension'],
                     'is_pregnant' => $request['is_pregnant'],
                     'activity_level' => $request['activity_level'],
-                    'assessment_for' =>  $request['assessment_for'],
+                    'assessment_for' => $request['assessment_for'],
                 ]);
 
-                if ($response->successful()) {
-                    $result = $response->json();
+            if ($response->successful()) {
+                $result = $response->json();
 
-                    DiagnosisSession::create([
-                        'status' => 'ACTIVE', 
-                        'pdf_file_path' => null,
-                        'user_id' => $user->id,
-                        'started_at' => now()
-                    ]);
+                DiagnosisSession::create([
+                    'status' => 'ACTIVE',
+                    'pdf_file_path' => null,
+                    'user_id' => $user->id,
+                    'started_at' => now(),
+                ]);
 
-                    return $result;
-                }
-                Log::error('FastAPI start diagnosis failed', ['body' => $response->body()]);
-                return null;
+                return $result;
+            }
+            Log::error('FastAPI start diagnosis failed', ['body' => $response->body()]);
+
+            return null;
 
         } catch (ConnectionException $e) {
             Log::error('FastAPI timeout (startDiagnosis): '.$e->getMessage());
@@ -92,6 +93,7 @@ class AiService
             }
 
             Log::error('FastAPI search symptoms failed', ['query' => $query, 'body' => $response->body()]);
+
             return null;
 
         } catch (ConnectionException $e) {
@@ -104,13 +106,14 @@ class AiService
             return null;
         }
     }
-    //*********************************************** */
+
+    // *********************************************** */
     public function getSymptomQuestions($data): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
                 ->asForm()
-                ->post($this->fastApiUrl . '/symptom/select', [
+                ->post($this->fastApiUrl.'/symptom/select', [
                     'session_id' => $data['session_id'],
                     'name' => $data['name'],
                 ]);
@@ -119,6 +122,7 @@ class AiService
                 return $response->json();
             }
             Log::error('FastAPI get symptom questions failed', ['name' => $data['name']]);
+
             return null;
 
         } catch (ConnectionException $e) {
@@ -131,12 +135,13 @@ class AiService
             return null;
         }
     }
-    //*********************************************** */
+
+    // *********************************************** */
     public function getNextDiagnosisQuestion($data)
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl . '/follow-up/next', [
+                ->get($this->fastApiUrl.'/follow-up/next', [
                     'session_id' => $data['session_id'],
                 ]);
 
@@ -145,6 +150,7 @@ class AiService
             }
 
             Log::error('FastAPI get next diagnosis question failed', ['body' => $response->body()]);
+
             return null;
 
         } catch (ConnectionException $e) {
@@ -158,23 +164,41 @@ class AiService
         }
     }
 
-    //********************************************* */
+    // ********************************************* */
     public function submitDiagnosisAnswer($data): ?array
     {
+        $user = auth()->user();
         try {
             $response = Http::timeout($this->timeout)
                 ->asForm()
-                ->post($this->fastApiUrl . '/follow-up/answer', [
+                ->post($this->fastApiUrl.'/follow-up/answer', [
                     'session_id' => $data['session_id'],
                     'question_id' => $data['question_id'],
                     'answer' => $data['answer'],
                 ]);
 
             if ($response->successful()) {
-                return $response->json();
-            }
+                $responseData = $response->json();
 
+                $responseType = $responseData['data']['response_type'] ?? null;
+
+                if ($responseType === 'diagnosis') {
+                    $currentSession = DiagnosisSession::where('user_id', $user->id)
+                        ->where('status', 'ACTIVE')
+                        ->first();
+
+                    if ($currentSession) {
+                        $currentSession->update([
+                            'status' => 'COMPLETED',
+                            'completed_at' => now(),
+                        ]);
+                    }
+                }
+
+                return $responseData;
+            }
             Log::error('FastAPI submit diagnosis answer failed', ['body' => $response->body()]);
+
             return null;
 
         } catch (ConnectionException $e) {
@@ -188,12 +212,12 @@ class AiService
         }
     }
 
- //************************************************************ */
+    // ************************************************************ */
     public function getDiagnosisHistory(string $userId)
     {
-        $user_h = DiagnosisSession::where('user_id' , $userId)
-                                ->where('status' ,'COMPLETED')
-                                ->get();
+        $user_h = DiagnosisSession::where('user_id', $userId)
+            ->where('status', 'COMPLETED')
+            ->get();
 
         return empty($user_h) ? null : $user_h;
 
