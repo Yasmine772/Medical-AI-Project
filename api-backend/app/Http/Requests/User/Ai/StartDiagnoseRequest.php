@@ -30,6 +30,8 @@ class StartDiagnoseRequest extends FormRequest
             'has_diabetes'     => 'required|boolean',
             'has_hypertension' => 'required|boolean',
             'is_pregnant'      => 'required|boolean',
+            'is_alcoholic'     => 'required|boolean',
+            'patient_job'      => 'required|string|max:255',
             'activity_level'   => 'required|string|in:sedentary,moderate,active',
             'assessment_for'   => 'required|string|in:myself,other',
         ];

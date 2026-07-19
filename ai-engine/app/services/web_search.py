@@ -96,12 +96,10 @@ def search_web(query: str, limit: int = 5) -> list:
         title = r.get("title", "")
         if not url or not title:
             continue
-        # Try to scrape the full page; fall back to the DDG snippet (body)
-        # so a blocked/scraped-failed site still contributes a result.
-        content = _scrape_url(url) or r.get("body", "")
-        if not content:
+        content = _scrape_url(url)
+        if content is None:
             continue
         enriched.append({"title": title, "url": url, "content": content})
 
-    log("WEB", f"Returning {len(enriched)}/{limit} results")
+    log("WEB", f"Returning {len(enriched)}/{limit} scraped results")
     return enriched

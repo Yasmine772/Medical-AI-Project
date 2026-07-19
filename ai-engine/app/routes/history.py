@@ -13,7 +13,7 @@ async def diagnosis_history(
     limit: int = Query(default=50, ge=1, le=200),
 ):
     sm = get_session_manager()
-    rows = sm.list_sessions_by_user(user_id, status="completed")
+    rows = sm.list_sessions_by_user(user_id)
     if not rows:
         return {"status": "success", "data": []}
 

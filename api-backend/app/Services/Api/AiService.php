@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\Log;
 class AiService
 {
     protected string $fastApiUrl;
-
     protected int $timeout;
-
     protected int $reportTimeout;
 
     public function __construct()
@@ -22,7 +20,6 @@ class AiService
         $this->timeout = config('services.fastapi.timeout');
         $this->reportTimeout = config('services.fastapi.report_timeout', 60);
     }
-
     // ------------------------------------------------------------------------------
     public function startDiagnosis($request): ?array
     {
@@ -35,6 +32,8 @@ class AiService
                 'is_smoker' => $request['is_smoker'],
                 'has_diabetes' => $request['has_diabetes'],
                 'has_hypertension' => $request['has_hypertension'],
+                'is_alcoholic'     => $request['is_alcoholic'],
+                'patient_job'      => $request['patient_job'],
                 'is_pregnant' => $request['is_pregnant'],
                 'activity_level' => $request['activity_level'],
             ]);
@@ -50,6 +49,8 @@ class AiService
                     'has_diabetes' => $request['has_diabetes'],
                     'has_hypertension' => $request['has_hypertension'],
                     'is_pregnant' => $request['is_pregnant'],
+                    'is_alcoholic'     => $request['is_alcoholic'],
+                    'patient_job'      => $request['patient_job'],
                     'activity_level' => $request['activity_level'],
                     'assessment_for' => $request['assessment_for'],
                 ]);
@@ -194,7 +195,6 @@ class AiService
                         ]);
                     }
                 }
-
                 return $responseData;
             }
             Log::error('FastAPI submit diagnosis answer failed', ['body' => $response->body()]);
@@ -215,36 +215,31 @@ class AiService
     // ************************************************************ */
     public function getDiagnosisHistory(string $userId)
     {
-        $user_h = DiagnosisSession::where('user_id', $userId)
-            ->where('status', 'COMPLETED')
-            ->get();
+        try {
+            $response = Http::timeout($this->timeout)
+                    ->get($this->fastApiUrl . '/diagnosis-history' ,[
+                        'user_id' => $userId
+                    ]);
 
-        return empty($user_h) ? null : $user_h;
+            if ($response->successful()) 
+            {
+                if (empty($responseData['data']['data'])) 
+                {
+                    return 'NoDiagnosisHistory';
+                }
+                return $response->json();
+            }
 
-        // if(isEmpty($user_h)){
-        //     return null;
-        // }
-        // return $user_h;
-        // try {
-        //     $response = Http::timeout($this->timeout)
-        //             ->get($this->fastApiUrl . '/diagnose/history' ,[
-        //                 'user_id' => $userId
-        //             ]);
+            Log::error('FastAPI get diagnosis history failed', [ 'body' => $response->body()]);
+            return null;
 
-        //     if ($response->successful()) {
-        //         return $response->json();
-        //     }
-
-        //     Log::error('FastAPI get diagnosis history failed', [ 'body' => $response->body()]);
-        //     return null;
-
-        // } catch (ConnectionException $e) {
-        //     Log::error('FastAPI timeout (getDiagnosisHistory): ' . $e->getMessage());
-        //     return null;
-        // } catch (\Exception $e) {
-        //     Log::error('FastAPI error (getDiagnosisHistory): ' . $e->getMessage());
-        //     return null;
-        // }
+        } catch (ConnectionException $e) {
+            Log::error('FastAPI timeout (getDiagnosisHistory): ' . $e->getMessage());
+            return null;
+        } catch (\Exception $e) {
+            Log::error('FastAPI error (getDiagnosisHistory): ' . $e->getMessage());
+            return null;
+        }
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////
