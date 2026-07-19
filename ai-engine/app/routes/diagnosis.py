@@ -3,7 +3,7 @@ from fastapi import APIRouter, Form, Query, Header
 from app.state import get_store, get_embedder, get_session_manager, get_llm
 from app.services.logger import log
 from app.services.socrates import build_extract_prompt, parse_llm_response
-from app.services.i18n import from_english, detect_lang, translate_batch
+from app.services.i18n import detect_lang, translate_batch
 
 router = APIRouter()
 
@@ -23,12 +23,26 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
     if not results:
         return {"status": "success", "data": {"query": q, "results": []}}
 
+    # Build context from search results using ONLY English fields
     context_blocks = []
     for i, r in enumerate(results):
-        doc = (r.get("document") or "").strip()
-        if not doc:
-            doc = (r.get("name_en") or r.get("name_ar") or "")
-        context_blocks.append(f"[PASSAGE {i+1}]\n{doc[:1200]}")
+        parts = []
+        ne = (r.get("name_en") or "").strip()
+        if ne:
+            parts.append(f"name: {ne}")
+        se = (r.get("symptoms_en") or "").strip()
+        if se:
+            parts.append(f"symptoms: {se}")
+        sp = (r.get("specialist") or "").strip()
+        if sp:
+            parts.append(f"specialist: {sp}")
+        if not parts:
+            doc = (r.get("document") or "").strip()[:200]
+            if doc and not any('\u0600' <= c <= '\u06ff' for c in doc):
+                parts.append(f"text: {doc}")
+            else:
+                parts.append(f"name: Chunk-{i+1}")
+        context_blocks.append(f"[PASSAGE {i+1}]\n" + "; ".join(parts))
 
     context = "\n\n".join(context_blocks)
     lang = detect_lang(q)
@@ -49,10 +63,10 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         except Exception as e:
             err = str(e)
             log("SYMPTOMS", f"Extraction attempt {attempt+1} model={mdl} failed: {err[:80]}")
-            if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower():
-                break  # non-rate-limit error, don't retry
+            if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower() and "403" not in err and "access" not in err.lower():
+                break
 
-    # Build a name→result lookup from the search results for source_id matching
+    # Build a name->result lookup from the search results for source_id matching
     result_by_name = {}
     for r in results:
         rname = (r.get("name_en") or "").strip().lower()
@@ -101,7 +115,6 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         if not summary_text:
             summary_text = (
                 src.get("symptoms_en")
-                or src.get("document")
                 or src.get("name_en")
                 or ""
             ).strip()
@@ -118,6 +131,7 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         summaries_ar = summary_en_list
 
     cleaned = []
+    cleaned_idx = 0
     for idx, it in enumerate(items):
         if not isinstance(it, dict):
             continue
@@ -130,13 +144,15 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         fb = int(it.get("source_chunk", 1))
         src = _find_src(name_en, fb)
         cleaned.append({
+            "id": cleaned_idx,
             "name_en": name_en,
-            "name_local": names_ar[idx] if lang != "en" else name_en,
+            "name_local": names_ar[cleaned_idx] if lang != "en" else name_en,
             "type": kind,
-            "summary": summaries_ar[idx] if lang != "en" else summary_en_list[idx],
+            "summary": summaries_ar[cleaned_idx] if lang != "en" else summary_en_list[cleaned_idx],
             "source_id": src.get("id", ""),
             "similarity": round(float(src.get("similarity", 0) or 0), 3),
         })
+        cleaned_idx += 1
 
     return {"status": "success", "data": {"query": q, "results": cleaned}}
 

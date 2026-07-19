@@ -1,11 +1,13 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, Response
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from app.services.report_service import (
     generate_pdf,
     save_pdf,
     get_pdf_path,
     generate_report_html,
+    build_report_json,
 )
 
 router = APIRouter()
@@ -20,7 +22,7 @@ class GenerateReportResponse(BaseModel):
 @router.post("/generate-report/{session_id}")
 async def generate_report(session_id: str):
     try:
-        pdf_bytes = generate_pdf(session_id)
+        pdf_bytes = await run_in_threadpool(generate_pdf, session_id)
         pdf_path = save_pdf(session_id, pdf_bytes)
         return GenerateReportResponse(
             session_id=session_id,
@@ -39,7 +41,7 @@ async def download_report(session_id: str):
     pdf_path = get_pdf_path(session_id)
     if not pdf_path:
         try:
-            pdf_bytes = generate_pdf(session_id)
+            pdf_bytes = await run_in_threadpool(generate_pdf, session_id)
             pdf_path = save_pdf(session_id, pdf_bytes)
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
@@ -59,8 +61,7 @@ async def download_report(session_id: str):
 @router.get("/reports/{session_id}/preview")
 async def preview_report(session_id: str):
     try:
-        html = generate_report_html(session_id)
-        return Response(content=html, media_type="text/html; charset=utf-8")
+        return build_report_json(session_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

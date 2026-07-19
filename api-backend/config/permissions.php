@@ -28,7 +28,6 @@ return [
             'add-advices', 'edit-advices', 'delete-advices', 'view-doctors',  'accept-doctors',
             'reject-doctors', 'edit-doctors', 'active-doctors',  'non-active-doctors',
             'delete-doctors', 'view-users', 'edit-users','ban-users', 'unban-users',
-            'edit-profile', 'view-profile',
             'send-notifications', 'view-notifications',  'admin-logout',
             'show-doctor-requests' ,
             'show-doctor-request-details',

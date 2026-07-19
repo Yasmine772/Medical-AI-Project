@@ -9,7 +9,7 @@ _PRIOR_KEYWORDS = [
 
 CONFIDENCE_THRESHOLD = 0.70
 TOP3_THRESHOLD = 0.85
-MAX_QUESTIONS = 10
+MAX_QUESTIONS = 25
 
 
 def compute_priors(diseases: list) -> dict:

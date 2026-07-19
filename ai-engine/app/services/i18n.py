@@ -51,12 +51,6 @@ def detect_lang(text: str) -> str:
             return "ko"
         if "\u3040" <= ch <= "\u30ff":
             return "ja"
-    try:
-        detected = GoogleTranslator(source="auto", target="en").detect(text)
-        if detected:
-            return detected.lower()
-    except Exception as e:
-        log("I18N", f"detect_lang failed, defaulting to en: {str(e)[:60]}")
     return "en"
 
 

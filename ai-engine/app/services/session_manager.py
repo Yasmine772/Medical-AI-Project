@@ -111,3 +111,19 @@ class SessionManager:
         if isinstance(data, str):
             data = json.loads(data)
         return data if isinstance(data, list) else []
+
+    def list_sessions_by_user(self, user_id: str) -> List[Dict]:
+        result = (
+            self.connect()
+            .table("diagnosis_sessions")
+            .select("id, user_id, created_at, updated_at, status, candidates")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        if not result.data:
+            return []
+        rows = result.data
+        if isinstance(rows, str):
+            rows = json.loads(rows)
+        return rows if isinstance(rows, list) else []
