@@ -34,8 +34,10 @@ class UpdateProfileRequest extends FormRequest
             'has_diabetes'     => 'sometimes|boolean',
             'has_hypertension' => 'sometimes|boolean',
             'is_pregnant'      => 'sometimes|boolean',
+            'drinks_alcohol'   => 'sometimes|boolean',
             'activity_level'   => 'sometimes|in:sedentary,moderate,active',
             'last_checkup_date'=> 'sometimes|date',
+            'occupation'       => 'sometimes|string|max:255',
         ];
     }
 

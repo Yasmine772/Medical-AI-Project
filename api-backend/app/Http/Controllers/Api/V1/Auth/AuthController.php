@@ -64,8 +64,10 @@ class AuthController extends Controller
                 'access_token' => $result['access_token'],
                 'access_token_expires_at' => $result['access_token_expires_at'],
                 'token_type' => $result['token_type'],
+                'fcm_token' => $result['fcm_token']
             ], 'User login successfully', 200)
         };
+
     }
 
     // -------------------------------------------------------------------------------------------

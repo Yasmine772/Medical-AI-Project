@@ -13,20 +13,26 @@ class UserSeeder extends Seeder
 
     public function run(): void
     {
-        $admin = User::create([
-            'full_name' => 'Admin',
-            'email' => 'admin@mediscan.com',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-        ]);
+        $admin = User::where('email', 'admin@mediscan.com')->first();
+        if (!$admin) {
+            $admin = User::create([
+                'full_name' => 'Admin',
+                'email' => 'admin@mediscan.com',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]);
+        }
         $admin->assignRole('admin');
 
-        $patient = User::create([
-            'full_name' => 'Patient',
-            'email' => 'patient@mediscan.com',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-        ]);
+        $patient = User::where('email', 'patient@mediscan.com')->first();
+        if (!$patient) {
+            $patient = User::create([
+                'full_name' => 'Patient',
+                'email' => 'patient@mediscan.com',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]);
+        }
         $patient->assignRole('patient');
 
         // $doctor = User::create([
