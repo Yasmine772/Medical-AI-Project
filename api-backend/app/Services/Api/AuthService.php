@@ -92,7 +92,6 @@ class AuthService
      */
     public function updateProfile(User $user, array $data, $avatarFile = null, bool $isMedicalOnly = false)
     {
-        // dd($avatarFile);
         if (!$isMedicalOnly && $avatarFile instanceof UploadedFile) {
             if ($user->avatar) {
                 Storage::disk('public')->delete($user->avatar);
@@ -114,6 +113,8 @@ class AuthService
             'has_hypertension',
             'is_pregnant',
             'activity_level',
+            'drinks_alcohol',
+            'occupation'
         ]));
 
         $user->profile()->updateOrCreate(
