@@ -223,10 +223,6 @@ class AiService
 
             if ($response->successful()) 
             {
-                if (empty($responseData['data']['data'])) 
-                {
-                    return 'NoDiagnosisHistory';
-                }
                 return $response->json();
             }
 

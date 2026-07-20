@@ -80,9 +80,6 @@ class AiController extends Controller
     {
         $result = $this->aiService->getDiagnosisHistory(auth()->user()->id);
 
-        if($result === 'NoDiagnosisHistory'){
-            return $this->successResponse(null, 'No diagnosis history found for this user', 200);
-        }
         if ($result === null) {
             return $this->errorResponse('Diagnosis service error. Please check storage/logs/laravel.log for details', null, 503);
         }
