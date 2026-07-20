@@ -25,9 +25,11 @@ class UserResource extends JsonResource
                 'has_diabetes'      => $this->profile?->has_diabetes ?? false,
                 'has_hypertension'  => $this->profile?->has_hypertension ?? false,
                 'is_pregnant'       => $this->profile?->is_pregnant ?? false,
+                'drinks_alcohol'    => $this->profile?->drinks_alcohol ?? false,
                 'activity_level'    => $this->profile?->activity_level ?? null,
                 'last_checkup_date' => $this->profile?->last_checkup_date ?? null,
-                'role'             => $this->roles->pluck('name'),
+                'occupation'       => $this->profile?->occupation ?? null,
+                'role'             => $this->roles->pluck('name'),       
                 ];
 
     }

@@ -35,6 +35,7 @@ class User extends Authenticatable implements Auditable
         'otp_verified_at' ,
         'expires_at',
         'created_at',
+        'fcm_token'
     ];
 
     protected $hidden = [
@@ -85,6 +86,16 @@ class User extends Authenticatable implements Auditable
     public function diagnosisSessions()
     {
         return $this->hasMany(DiagnosisSession::class);
+    }
+
+    /**
+     * Specifies the user's FCM token
+     *
+     * @return string|array
+     */
+    public function routeNotificationForFcm()
+    {
+    return $this->fcm_token;
     }
 
 }
