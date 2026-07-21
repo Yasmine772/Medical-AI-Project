@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Laravel\Cashier\Billable;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Carbon\Carbon;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -14,8 +15,8 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements Auditable
 {
-    use HasFactory, Notifiable , HasApiTokens, CanResetPassword , HasRoles;
-    use  \OwenIt\Auditing\Auditable;
+    use HasFactory, Notifiable, HasApiTokens, CanResetPassword, HasRoles, Billable;
+    use \OwenIt\Auditing\Auditable;
 
     /**
      * The attributes excluded from the audit.
@@ -35,7 +36,11 @@ class User extends Authenticatable implements Auditable
         'otp_verified_at' ,
         'expires_at',
         'created_at',
-        'fcm_token'
+        'fcm_token',
+        'stripe_id',
+        'pm_type',
+        'pm_last_four',
+        'trial_ends_at',
     ];
 
     protected $hidden = [
@@ -81,6 +86,11 @@ class User extends Authenticatable implements Auditable
     public function diagnosisSessions()
     {
         return $this->hasMany(DiagnosisSession::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(\App\Models\Payment::class);
     }
 
     /**

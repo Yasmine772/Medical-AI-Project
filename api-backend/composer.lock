@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "61c84ac663507048e02a9c4b9e9755b6",
+    "content-hash": "f408a603232f88bd26e1b155a95205ff",
     "packages": [
         {
             "name": "beste/clock",
@@ -2234,6 +2234,389 @@
             "time": "2026-02-20T21:49:09+00:00"
         },
         {
+            "name": "kreait/firebase-php",
+            "version": "8.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/beste/firebase-php.git",
+                "reference": "c73502749a91ee762bdfeff40c118058b6d5ff2c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/beste/firebase-php/zipball/c73502749a91ee762bdfeff40c118058b6d5ff2c",
+                "reference": "c73502749a91ee762bdfeff40c118058b6d5ff2c",
+                "shasum": ""
+            },
+            "require": {
+                "beste/clock": "^3.0",
+                "beste/in-memory-cache": "^1.3.1",
+                "beste/json": "^1.5.1",
+                "cuyz/valinor": "^2.2.1",
+                "ext-ctype": "*",
+                "ext-filter": "*",
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "fig/http-message-util": "^1.1.5",
+                "firebase/php-jwt": "^6.10.2 || ^7.0.2",
+                "google/auth": "^1.45",
+                "google/cloud-storage": "^1.50.0 || ^2.0.0",
+                "guzzlehttp/guzzle": "^7.9.2",
+                "guzzlehttp/promises": "^2.0.4",
+                "guzzlehttp/psr7": "^2.7",
+                "kreait/firebase-tokens": "^5.2",
+                "lcobucci/jwt": "^5.3",
+                "mtdowling/jmespath.php": "^2.9.2",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/cache": "^2.0 || ^3.0",
+                "psr/clock": "^1.0",
+                "psr/http-client": "^1.0.3",
+                "psr/http-factory": "^1.1",
+                "psr/http-message": "^1.1 || ^2.0"
+            },
+            "require-dev": {
+                "google/cloud-firestore": "^1.55.0 || ^2.0",
+                "psr/log": "^3.0.2",
+                "symfony/var-dumper": "^7.4.4 || ^8.0.8",
+                "vlucas/phpdotenv": "^5.6.3"
+            },
+            "suggest": {
+                "google/cloud-firestore": "^1.55.0|^2.0 to use the Firestore component"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-7.x": "7.x-dev",
+                    "dev-8.x": "8.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Kreait\\Firebase\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jérôme Gamez",
+                    "homepage": "https://github.com/jeromegamez"
+                }
+            ],
+            "description": "Firebase Admin SDK",
+            "homepage": "https://github.com/beste/firebase-php",
+            "keywords": [
+                "api",
+                "database",
+                "firebase",
+                "google",
+                "sdk"
+            ],
+            "support": {
+                "docs": "https://firebase-php.readthedocs.io",
+                "issues": "https://github.com/beste/firebase-php/issues",
+                "source": "https://github.com/beste/firebase-php"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/sponsors/jeromegamez",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-07-17T22:32:55+00:00"
+        },
+        {
+            "name": "kreait/firebase-tokens",
+            "version": "5.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/beste/firebase-tokens-php.git",
+                "reference": "b19ef0dc412bda77e6ae56797a7562c951146946"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/beste/firebase-tokens-php/zipball/b19ef0dc412bda77e6ae56797a7562c951146946",
+                "reference": "b19ef0dc412bda77e6ae56797a7562c951146946",
+                "shasum": ""
+            },
+            "require": {
+                "beste/clock": "^3.0",
+                "ext-json": "*",
+                "ext-openssl": "*",
+                "fig/http-message-util": "^1.1.5",
+                "guzzlehttp/guzzle": "^7.8",
+                "lcobucci/jwt": "^5.2",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/cache": "^1.0|^2.0|^3.0"
+            },
+            "require-dev": {
+                "beste/in-memory-cache": "^1.5",
+                "friendsofphp/php-cs-fixer": "^3.95.12",
+                "phpstan/extension-installer": "^1.4.3",
+                "phpstan/phpstan": "^2.2.5",
+                "phpstan/phpstan-phpunit": "^2.0.18",
+                "phpunit/phpunit": "^10.5.64",
+                "rector/rector": "^2.5.4",
+                "symfony/var-dumper": "^6.4.3 || ^7.3.4 || ^8.1.1"
+            },
+            "suggest": {
+                "psr/cache-implementation": "to cache fetched remote public keys"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Kreait\\Firebase\\JWT\\": "src/JWT"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jérôme Gamez",
+                    "homepage": "https://github.com/jeromegamez"
+                }
+            ],
+            "description": "A library to work with Firebase tokens",
+            "homepage": "https://github.com/beste/firebase-token-php",
+            "keywords": [
+                "Authentication",
+                "auth",
+                "firebase",
+                "google",
+                "token"
+            ],
+            "support": {
+                "issues": "https://github.com/beste/firebase-tokens-php/issues",
+                "source": "https://github.com/beste/firebase-tokens-php/tree/5.4.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/sponsors/jeromegamez",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-07-17T22:13:47+00:00"
+        },
+        {
+            "name": "kreait/laravel-firebase",
+            "version": "7.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/beste/laravel-firebase.git",
+                "reference": "a9f63c54089c9a5aa7bce5cabd9a57b2dcbeed64"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/beste/laravel-firebase/zipball/a9f63c54089c9a5aa7bce5cabd9a57b2dcbeed64",
+                "reference": "a9f63c54089c9a5aa7bce5cabd9a57b2dcbeed64",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/notifications": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/support": "^11.0 || ^12.0 || ^13.0",
+                "kreait/firebase-php": "^8.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+                "symfony/cache": "^6.1.2 || ^7.0.3 || ^8.0.8"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.22.1",
+                "orchestra/testbench": "^9.0 || ^10.4 || ^11.0",
+                "phpunit/phpunit": "^12.5.17 || ^13.1.1"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Firebase": "Kreait\\Laravel\\Firebase\\Facades\\Firebase"
+                    },
+                    "providers": [
+                        "Kreait\\Laravel\\Firebase\\ServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Kreait\\Laravel\\Firebase\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jérôme Gamez",
+                    "email": "jerome@gamez.name"
+                }
+            ],
+            "description": "A Laravel package for the Firebase PHP Admin SDK",
+            "keywords": [
+                "FCM",
+                "api",
+                "database",
+                "firebase",
+                "gcm",
+                "laravel",
+                "sdk"
+            ],
+            "support": {
+                "issues": "https://github.com/beste/laravel-firebase/issues",
+                "source": "https://github.com/beste/laravel-firebase/tree/7.2.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/sponsors/jeromegamez",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-05-07T13:39:14+00:00"
+        },
+        {
+            "name": "laravel-notification-channels/fcm",
+            "version": "6.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel-notification-channels/fcm.git",
+                "reference": "c901ced4d47a511f874a695dd9fb95c4a3dd51a9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel-notification-channels/fcm/zipball/c901ced4d47a511f874a695dd9fb95c4a3dd51a9",
+                "reference": "c901ced4d47a511f874a695dd9fb95c4a3dd51a9",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.0",
+                "illuminate/notifications": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "kreait/laravel-firebase": "^6.0 || ^7.0",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.25",
+                "mockery/mockery": "^1.6.0",
+                "phpunit/phpunit": "^12.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "NotificationChannels\\Fcm\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Chris Bautista",
+                    "email": "chris.bautista@coreproc.ph",
+                    "homepage": "https://coreproc.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "FCM (Firebase Cloud Messaging) Notifications Driver for Laravel",
+            "homepage": "https://github.com/laravel-notification-channels/fcm",
+            "support": {
+                "issues": "https://github.com/laravel-notification-channels/fcm/issues",
+                "source": "https://github.com/laravel-notification-channels/fcm/tree/6.1.0"
+            },
+            "time": "2026-02-20T21:49:09+00:00"
+        },
+        {
+            "name": "laravel/cashier",
+            "version": "v16.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/cashier-stripe.git",
+                "reference": "2212c7e3227fa30596bb0ab3a3e0a908ebed80b5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/cashier-stripe/zipball/2212c7e3227fa30596bb0ab3a3e0a908ebed80b5",
+                "reference": "2212c7e3227fa30596bb0ab3a3e0a908ebed80b5",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/http": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/log": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/notifications": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/pagination": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/routing": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/view": "^10.0|^11.0|^12.0|^13.0",
+                "moneyphp/money": "^4.0",
+                "nesbot/carbon": "^2.0|^3.0",
+                "php": "^8.1",
+                "stripe/stripe-php": "^17.3.0",
+                "symfony/console": "^6.0|^7.0|^8.0",
+                "symfony/http-kernel": "^6.0|^7.0|^8.0",
+                "symfony/polyfill-intl-icu": "^1.22.1",
+                "symfony/polyfill-php84": "^1.32"
+            },
+            "require-dev": {
+                "dompdf/dompdf": "^2.0|^3.0",
+                "orchestra/testbench": "^8.36|^9.15|^10.8|^11.0",
+                "phpstan/phpstan": "^1.10",
+                "spatie/laravel-ray": "^1.40"
+            },
+            "suggest": {
+                "dompdf/dompdf": "Required when generating and downloading invoice PDF's using Dompdf (^2.0|^3.0).",
+                "ext-intl": "Allows for more locales besides the default \"en\" when formatting money values.",
+                "spatie/laravel-pdf": "Required when generating and downloading invoice PDF's using Cashier's LaravelPdfInvoiceRenderer."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Laravel\\Cashier\\CashierServiceProvider"
+                    ]
+                },
+                "branch-alias": {
+                    "dev-master": "16.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laravel\\Cashier\\": "src/",
+                    "Laravel\\Cashier\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylor@laravel.com"
+                },
+                {
+                    "name": "Dries Vints",
+                    "email": "dries@laravel.com"
+                }
+            ],
+            "description": "Laravel Cashier provides an expressive, fluent interface to Stripe's subscription billing services.",
+            "keywords": [
+                "billing",
+                "laravel",
+                "stripe"
+            ],
+            "support": {
+                "issues": "https://github.com/laravel/cashier/issues",
+                "source": "https://github.com/laravel/cashier"
+            },
+            "time": "2026-06-23T19:53:52+00:00"
+        },
+        {
             "name": "laravel/framework",
             "version": "v12.64.0",
             "source": {
@@ -3608,6 +3991,96 @@
                 }
             ],
             "time": "2026-03-08T20:05:35+00:00"
+        },
+        {
+            "name": "moneyphp/money",
+            "version": "v4.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/moneyphp/money.git",
+                "reference": "d49ee625c6ba79b9d7a228ce153b02fc1032152b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/moneyphp/money/zipball/d49ee625c6ba79b9d7a228ce153b02fc1032152b",
+                "reference": "d49ee625c6ba79b9d7a228ce153b02fc1032152b",
+                "shasum": ""
+            },
+            "require": {
+                "ext-bcmath": "*",
+                "ext-filter": "*",
+                "ext-json": "*",
+                "php": "~8.1.0 || ~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0"
+            },
+            "require-dev": {
+                "cache/taggable-cache": "^1.1.0",
+                "doctrine/coding-standard": "^12.0",
+                "doctrine/instantiator": "^1.5.0 || ^2.0",
+                "ext-gmp": "*",
+                "ext-intl": "*",
+                "florianv/exchanger": "^2.8.1",
+                "florianv/swap": "^4.3.0",
+                "moneyphp/crypto-currencies": "^1.1.0",
+                "moneyphp/iso-currencies": "^3.4",
+                "php-http/message": "^1.16.0",
+                "php-http/mock-client": "^1.6.0",
+                "phpbench/phpbench": "^1.2.5",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan": "^2.1.9",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpunit/phpunit": "^10.5.9",
+                "psr/cache": "^1.0.1 || ^2.0 || ^3.0",
+                "ticketswap/phpstan-error-formatter": "^1.1"
+            },
+            "suggest": {
+                "ext-gmp": "Calculate without integer limits",
+                "ext-intl": "Format Money objects with intl",
+                "florianv/exchanger": "Exchange rates library for PHP",
+                "florianv/swap": "Exchange rates library for PHP",
+                "psr/cache-implementation": "Used for Currency caching"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Money\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mathias Verraes",
+                    "email": "mathias@verraes.net",
+                    "homepage": "http://verraes.net"
+                },
+                {
+                    "name": "Márk Sági-Kazár",
+                    "email": "mark.sagikazar@gmail.com"
+                },
+                {
+                    "name": "Frederik Bosch",
+                    "email": "f.bosch@genkgo.nl"
+                }
+            ],
+            "description": "PHP implementation of Fowler's Money pattern",
+            "homepage": "http://moneyphp.org",
+            "keywords": [
+                "Value Object",
+                "money",
+                "vo"
+            ],
+            "support": {
+                "issues": "https://github.com/moneyphp/money/issues",
+                "source": "https://github.com/moneyphp/money/tree/v4.9.0"
+            },
+            "time": "2026-05-04T20:23:15+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -5460,185 +5933,6 @@
             "time": "2026-03-17T22:46:46+00:00"
         },
         {
-            "name": "symfony/cache",
-            "version": "v8.1.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/cache.git",
-                "reference": "c14decc1b0755b1e8ab6babeef56e1880348e817"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/cache/zipball/c14decc1b0755b1e8ab6babeef56e1880348e817",
-                "reference": "c14decc1b0755b1e8ab6babeef56e1880348e817",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=8.4.1",
-                "psr/cache": "^2.0|^3.0",
-                "psr/log": "^1.1|^2|^3",
-                "symfony/cache-contracts": "^3.6",
-                "symfony/service-contracts": "^2.5|^3",
-                "symfony/var-exporter": "^8.1"
-            },
-            "conflict": {
-                "ext-redis": "<6.1",
-                "ext-relay": "<0.12.1"
-            },
-            "provide": {
-                "psr/cache-implementation": "2.0|3.0",
-                "psr/simple-cache-implementation": "1.0|2.0|3.0",
-                "symfony/cache-implementation": "1.1|2.0|3.0"
-            },
-            "require-dev": {
-                "cache/integration-tests": "dev-master",
-                "doctrine/dbal": "^4.3",
-                "predis/predis": "^1.1|^2.0",
-                "psr/simple-cache": "^1.0|^2.0|^3.0",
-                "symfony/clock": "^7.4|^8.0",
-                "symfony/config": "^7.4|^8.0",
-                "symfony/dependency-injection": "^7.4|^8.0",
-                "symfony/filesystem": "^7.4|^8.0",
-                "symfony/http-kernel": "^7.4|^8.0",
-                "symfony/messenger": "^7.4|^8.0",
-                "symfony/var-dumper": "^7.4|^8.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Symfony\\Component\\Cache\\": ""
-                },
-                "classmap": [
-                    "Traits/ValueWrapper.php"
-                ],
-                "exclude-from-classmap": [
-                    "/Tests/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Nicolas Grekas",
-                    "email": "p@tchwork.com"
-                },
-                {
-                    "name": "Symfony Community",
-                    "homepage": "https://symfony.com/contributors"
-                }
-            ],
-            "description": "Provides extended PSR-6, PSR-16 (and tags) implementations",
-            "homepage": "https://symfony.com",
-            "keywords": [
-                "caching",
-                "psr6"
-            ],
-            "support": {
-                "source": "https://github.com/symfony/cache/tree/v8.1.1"
-            },
-            "funding": [
-                {
-                    "url": "https://symfony.com/sponsor",
-                    "type": "custom"
-                },
-                {
-                    "url": "https://github.com/fabpot",
-                    "type": "github"
-                },
-                {
-                    "url": "https://github.com/nicolas-grekas",
-                    "type": "github"
-                },
-                {
-                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
-                    "type": "tidelift"
-                }
-            ],
-            "time": "2026-06-17T15:04:37+00:00"
-        },
-        {
-            "name": "symfony/cache-contracts",
-            "version": "v3.7.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/cache-contracts.git",
-                "reference": "9789738bc19af1106dc54d6afba9a0b467516cf2"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/cache-contracts/zipball/9789738bc19af1106dc54d6afba9a0b467516cf2",
-                "reference": "9789738bc19af1106dc54d6afba9a0b467516cf2",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=8.1",
-                "psr/cache": "^3.0"
-            },
-            "type": "library",
-            "extra": {
-                "thanks": {
-                    "url": "https://github.com/symfony/contracts",
-                    "name": "symfony/contracts"
-                },
-                "branch-alias": {
-                    "dev-main": "3.7-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Symfony\\Contracts\\Cache\\": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Nicolas Grekas",
-                    "email": "p@tchwork.com"
-                },
-                {
-                    "name": "Symfony Community",
-                    "homepage": "https://symfony.com/contributors"
-                }
-            ],
-            "description": "Generic abstractions related to caching",
-            "homepage": "https://symfony.com",
-            "keywords": [
-                "abstractions",
-                "contracts",
-                "decoupling",
-                "interfaces",
-                "interoperability",
-                "standards"
-            ],
-            "support": {
-                "source": "https://github.com/symfony/cache-contracts/tree/v3.7.1"
-            },
-            "funding": [
-                {
-                    "url": "https://symfony.com/sponsor",
-                    "type": "custom"
-                },
-                {
-                    "url": "https://github.com/fabpot",
-                    "type": "github"
-                },
-                {
-                    "url": "https://github.com/nicolas-grekas",
-                    "type": "github"
-                },
-                {
-                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
-                    "type": "tidelift"
-                }
-            ],
-            "time": "2026-06-05T06:23:12+00:00"
-        },
-        {
             "name": "symfony/clock",
             "version": "v8.1.0",
             "source": {
@@ -6894,6 +7188,94 @@
                 }
             ],
             "time": "2026-05-26T05:58:03+00:00"
+        },
+        {
+            "name": "symfony/polyfill-intl-icu",
+            "version": "v1.38.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/polyfill-intl-icu.git",
+                "reference": "445c90e341fccda10311019cf82ff73bb7343945"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/polyfill-intl-icu/zipball/445c90e341fccda10311019cf82ff73bb7343945",
+                "reference": "445c90e341fccda10311019cf82ff73bb7343945",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.2"
+            },
+            "suggest": {
+                "ext-intl": "For best performance and support of other locales than \"en\""
+            },
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "url": "https://github.com/symfony/polyfill",
+                    "name": "symfony/polyfill"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "bootstrap.php"
+                ],
+                "psr-4": {
+                    "Symfony\\Polyfill\\Intl\\Icu\\": ""
+                },
+                "classmap": [
+                    "Resources/stubs"
+                ],
+                "exclude-from-classmap": [
+                    "/Tests/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony polyfill for intl's ICU-related data and classes",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "compatibility",
+                "icu",
+                "intl",
+                "polyfill",
+                "portable",
+                "shim"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/polyfill-intl-icu/tree/v1.38.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-05-25T11:52:53+00:00"
         },
         {
             "name": "symfony/polyfill-intl-idn",
@@ -11210,6 +11592,6 @@
     "platform": {
         "php": "^8.2"
     },
-    "platform-dev": [],
+    "platform-dev": {},
     "plugin-api-version": "2.6.0"
 }
