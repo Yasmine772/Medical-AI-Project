@@ -23,4 +23,9 @@ class DiagnosisSession extends Model
     {
         return $this->hasMany(SessionMessage::class);
     }
+
+    public function payment()
+    {
+        return $this->hasOne(\App\Models\Payment::class);
+    }
 }

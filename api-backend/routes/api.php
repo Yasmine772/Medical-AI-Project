@@ -2,10 +2,13 @@
 
 use App\Http\Controllers\Api\V1\Ai\AiController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Payment\PaymentController;
 use App\Http\Controllers\Api\V1\Reports\ReportController;
 use App\Http\Controllers\Api\V1\settingController;
 use \App\Http\Controllers\Api\V1\User\NotificationController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/v1/stripe/webhook', [PaymentController::class, 'handleWebhook']);
 
 Route::prefix('v1/auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -45,6 +48,10 @@ Route::prefix('v1/auth')->group(function () {
         Route::post('/reports/{sessionId}/generate', [ReportController::class, 'generate'])->middleware('permission:download-report');
         Route::get('/reports/{sessionId}/download', [ReportController::class, 'download'])->middleware('permission:download-report');
         Route::get('/reports/{sessionId}/preview', [ReportController::class, 'preview'])->middleware('permission:download-report');
+
+        // Payment routes
+        Route::post('/payments/create-intent', [PaymentController::class, 'createIntent']);
+        Route::get('/payments/{paymentIntentId}/status', [PaymentController::class, 'status']);
 
         // Check if the user is authenticated
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
