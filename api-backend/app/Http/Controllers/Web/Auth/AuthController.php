@@ -4,56 +4,82 @@ namespace App\Http\Controllers\Web\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\Auth\LoginRequest;
-use App\Services\Api\OTPService;
+use App\Http\Requests\User\OTP\VerifyOTPRequest;
+use App\Services\Web\AuthService;
 use App\Traits\ApiResponseTrait;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
     use ApiResponseTrait;
-    protected OTPService $otpService;
+    protected AuthService $authService;
 
-    public function __construct(OTPService $otpService)
+    public function __construct(AuthService $authService)
     {
-        $this->otpService = $otpService;
+        $this->authService = $authService;
     }
-    ///////////////////////////////////////////////////////////
+
     public function adminLogin(LoginRequest $request)
     {
-        try {
-            $credentials = $request->validated();
+        $result = $this->authService->login($request->validated());
 
-            if (!Auth::attempt($credentials)) {
-                return $this->errorResponse('Error', 'Invalid email or password', 401);
-            }
+        return match ($result) {
+            'unauthorized' => $this->errorResponse('Invalid email or password', null, 401),
+            'AccessDenied' => $this->errorResponse('Access denied. This system is for administrators only.', null, 403),
+            'EmailNotVerified' => $this->errorResponse('Please verify your email first. Check your email for OTP code.', null, 403),
 
-            /** @var \App\Models\User $user */
-            $user = Auth::user();
-
-            if (!$user->hasRole('admin')) {
-                return $this->errorResponse('Error', 'Access denied. This system is for administrators only.', 403);
-            }
-
-            if (is_null($user->email_verified_at)) {
-                $this->otpService->sendOTP($user);
-                return $this->errorResponse('Error', 'Please verify your email first. Check your email for OTP code', 403);
-            }
-
-            $accessTokenExpiresAt = Carbon::now()->addDays(1);
-            $accessToken = $user->createToken('access_token', ['admin'], $accessTokenExpiresAt)->plainTextToken;
-
-            $data = [
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'accessToken' => $accessToken,
-                    'token_type' => 'Bearer'
-                ];
-
-            return $this->successResponse($data , 'Admin login successfuly' , 200);
-
-        } catch (\Throwable $e) {
-            return $this->errorResponse('Error', $e->getMessage(), 500);
-        }
+            default => $this->successResponse([
+                    'user'         => $result['Admin'],
+                    'access_token' => $result['access_token'],
+                    'token_type'   => 'Bearer',
+                    'expires_at'   => '1 day',
+            ], 'Admin login successfully', 200)
+        };
     }
+
+    public function doctorLogin(LoginRequest $request)
+    {
+        $result = $this->authService->login($request->validated());
+
+        return match ($result) {
+            'unauthorized' => $this->errorResponse('Invalid email or password', null, 401),
+            'AccessDenied' => $this->errorResponse('Access denied. This system is for administrators only.', null, 403),
+            'EmailNotVerified' => $this->errorResponse('Please verify your email first. Check your email for OTP code.', null, 403),
+
+            default => $this->successResponse([
+                'user'         => $result['user'],
+                'access_token' => $result['access_token'],
+                'token_type'   => 'Bearer',
+                'expires_at'   => '1 day',
+            ], 'Doctor login successfully', 200)
+        };
+    }
+
+    public function adminVerifyOtp(VerifyOTPRequest $request)
+    {
+        $result = $this->authService->verifyOtp($request->validated(), 'admin');
+
+        return match ($result) {
+            'UserNotFound' => $this->errorResponse('User not found!', null, 404),
+            'NotValidOTP' => $this->errorResponse('Not valid OTP!', null, 422),
+            'OTPHasExpired' => $this->errorResponse('OTP has expired!', null, 400),
+            'OTP used' => $this->errorResponse('You have been used it!', null, 422),
+            default => $this->successResponse($result, 'OTP verified successfully', 200)
+        };
+    }
+
+
+    public function doctorVerifyOtp(VerifyOTPRequest $request)
+    {
+        $result = $this->authService->verifyOtp($request->validated(), 'doctor');
+
+        return match ($result) {
+            'UserNotFound' => $this->errorResponse('User not found!', null, 404),
+            'NotValidOTP' => $this->errorResponse('Not valid OTP!', null, 422),
+            'OTPHasExpired' => $this->errorResponse('OTP has expired!', null, 400),
+            'OTP used' => $this->errorResponse('You have been used it!', null, 422),
+            default => $this->successResponse($result, 'OTP verified successfully', 200)
+        };
+    }
+
+
 }

@@ -2,12 +2,10 @@
 
 namespace App\Services\Api;
 
+use App\Models\Doctor;
 use App\Models\User;
 use App\Notifications\OTPNotification;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-
-use function Illuminate\Log\log;
 
 class OTPService 
 {
@@ -57,7 +55,6 @@ class OTPService
     public function resendOtp(array $request)
     {
         $user = User::where('email', $request['email'])->first();
-
         if (!$user) {
             return 'UserNotFound';
         }

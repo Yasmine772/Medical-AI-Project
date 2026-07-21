@@ -17,7 +17,6 @@ class doctorResource extends JsonResource
         return [
             'full_name'           => $this->full_name,
             'email'               => $this->email,
-            'password'            => $this->password,
             'phone'               => $this->phone,
             'specialization'      => $this->specialization,
             'years_of_experience' => $this->years_of_experience,
@@ -25,10 +24,9 @@ class doctorResource extends JsonResource
             'clinic_address'      => $this->clinic_address ?? null,
             'license_number'      => $this->license_number ?? null,
             'biography'           => $this->biography ?? null,
-            'photo_path'          => $this->photo_path ? asset('storage/' . $this->photo_path) : null,
+            'photo'               => $this->photo ? asset('storage/' . $this->photo) : null,
             'cv_file'             => $this->cv_file ? asset('storage/' . $this->cv_file) : null,
             'license_file'        => $this->license_file ? asset('storage/' . $this->license_file) : null,
-            'is_active'           => $this->is_active
         ];
     }
 }

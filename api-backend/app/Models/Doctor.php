@@ -30,7 +30,6 @@ class Doctor extends Model implements Auditable
         'cv_file',
         'license_file',
         'is_active',
-        'user_id'
     ];
 
     public function user()

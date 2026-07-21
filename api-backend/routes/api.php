@@ -49,15 +49,15 @@ Route::prefix('v1/auth')->group(function () {
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
         // Notifications routes
-       Route::prefix('notifications')->group(function () {
-       Route::get('/', [NotificationController::class, 'index']);
-       Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
-       Route::delete('/destroy-all', [NotificationController::class, 'destroyAll']);
-       Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications']);
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [NotificationController::class, 'index']);
+            Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
+            Route::delete('/destroy-all', [NotificationController::class, 'destroyAll']);
+            Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications']);
 
-       Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead']);
-       Route::patch('/{notificationId}/unread', [NotificationController::class, 'markAsUnread']);
-       Route::delete('/{notificationId}', [NotificationController::class, 'destroy']);
+            Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead']);
+            Route::patch('/{notificationId}/unread', [NotificationController::class, 'markAsUnread']);
+            Route::delete('/{notificationId}', [NotificationController::class, 'destroy']);
         });
         
     });

@@ -8,17 +8,9 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-
+use App\Notifications\WelcomeMessageNotification;
 class AuthService
 {
-    // protected OTPService $otpService;
-
-    // public function __construct(OTPService $otpService)
-    // {
-    //     $this->otpService = $otpService;
-    // }
-
-    // -------------------------------------------------------------------------------------------
     public function register(array $data)
     {
         $user = User::create([
@@ -26,7 +18,6 @@ class AuthService
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
-
         $user->assignRole('patient');
 
         return $user;
@@ -50,21 +41,18 @@ class AuthService
 
         $accessToken = $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken;
 
-        // if ($user->hasRole('admin') && $user->otp_verified_at === null) {
-        //     $this->otpService->sendOTP($user);
+        if (isset($data['fcm_token'])) {
+             $user->update(['fcm_token' => $data['fcm_token']]);
+             $user->notify(new WelcomeMessageNotification());
 
-        //     return [
-        //         'user' => $user,
-        //         'access_token' =>  $accessToken,
-        //         'access_token_expires_at' => '1 day',
-        //         'token_type' => 'Bearer',] 
-        // }
+        }
 
             return [
             'user' => $user,
             'access_token' =>  $accessToken,
             'access_token_expires_at' => '1 day',
             'token_type' => 'Bearer',
+            'fcm_token' => $data['fcm_token'] ?? null
         ];
     }
 
@@ -85,7 +73,6 @@ class AuthService
      */
     public function updateProfile(User $user, array $data, $avatarFile = null, bool $isMedicalOnly = false)
     {
-        // dd($avatarFile);
         if (!$isMedicalOnly && $avatarFile instanceof UploadedFile) {
             if ($user->avatar) {
                 Storage::disk('public')->delete($user->avatar);
@@ -107,6 +94,8 @@ class AuthService
             'has_hypertension',
             'is_pregnant',
             'activity_level',
+            'drinks_alcohol',
+            'occupation'
         ]));
 
         $user->profile()->updateOrCreate(

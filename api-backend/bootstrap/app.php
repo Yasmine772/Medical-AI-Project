@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Session\Middleware\StartSession::class,
         ]);
 
-        $middleware->validateCsrfTokens(except : ['admin/*']);
+        $middleware->validateCsrfTokens(except : ['admin/*', 'doctor/*' ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
     $exceptions->render(function (AuthenticationException $e, $request) {

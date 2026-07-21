@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\DoctorRequest;
-use app\Services\Web\FileService;
+use App\Services\Web\FileService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -40,21 +40,21 @@ class UploadDoctorRequestFiles implements ShouldQueue
         $uploadedFiles = [];
 
         if ($this->filePaths['license_file'] ?? null) {
-            $uploadedFiles['license_file_path'] = $fileService->uploadFile(
+            $uploadedFiles['license_file'] = $fileService->moveFile(
                 $this->filePaths['license_file'],
                 'doctor/licenses'
             );
         }
 
         if ($this->filePaths['cv_file'] ?? null) {
-            $uploadedFiles['cv_path'] = $fileService->uploadFile(
+            $uploadedFiles['cv_file'] = $fileService->moveFile(
                 $this->filePaths['cv_file'],
                 'doctor/CVs'
             );
         }
 
         if ($this->filePaths['photo'] ?? null) {
-            $uploadedFiles['photo_path'] = $fileService->uploadFile(
+            $uploadedFiles['photo'] = $fileService->moveFile(
                 $this->filePaths['photo'],
                 'doctor/photos'
             );

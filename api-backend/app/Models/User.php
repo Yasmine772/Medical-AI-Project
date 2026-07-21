@@ -78,11 +78,6 @@ class User extends Authenticatable implements Auditable
         return null;
     }
 
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
-
     public function diagnosisSessions()
     {
         return $this->hasMany(DiagnosisSession::class);
@@ -97,5 +92,10 @@ class User extends Authenticatable implements Auditable
     {
     return $this->fcm_token;
     }
+
+    // public function doctor()
+    // {
+    //     return $this->hasOne(Doctor::class);
+    // }
 
 }

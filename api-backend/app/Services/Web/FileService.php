@@ -1,16 +1,20 @@
 <?php
 
-namespace app\Services\Web;
+namespace App\Services\Web;
 
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class FileService
 {
-    public function uploadFile($file, $destinationPath)
+    public function moveFile(string $tempPath, string $destination): string
     {
-        $fileName = $file->getClientOriginalName();
-        $file->move(public_path($destinationPath) , $fileName);
-        $newFilePath =  $destinationPath . '/' . $fileName;
-        return $newFilePath;
+        $fileName = Str::random(40) . '.' . pathinfo($tempPath, PATHINFO_EXTENSION);
+        $newPath = $destination . '/' . $fileName;
+
+        Storage::disk('public')->move($tempPath, $newPath);
+
+        return $newPath;
     }
 
 }
