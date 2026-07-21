@@ -118,6 +118,7 @@ class SessionManager:
             .table("diagnosis_sessions")
             .select("id, user_id, created_at, updated_at, status, candidates")
             .eq("user_id", user_id)
+            .eq("status", "completed")
             .order("created_at", desc=True)
             .execute()
         )
