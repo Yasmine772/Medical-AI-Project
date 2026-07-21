@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Messages\DatabaseMessage;
 use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
@@ -74,7 +75,9 @@ class WelcomeMessageNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            //
+            'title' => 'Welcome Back!',
+            'message' => 'We are thrilled to have you back! Explore our app and discover new features tailored just for you.',
+            'data' => ['type' => 'welcome_message'],
         ];
     }
 }
