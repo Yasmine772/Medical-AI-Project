@@ -1,5 +1,6 @@
 import json
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.services.logger import log
 from app.services.web_search import search_web
@@ -110,21 +111,32 @@ class DiagnosisService:
         results = self.store.search(query_vector, limit=5, filter_type=None)
         log("VECTOR", f"'{name_en}' -> {len(results)} results", [r.get("name_en") for r in results])
 
-        if not results:
-            log("VECTOR", f"No results for '{name_en}', falling back to web search")
-            web_results = search_web(f"{name_en} medical condition symptoms", limit=5)
-            if not web_results:
-                return {"error": "No matching diseases found for this symptom"}
-            results = [
-                {
-                    "name_en": r["title"],
-                    "name_local": r["title"],
-                    "symptoms_en": r.get("content") or r.get("snippet") or "",
+        # Check if best similarity is low — supplement with web search in parallel
+        best_sim = max((float(r.get("similarity", 0) or 0) for r in results), default=0)
+        web_results = []
+        if best_sim < 0.5 or not results:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                web_future = pool.submit(search_web, f"{name_en} medical condition symptoms", 5)
+                # Continue processing while web search runs
+                web_results = web_future.result() or []
+
+        if not results and not web_results:
+            return {"error": "No matching diseases found for this symptom"}
+
+        # Merge: vector results first, then web results (avoid duplicates)
+        existing_names = {r.get("name_en", "").lower() for r in results}
+        for r in web_results:
+            title = (r.get("title") or "").strip()
+            if title and title.lower() not in existing_names:
+                results.append({
+                    "name_en": title,
+                    "name_local": title,
+                    "symptoms_en": (r.get("content") or "")[:500],
                     "specialist": "General",
-                    "similarity": 0.5,
-                }
-                for r in web_results
-            ]
+                    "similarity": 0.4,
+                })
+                existing_names.add(title.lower())
+        log("SELECT", f"After merge: {len(results)} total ({len(web_results)} from web)")
 
         selected_entry = {
             "query": query_text,
@@ -252,8 +264,9 @@ class DiagnosisService:
             f"  {k}: {v*100:.0f}%" for k, v in sorted(probabilities.items(), key=lambda x: -x[1])
         ) if probabilities else ""
 
+        baseline = candidates.get("baseline", {})
         system_prompt = build_system_prompt(
-            diseases_text, socrates_axis, probs_text, language=lang, force=False
+            diseases_text, socrates_axis, probs_text, language=lang, force=False, baseline=baseline
         )
         messages = [{"role": "system", "content": system_prompt}, *conversation]
         content = self.llm.ask(messages)
@@ -331,8 +344,9 @@ class DiagnosisService:
             f"  {k}: {v*100:.0f}%" for k, v in sorted(probabilities.items(), key=lambda x: -x[1])
         ) if probabilities else ""
 
+        baseline = candidates.get("baseline", {})
         system_prompt = build_system_prompt(
-            diseases_text, socrates_axis, probs_text, language=lang, force=False
+            diseases_text, socrates_axis, probs_text, language=lang, force=False, baseline=baseline
         )
         if initial_msg and not conversation:
             conversation = [{"role": "user", "content": f"Patient reports: {initial_msg}"}]
@@ -388,7 +402,13 @@ class DiagnosisService:
         else:
             # Derive named diagnoses from the top evidence passages + Bayesian weights
             named = self._name_diagnoses(probabilities, diseases, lang)
-            parsed = {"type": "diagnosis", "diagnoses": named} if named else {"type": "diagnosis", "diagnoses": force_top3(probabilities, diseases, labels)}
+            fallback = force_top3(probabilities, diseases, labels)
+            if named and len(named) < 3:
+                existing_names = {d.get("disease_name", "").lower() for d in named}
+                for fb in fallback:
+                    if fb.get("disease_name", "").lower() not in existing_names and len(named) < 3:
+                        named.append(fb)
+            parsed = {"type": "diagnosis", "diagnoses": named if named else fallback}
 
         parsed["type"] = "diagnosis"
         parsed["diagnoses"] = self._localize_diagnoses(parsed["diagnoses"], lang)
@@ -556,15 +576,51 @@ class DiagnosisService:
 
         query = " | ".join(user_texts[-5:])
         query_vector = self.embedder.encode(query)
-        results = self.store.search(query_vector, limit=5)
-        log("RESEARCH", f"Re-search query ({len(user_texts)} user msgs) -> {len(results)} new candidates", [r.get("name_en") for r in results])
+
+        # Run vector search and web search in parallel
+        vector_results = []
+        web_results = []
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = {
+                pool.submit(self.store.search, query_vector, 5): "vector",
+                pool.submit(search_web, f"{query} medical condition", 3): "web",
+            }
+            for fut in as_completed(futures):
+                kind = futures[fut]
+                try:
+                    res = fut.result()
+                    if kind == "vector":
+                        vector_results = res or []
+                    else:
+                        web_results = res or []
+                except Exception as e:
+                    log("RESEARCH", f"{kind} search failed: {str(e)[:80]}")
+
+        log("RESEARCH", f"Re-search query ({len(user_texts)} user msgs) -> {len(vector_results)} vector + {len(web_results)} web",
+            [r.get("name_en") for r in vector_results[:3]])
 
         existing_names = {d.get("name_en", "") for d in existing_diseases or []}
-        for r in results:
+
+        # Add vector results first (higher quality)
+        for r in vector_results:
             name = r.get("name_en", "")
             if name and name not in existing_names:
                 existing_diseases.append(r)
                 existing_probs[name] = 0.01
+                existing_names.add(name)
+
+        # Add web results (lower weight, only if not already present)
+        for r in web_results:
+            name = (r.get("title") or "").strip()
+            if name and name not in existing_names:
+                existing_diseases.append({
+                    "name_en": name,
+                    "name_local": name,
+                    "symptoms_en": (r.get("content") or "")[:500],
+                    "specialist": "General",
+                    "similarity": 0.4,
+                })
+                existing_probs[name] = 0.005
                 existing_names.add(name)
 
         total = sum(existing_probs.values()) or 1

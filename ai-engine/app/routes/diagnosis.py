@@ -1,9 +1,11 @@
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi import APIRouter, Form, Query, Header
 from app.state import get_store, get_embedder, get_session_manager, get_llm
 from app.services.logger import log
 from app.services.socrates import build_extract_prompt, parse_llm_response
 from app.services.i18n import detect_lang, translate_batch
+from app.services.web_search import search_web
 
 router = APIRouter()
 
@@ -18,10 +20,45 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         return {"status": "success", "data": {"query": q, "results": []}}
 
     query_vector = embedder.encode(q.strip())
-    results = store.search(query_vector, limit=10)
 
-    if not results:
+    # Run vector search and web search in parallel
+    vector_results = []
+    web_results = []
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = {
+            pool.submit(store.search, query_vector, 10): "vector",
+            pool.submit(search_web, f"{q} medical condition symptoms", 5): "web",
+        }
+        for fut in as_completed(futures):
+            kind = futures[fut]
+            try:
+                res = fut.result()
+                if kind == "vector":
+                    vector_results = res or []
+                else:
+                    web_results = res or []
+            except Exception as e:
+                log("SYMPTOMS", f"{kind} search failed: {str(e)[:80]}")
+
+    log("SYMPTOMS", f"Search '{q[:50]}': {len(vector_results)} vector + {len(web_results)} web")
+
+    if not vector_results and not web_results:
         return {"status": "success", "data": {"query": q, "results": []}}
+
+    # Merge: vector results first, then web results (avoid duplicates)
+    results = list(vector_results)
+    existing_names = {(r.get("name_en") or "").lower() for r in results}
+    for r in web_results:
+        title = (r.get("title") or "").strip()
+        if title and title.lower() not in existing_names:
+            results.append({
+                "name_en": title,
+                "name_local": title,
+                "symptoms_en": (r.get("content") or "")[:500],
+                "specialist": "General",
+                "similarity": 0.4,
+            })
+            existing_names.add(title.lower())
 
     # Build context from search results using ONLY English fields
     context_blocks = []
@@ -49,20 +86,20 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
 
     system_prompt = build_extract_prompt(q, context, lang)
     items = []
-    for attempt, mdl in enumerate(["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]):
+    for attempt in range(2):
         try:
             raw = llm.ask([
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {q}"},
-            ], temperature=0, max_tokens=1024, model=mdl)
+            ], temperature=0, max_tokens=1024)
             parsed = parse_llm_response(raw)
             items = parsed.get("results", []) if isinstance(parsed, dict) else []
             if items:
-                log("SYMPTOMS", f"Extraction succeeded model={mdl} items={len(items)}")
+                log("SYMPTOMS", f"Extraction succeeded items={len(items)}")
                 break
         except Exception as e:
             err = str(e)
-            log("SYMPTOMS", f"Extraction attempt {attempt+1} model={mdl} failed: {err[:80]}")
+            log("SYMPTOMS", f"Extraction attempt {attempt+1} failed: {err[:80]}")
             if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower() and "403" not in err and "access" not in err.lower():
                 break
 
@@ -161,6 +198,7 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
 async def start_diagnosis(
     user_id: str = Form(...),
     gender: str = Form(default=""),
+    age: int = Form(default=None),
     is_smoker: bool = Form(default=False),
     has_diabetes: bool = Form(default=False),
     has_hypertension: bool = Form(default=False),
@@ -173,6 +211,7 @@ async def start_diagnosis(
         svc = _get_svc()
         baseline = {
             "gender": gender,
+            "age": age,
             "is_smoker": is_smoker,
             "has_diabetes": has_diabetes,
             "has_hypertension": has_hypertension,

@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Payment\PaymentController;
 use App\Http\Controllers\Api\V1\Reports\ReportController;
 use App\Http\Controllers\Api\V1\settingController;
-use \App\Http\Controllers\Api\V1\User\NotificationController;
+use App\Http\Controllers\Api\V1\User\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/v1/stripe/webhook', [PaymentController::class, 'handleWebhook']);
