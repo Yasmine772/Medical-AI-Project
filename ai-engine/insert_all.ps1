@@ -1,6 +1,18 @@
 $ErrorActionPreference = 'Stop'
-$dir = "D:\programming projects\laravel_projects\Medical-AI-Project\ai-engine\app\data"
+
+$defaultDir = Join-Path $PSScriptRoot "app\data"
+$input = Read-Host "Enter PDF folder path (press Enter for default: $defaultDir)"
+$dir = if ($input.Trim()) { $input.Trim() } else { $defaultDir }
+
+if (-not (Test-Path $dir)) {
+    Write-Host "ERROR: Folder not found: $dir"
+    exit 1
+}
+
 $pdfs = Get-ChildItem -Path $dir -File -Filter *.pdf
+Write-Host "Found $($pdfs.Count) PDF(s) in $dir"
+Write-Host ""
+
 foreach ($f in $pdfs) {
     $name = $f.Name
     Write-Host "=== INSERTING: $name ==="
