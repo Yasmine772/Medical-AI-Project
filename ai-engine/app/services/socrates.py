@@ -50,12 +50,35 @@ def build_system_prompt(
     probs_text: str,
     language: str = "ar",
     force: bool = False,
+    baseline: dict | None = None,
 ) -> str:
     axis_label = SOCRATES_AXES[socrates_axis] if socrates_axis < len(SOCRATES_AXES) else "Any remaining clarifying questions"
     covered = SOCRATES_AXES[:socrates_axis]
     covered_text = "\n".join(f"- {a}" for a in covered) if covered else "None yet"
 
+    # Build patient context from baseline
+    ctx_parts = []
+    if baseline:
+        if baseline.get("age") is not None:
+            ctx_parts.append(f"{baseline['age']} years old")
+        if baseline.get("gender"):
+            g = baseline["gender"]
+            ctx_parts.append(g)
+        if baseline.get("is_smoker"):
+            ctx_parts.append("smoker")
+        if baseline.get("has_diabetes"):
+            ctx_parts.append("diabetic")
+        if baseline.get("has_hypertension"):
+            ctx_parts.append("has hypertension")
+        if baseline.get("is_pregnant") is True:
+            ctx_parts.append("pregnant")
+        if baseline.get("activity_level") and baseline["activity_level"] != "moderate":
+            ctx_parts.append(f"activity level: {baseline['activity_level']}")
+    patient_context = ", ".join(ctx_parts) if ctx_parts else "No patient context provided"
+
     prompt = f"""You are a medical diagnosis assistant. All output MUST be in English only — the system translates for the patient.
+
+Patient context: {patient_context}
 
 Possible diseases from database:
 {candidates_text}
