@@ -18,9 +18,9 @@ class PaymentController extends Controller
     public function createIntent(CreatePaymentIntentRequest $request)
     {
         $user = $request->user();
-        $diagnosisSessionId = $request->input('diagnosis_session_id');
+        $sessionHash = $request->input('session_hash');
         
-        $result = $this->paymentService->createPaymentIntent($user, $diagnosisSessionId);
+        $result = $this->paymentService->createPaymentIntent($user, $sessionHash);
       
         if ($result === null) {
             return $this->errorResponse('Failed to create payment intent. Please try again.', null, 500);

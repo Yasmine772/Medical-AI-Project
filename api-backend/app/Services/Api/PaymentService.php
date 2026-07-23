@@ -11,9 +11,9 @@ class PaymentService
 {
     private const DIAGNOSIS_AMOUNT = 500;
 
-    public function createPaymentIntent(User $user, int $diagnosisSessionId): ?array
+    public function createPaymentIntent(User $user, string $sessionHash): ?array
     {
-        $session = DiagnosisSession::where('id', $diagnosisSessionId)
+        $session = DiagnosisSession::where('session_hash', $sessionHash)
             ->where('user_id', $user->id)
             ->first();
 
@@ -28,14 +28,14 @@ class PaymentService
 
             $payment = $user->pay(self::DIAGNOSIS_AMOUNT, [
                 'metadata' => [
-                    'diagnosis_session_id' => $diagnosisSessionId,
+                    'session_hash' => $sessionHash,
                     'user_id' => $user->id,
                 ],
             ]);
 
             $record = Payment::create([
                 'user_id' => $user->id,
-                'diagnosis_session_id' => $diagnosisSessionId,
+                'diagnosis_session_id' => $session->id,
                 'stripe_payment_intent_id' => $payment->id,
                 'amount' => self::DIAGNOSIS_AMOUNT,
                 'currency' => 'usd',
@@ -52,7 +52,7 @@ class PaymentService
         } catch (\Exception $e) {
             Log::error('Payment intent creation failed', [
                 'user_id' => $user->id,
-                'session_id' => $diagnosisSessionId,
+                'session_hash' => $sessionHash,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

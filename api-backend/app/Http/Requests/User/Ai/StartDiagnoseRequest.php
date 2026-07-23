@@ -34,6 +34,7 @@ class StartDiagnoseRequest extends FormRequest
             'patient_job'      => 'required|string|max:255',
             'activity_level'   => 'required|string|in:sedentary,moderate,active',
             'assessment_for'   => 'required|string|in:myself,other',
+            'birth_date'       => 'required|date',
         ];
     }
 

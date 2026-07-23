@@ -51,7 +51,8 @@ class AuthService
             'type' => 'welcome_message',
             'title' => 'Welcome Back!',
             'message' => 'We are thrilled to have you back! Explore our app and discover new features tailored just for you.',
-            'user_id' => $user->id,
+            'notifiable_type' => get_class($user),
+            'notifiable_id' => $user->id,
         ]);
 
             return [
