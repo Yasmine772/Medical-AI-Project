@@ -34,11 +34,7 @@ class AiController extends Controller
     //************************************************* */
     public function searchSymptoms(SymptomsRequest $request)
     {
-<<<<<<< HEAD
-        $result = $this->aiService->searchSymptoms($request->query('q', ''));
-=======
         $result = $this->aiService->searchSymptoms($request->query('q', ''), $request->query('model_name'));
->>>>>>> Yousef
 
         if ($result === null) {
             return $this->errorResponse('Diagnosis service error. Please check storage/logs/laravel.log for details', null, 503);
