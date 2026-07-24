@@ -93,11 +93,19 @@ class AiService
     }
 
     // *********************************************** */
+<<<<<<< HEAD
     public function searchSymptoms(string $query): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
                 ->get($this->fastApiUrl.'/symptoms', ['q' => $query]);
+=======
+    public function searchSymptoms(string $query, string $modelName): ?array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->get($this->fastApiUrl.'/symptoms', ['q' => $query, 'model_name' => $modelName]);
+>>>>>>> Yousef
 
             if ($response->successful()) {
                 return $response->json();

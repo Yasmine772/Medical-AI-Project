@@ -1,25 +1,40 @@
+<<<<<<< HEAD
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
+=======
+>>>>>>> Yousef
 from fastapi import APIRouter, Form, Query, Header
 from app.state import get_store, get_embedder, get_session_manager, get_llm
 from app.services.logger import log
 from app.services.socrates import build_extract_prompt, parse_llm_response
 from app.services.i18n import detect_lang, translate_batch
+<<<<<<< HEAD
 from app.services.web_search import search_web
+=======
+>>>>>>> Yousef
 
 router = APIRouter()
 
 
 @router.get("/symptoms")
-async def search_symptoms(q: str = Query(default="", description="Search query for symptoms or illnesses")):
+async def search_symptoms(
+    q: str = Query(default="", description="Search query for symptoms or illnesses"),
+    model_name: str = Query(default=None, description="LLM model to use for extraction"),
+):
     store = get_store()
     embedder = get_embedder()
     llm = get_llm()
+    lang = detect_lang(q)
 
     if not q:
         return {"status": "success", "data": {"query": q, "results": []}}
 
     query_vector = embedder.encode(q.strip())
+<<<<<<< HEAD
+=======
+    results = store.search(query_vector, limit=10) or []
+    log("SYMPTOMS", f"Vector search: {len(results)} results for '{q[:50]}'")
+>>>>>>> Yousef
 
     # Run vector search and web search in parallel
     vector_results = []
@@ -45,6 +60,7 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
     if not vector_results and not web_results:
         return {"status": "success", "data": {"query": q, "results": []}}
 
+<<<<<<< HEAD
     # Merge: vector results first, then web results (avoid duplicates)
     results = list(vector_results)
     existing_names = {(r.get("name_en") or "").lower() for r in results}
@@ -61,6 +77,9 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
             existing_names.add(title.lower())
 
     # Build context from search results using ONLY English fields
+=======
+    # Build context from PDF chunks
+>>>>>>> Yousef
     context_blocks = []
     for i, r in enumerate(results):
         parts = []
@@ -70,6 +89,7 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         se = (r.get("symptoms_en") or "").strip()
         if se:
             parts.append(f"symptoms: {se}")
+<<<<<<< HEAD
         sp = (r.get("specialist") or "").strip()
         if sp:
             parts.append(f"specialist: {sp}")
@@ -81,8 +101,15 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
                 parts.append(f"name: Chunk-{i+1}")
         context_blocks.append(f"[PASSAGE {i+1}]\n" + "; ".join(parts))
 
+=======
+        doc = (r.get("document") or "").strip()[:200]
+        if doc and not any('\u0600' <= c <= '\u06ff' for c in doc):
+            parts.append(f"text: {doc}")
+        if not parts:
+            parts.append(f"text: Chunk-{i+1}")
+        context_blocks.append(f"[PASSAGE {i+1}]\n" + "; ".join(parts))
+>>>>>>> Yousef
     context = "\n\n".join(context_blocks)
-    lang = detect_lang(q)
 
     system_prompt = build_extract_prompt(q, context, lang)
     items = []
@@ -91,10 +118,16 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
             raw = llm.ask([
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {q}"},
+<<<<<<< HEAD
             ], temperature=0, max_tokens=1024)
+=======
+            ], temperature=0, max_tokens=1024, model=model_name)
+>>>>>>> Yousef
             parsed = parse_llm_response(raw)
             items = parsed.get("results", []) if isinstance(parsed, dict) else []
+            log("SYMPTOMS", f"LLM extraction attempt {attempt+1}: {len(items)} items")
             if items:
+<<<<<<< HEAD
                 log("SYMPTOMS", f"Extraction succeeded items={len(items)}")
                 break
         except Exception as e:
@@ -103,6 +136,51 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
             if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower() and "403" not in err and "access" not in err.lower():
                 break
 
+=======
+                break
+        except Exception as e:
+            err = str(e)
+            log("SYMPTOMS", f"LLM attempt {attempt+1} failed: {err[:80]}")
+            if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower() and "403" not in err and "access" not in err.lower():
+                break
+
+    if not items:
+        return {"status": "success", "data": {"query": q, "results": []}}
+
+    name_en_list = []
+    summary_en_list = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        name_en = (it.get("name_en") or "").strip()
+        if not name_en:
+            continue
+        summary = (it.get("summary") or "").strip()[:200]
+        name_en_list.append(name_en)
+        summary_en_list.append(summary)
+
+    if lang != "en":
+        names_local = translate_batch(name_en_list, lang)
+        summaries_local = translate_batch(summary_en_list, lang)
+    else:
+        names_local = name_en_list
+        summaries_local = summary_en_list
+
+    cleaned = []
+    for idx, ne in enumerate(name_en_list):
+        cleaned.append({
+            "id": idx,
+            "name_en": ne,
+            "name_local": names_local[idx],
+            "type": "illness",
+            "summary": summaries_local[idx],
+            "source_id": "",
+            "similarity": 1.0,
+        })
+
+    return {"status": "success", "data": {"query": q, "results": cleaned}}
+
+>>>>>>> Yousef
     # Build a name->result lookup from the search results for source_id matching
     result_by_name = {}
     for r in results:
@@ -205,6 +283,7 @@ async def start_diagnosis(
     is_pregnant: bool = Form(default=None),
     activity_level: str = Form(default="moderate"),
     assessment_for: str = Form(default="myself"),
+    model_name: str = Form(default=None),
     x_user_id: str = Header(default="anonymous"),
 ):
     try:
@@ -219,7 +298,11 @@ async def start_diagnosis(
             "activity_level": activity_level,
             "assessment_for": assessment_for,
         }
+<<<<<<< HEAD
         session_id = svc.create_session(baseline, user_id)
+=======
+        session_id = svc.create_session(baseline, user_id, model_name=model_name)
+>>>>>>> Yousef
         return {"status": "success", "data": {"session_id": session_id}}
     except Exception as e:
         import traceback
