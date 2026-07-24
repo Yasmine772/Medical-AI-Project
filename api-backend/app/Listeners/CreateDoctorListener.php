@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\DoctorRegisterEvent;
 use App\Models\Doctor;
 use App\Models\DoctorRequest;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -48,9 +49,14 @@ class CreateDoctorListener
                 'is_active'           => true,
             ]);
 
-            DB::commit();
+            // $user = User::create([
+            //     'full_name'  => $doctorRequest->full_name,
+            //     'email'      => $doctorRequest->email,
+            //     'password'   => $doctorRequest->password,
+            // ]);
+            // $user->assignRole('doctor');
 
-            $doctor->assignRole('doctor');
+            DB::commit();
             
         } catch (\Throwable $e) {
             DB::rollBack();

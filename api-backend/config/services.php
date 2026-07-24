@@ -47,4 +47,10 @@ return [
         'report_timeout' => env('FASTAPI_REPORT_TIMEOUT', 60),
     ],
 
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
 ];

@@ -30,12 +30,16 @@ class Doctor extends Model implements Auditable
         'cv_file',
         'license_file',
         'is_active',
-        'user_id'
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getPhotoPathAttribute(): ?string
+    {
+        return $this->photo;
     }
 
     public function diseases()

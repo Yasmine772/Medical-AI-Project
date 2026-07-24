@@ -16,9 +16,11 @@ class PatientProfile extends Model implements Auditable
         'has_diabetes',
         'has_hypertension',
         'is_pregnant',
+        'drinks_alcohol',
         'activity_level',
         'last_checkup_date',
         'user_id',
+        'occupation'
     ];                              
 
     public function user()
@@ -32,6 +34,7 @@ class PatientProfile extends Model implements Auditable
         'has_diabetes' => 'boolean',
         'has_hypertension' => 'boolean',
         'is_pregnant' => 'boolean',
+        'drinks_alcohol' => 'boolean',
     ];
 
 }

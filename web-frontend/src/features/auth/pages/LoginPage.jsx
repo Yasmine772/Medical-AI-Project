@@ -19,7 +19,11 @@ const LoginPage = () => {
     }
   }, [isAuthenticated, navigate]);
   return (
+    
     <div className="min-h-screen w-full bg-[#BACED6] flex items-center justify-center p-6 antialiased font-sans relative overflow-hidden">
+      
+
+     
       <div
         className="absolute rounded-full pointer-events-none"
         style={{
@@ -27,11 +31,12 @@ const LoginPage = () => {
           left: "-20%",
           width: "70vw",
           height: "70vw",
-          backgroundColor: "#A3BCC7",
+          backgroundColor: "#A3BCC7", 
           zIndex: 1,
         }}
       />
 
+     
       <div
         className="absolute rounded-full pointer-events-none"
         style={{
@@ -44,6 +49,7 @@ const LoginPage = () => {
         }}
       />
 
+      
       <div
         className="absolute rounded-full pointer-events-none"
         style={{
@@ -51,11 +57,12 @@ const LoginPage = () => {
           left: "-15%",
           width: "55vw",
           height: "55vw",
-          backgroundColor: "#C5D6DC",
+          backgroundColor: "#C5D6DC", 
           zIndex: 1,
         }}
       />
 
+      
       <div
         className="absolute rounded-full pointer-events-none"
         style={{
@@ -63,11 +70,12 @@ const LoginPage = () => {
           right: "-15%",
           width: "55vw",
           height: "55vw",
-          backgroundColor: "#CDE1E8",
+          backgroundColor: "#CDE1E8", 
           zIndex: 1,
         }}
       />
 
+      
       <div
         className="absolute rounded-full pointer-events-none"
         style={{
@@ -80,6 +88,7 @@ const LoginPage = () => {
         }}
       />
 
+      
       <div
         className="absolute rounded-full pointer-events-none"
         style={{
@@ -99,6 +108,7 @@ const LoginPage = () => {
       >
         {/* Medical Illustration */}
         <div className="hidden md:flex flex-col justify-center items-center bg-[#F8FAFC]/60 p-8 border-r border-gray-100/50 relative">
+          
           <img
             src={medicalImg}
             alt="Medical Diagnostic Illustration"
@@ -106,18 +116,21 @@ const LoginPage = () => {
           />
         </div>
 
+        
         <div className="flex flex-col justify-center p-8 lg:p-12 relative bg-white">
+         
           <div className="md:absolute md:top-10 md:left-12 flex items-center gap-3 mb-8 md:mb-0 shrink-0">
             <img
               src={logoImg}
               alt="MedDiagnostic Logo"
-              className="w-17 h-17 object-contain shrink-0"
+              className="w-17 h-17 object-contain shrink-0" 
             />
 
             <div className="flex flex-col leading-none">
               <div className="flex font-bold text-lg tracking-tight">
+            
                 <span className="text-[#72a6bb]">Med</span>
-
+                
                 <span className="text-gray-800">Diagnostic</span>
               </div>
               <span className="text-[10px] text-gray-400 font-semibold tracking-widest uppercase mt-0.5">

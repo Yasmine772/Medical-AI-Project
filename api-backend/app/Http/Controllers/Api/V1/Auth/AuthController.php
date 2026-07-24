@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log;
 use App\Http\Requests\User\Auth\LoginRequest;
 use App\Http\Requests\User\Auth\RegisterRequest;
 use App\Http\Requests\User\OTP\ResendOTPRequest;
@@ -45,6 +46,7 @@ class AuthController extends Controller
             return $this->successResponse(new UserResource($user), 'User registered successfully. Please check your email, we sent OTP', 201);
 
         } catch (Throwable $e) {
+            Log::error('Failed to register user: ' . $e->getMessage(), ['exception' => $e]);
             return $this->errorResponse('Failed to register user', $e->getMessage(), 500);
         }
     }
@@ -62,8 +64,10 @@ class AuthController extends Controller
                 'access_token' => $result['access_token'],
                 'access_token_expires_at' => $result['access_token_expires_at'],
                 'token_type' => $result['token_type'],
+                'fcm_token' => $result['fcm_token']
             ], 'User login successfully', 200)
         };
+
     }
 
     // -------------------------------------------------------------------------------------------

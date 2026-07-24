@@ -40,11 +40,6 @@ function App() {
           <Route path="/app/diseases" element={<DiseasesPage />} />
         </Route>
 
-        {/* doctors routes*/}
-        <Route path="/doctor" element={<DoctorLayout />}>
-          <Route path="dashboard" element={<HomePage />} />
-        </Route>
-
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>

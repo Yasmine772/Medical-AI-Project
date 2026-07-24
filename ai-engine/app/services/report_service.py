@@ -105,6 +105,55 @@ def _format_timestamp(ts: str | None) -> str:
         return ts[:19] if ts else "—"
 
 
+def build_report_json(session_id: str) -> dict:
+    sm = get_session_manager()
+    data = sm.get_session(session_id)
+    if not data:
+        raise ValueError(f"Session {session_id} not found")
+
+    data = _parse_json_fields(data)
+    diagnoses = _extract_diagnoses(data)
+    advice = _extract_advice(diagnoses)
+
+    for d in diagnoses:
+        d["disease_name_local"] = d.get("disease_name_local") or d.get("disease_name_ar") or d.get("disease_name", "")
+        d["specialist_local"] = d.get("specialist_local") or d.get("specialist_ar") or d.get("specialist", "")
+        d["advice_local"] = d.get("advice_local") or d.get("advice", "")
+
+    conversation = data.get("conversation") or []
+    if isinstance(conversation, str):
+        try:
+            conversation = json.loads(conversation)
+        except (json.JSONDecodeError, TypeError):
+            conversation = []
+
+    transcript = []
+    for m in conversation:
+        role = m.get("role")
+        content = m.get("content", "")
+        if role == "assistant":
+            try:
+                parsed = json.loads(content)
+                if parsed.get("type") == "question":
+                    content = parsed.get("question", "")
+                elif parsed.get("type") == "diagnosis":
+                    content = "Final diagnosis provided."
+            except (json.JSONDecodeError, TypeError):
+                pass
+        transcript.append({"role": role, "text": content})
+
+    return {
+        "session_id": session_id,
+        "patient_name": data.get("user_id", "—"),
+        "started_at": _format_timestamp(data.get("created_at")),
+        "completed_at": _format_timestamp(data.get("updated_at")),
+        "status": data.get("status", "COMPLETED"),
+        "diagnoses": diagnoses,
+        "advice": advice,
+        "conversation": transcript,
+    }
+
+
 def generate_report_html(session_id: str) -> str:
     sm = get_session_manager()
     data = sm.get_session(session_id)

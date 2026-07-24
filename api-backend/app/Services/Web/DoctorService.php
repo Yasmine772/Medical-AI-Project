@@ -4,10 +4,15 @@ namespace App\Services\Web;
 
 use App\Events\doctorRegisterEvent;
 use App\Http\Resources\doctorResource;
+use App\Jobs\ProcessDoctorApproval;
+use App\Jobs\SendRejectionEmailJob;
+use App\Jobs\UploadDoctorRequestFiles;
 use App\Models\DoctorRequest;
 use App\Models\User;
+use App\Notifications\NewDoctorRequestNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class DoctorService
 {
@@ -36,10 +41,7 @@ class DoctorService
         if($doctorReq === null) {
             return null;
         }
-        $doctorReq->status = 'approved';
-        $doctorReq->save();
-
-        event(new DoctorRegisterEvent($doctorReq));
+        ProcessDoctorApproval::dispatch($doctorReq)->onQueue('default');
 
         return new doctorResource($doctorReq);
     }
@@ -54,6 +56,8 @@ class DoctorService
         $doctorReq->rejection_reason = $array['rejection_reason'];
         $doctorReq->save();
 
+        SendRejectionEmailJob::dispatch($doctorReq, $doctorReq->rejection_reason)->onQueue('default');
+
         $user = User::where('email', $doctorReq->email)->first();
         if ($user) {
             $user->delete();
@@ -63,41 +67,50 @@ class DoctorService
     //************************************************************ */
     public function sendJoinRequest(array $data)
     {
-        DB::beginTransaction();
+        try {
+            DB::beginTransaction();
 
-        $fileService = app(FileService::class);
+            $doctorRequest = DoctorRequest::create([
+                'full_name'           => $data['full_name'],
+                'email'               => $data['email'],
+                'password'            => Hash::make($data['password']),
+                'phone'               => $data['phone'] ?? null,
+                'specialization'      => $data['specialization'],
+                'years_of_experience' => $data['years_of_experience'],
+                'clinic_phone'        => $data['clinic_phone'] ?? null,
+                'clinic_address'      => $data['clinic_address'] ?? null,
+                'license_number'      => $data['license_number'] ?? null,
+                'biography'           => $data['biography'] ?? null,
+                'status'              => 'pending',
+            ]);
 
-        $licensePath = isset($data['license_file'])
-                    ? $fileService->uploadFile($data['license_file'], 'doctor/licenses')
-                    : null;
+            $tempFiles = [];
 
-        $cvPath = isset($data['cv_file'])
-                    ? $fileService->uploadFile($data['cv_file'], 'doctor/CVs')
-                    : null;
+            if (isset($data['license_file'])) {
+                $tempFiles['license_file'] = $data['license_file']->store('temp/licenses', 'public');
+            }
 
-        $photoPath = isset($data['photo'])
-                    ? $fileService->uploadFile($data['photo'], 'doctor/photos')
-                    : null;
+            if (isset($data['cv_file'])) {
+                $tempFiles['cv_file'] = $data['cv_file']->store('temp/cvs', 'public');
+            }
 
-        $doctorRequest = DoctorRequest::create([
-            'full_name'           => $data['full_name'],
-            'email'               => $data['email'],
-            'password'            => Hash::make($data['password']),
-            'phone'               => $data['phone'] ?? null,
-            'specialization'      => $data['specialization'],
-            'years_of_experience' => $data['years_of_experience'],
-            'clinic_phone'        => $data['clinic_phone'] ?? null,
-            'clinic_address'      => $data['clinic_address'] ?? null,
-            'license_number'      => $data['license_number'] ?? null,
-            'biography'           => $data['biography'] ?? null,
-            'photo'               => $photoPath,
-            'license_file'        => $licensePath,
-            'cv_file'             => $cvPath,
-            'status'              => 'pending',
-        ]);
+            if (isset($data['photo'])) {
+                $tempFiles['photo'] = $data['photo']->store('temp/photos', 'public');
+            }
 
-        DB::commit();
-        
-        return new doctorResource($doctorRequest);
+            DB::commit();
+
+            UploadDoctorRequestFiles::dispatch($doctorRequest->id, $tempFiles)->onQueue('default');
+
+            $admin = User::role('admin')->first();
+            $admin->notify(new NewDoctorRequestNotification($doctorRequest));
+
+            return $doctorRequest;
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Doctor request creation failed: ' . $e->getMessage());
+            throw $e;
+        }
     }
 }

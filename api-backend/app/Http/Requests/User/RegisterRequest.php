@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Requests\User\Ai;
+namespace App\Http\Requests\User;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class SubmitDiagnosisAnswerRequest extends FormRequest
+class RegisterRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,11 +25,13 @@ class SubmitDiagnosisAnswerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'session_id' => 'nullable|string',
-            'question_id' => 'required|string|max:255',
-            'answer' => 'required|string|max:65535',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|confirmed|min:8',
         ];
     }
+
+
 
     protected function failedValidation(Validator $validator)
     {
@@ -42,4 +44,7 @@ class SubmitDiagnosisAnswerRequest extends FormRequest
     }
 
 
+
+
+    
 }

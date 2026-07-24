@@ -20,6 +20,7 @@ class Notification extends Model implements Auditable
         'user_id'
     ];
 
+
     public function user()
     {
         return $this->belongsTo(User::class);

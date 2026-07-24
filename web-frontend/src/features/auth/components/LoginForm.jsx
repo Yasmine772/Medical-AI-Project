@@ -90,9 +90,10 @@ const LoginForm = () => {
 
   return (
     <form
-      onSubmit={handleLoginSubmit}
+      onSubmit={handleSubmit}
       className="flex flex-col gap-4 w-full max-w-xs mx-auto font-sans"
     >
+      
       <h2 className="text-xl font-bold text-gray-800 tracking-tight mt-2">
         Login to your{" "}
         <span className="text-medical font-medium">diagnostic account</span>
@@ -117,6 +118,7 @@ const LoginForm = () => {
         />
       </div>
 
+      {/* forgot password */}
       <div className="text-left">
         <button
           type="button"
@@ -127,6 +129,7 @@ const LoginForm = () => {
         </button>
       </div>
 
+      
       <div className="flex flex-col gap-2.5 mt-2">
         <Button type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
