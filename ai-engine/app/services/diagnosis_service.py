@@ -112,37 +112,8 @@ class DiagnosisService:
         results = self.store.search(query_vector, limit=5, filter_type=None)
         log("VECTOR", f"'{name_en}' -> {len(results)} results", [r.get("name_en") for r in results])
 
-<<<<<<< HEAD
-        # Check if best similarity is low — supplement with web search in parallel
-        best_sim = max((float(r.get("similarity", 0) or 0) for r in results), default=0)
-        web_results = []
-        if best_sim < 0.5 or not results:
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                web_future = pool.submit(search_web, f"{name_en} medical condition symptoms", 5)
-                # Continue processing while web search runs
-                web_results = web_future.result() or []
-
-        if not results and not web_results:
-            return {"error": "No matching diseases found for this symptom"}
-
-        # Merge: vector results first, then web results (avoid duplicates)
-        existing_names = {r.get("name_en", "").lower() for r in results}
-        for r in web_results:
-            title = (r.get("title") or "").strip()
-            if title and title.lower() not in existing_names:
-                results.append({
-                    "name_en": title,
-                    "name_local": title,
-                    "symptoms_en": (r.get("content") or "")[:500],
-                    "specialist": "General",
-                    "similarity": 0.4,
-                })
-                existing_names.add(title.lower())
-        log("SELECT", f"After merge: {len(results)} total ({len(web_results)} from web)")
-=======
         if not results:
             return {"error": "No matching diseases found for this symptom"}
->>>>>>> Yousef
 
         selected_entry = {
             "query": query_text,
@@ -412,11 +383,7 @@ class DiagnosisService:
                 parsed["diagnoses"] = diag.get("top_3") if isinstance(diag, dict) and "top_3" in diag else force_top3(probabilities, diseases, labels)
         else:
             # Derive named diagnoses from the top evidence passages + Bayesian weights
-<<<<<<< HEAD
-            named = self._name_diagnoses(probabilities, diseases, lang)
-=======
             named = self._name_diagnoses(probabilities, diseases, lang, model_name=model_name)
->>>>>>> Yousef
             fallback = force_top3(probabilities, diseases, labels)
             if named and len(named) < 3:
                 existing_names = {d.get("disease_name", "").lower() for d in named}
@@ -591,35 +558,6 @@ class DiagnosisService:
 
         query = " | ".join(user_texts[-5:])
         query_vector = self.embedder.encode(query)
-<<<<<<< HEAD
-
-        # Run vector search and web search in parallel
-        vector_results = []
-        web_results = []
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            futures = {
-                pool.submit(self.store.search, query_vector, 5): "vector",
-                pool.submit(search_web, f"{query} medical condition", 3): "web",
-            }
-            for fut in as_completed(futures):
-                kind = futures[fut]
-                try:
-                    res = fut.result()
-                    if kind == "vector":
-                        vector_results = res or []
-                    else:
-                        web_results = res or []
-                except Exception as e:
-                    log("RESEARCH", f"{kind} search failed: {str(e)[:80]}")
-
-        log("RESEARCH", f"Re-search query ({len(user_texts)} user msgs) -> {len(vector_results)} vector + {len(web_results)} web",
-            [r.get("name_en") for r in vector_results[:3]])
-
-        existing_names = {d.get("name_en", "") for d in existing_diseases or []}
-
-        # Add vector results first (higher quality)
-        for r in vector_results:
-=======
         results = self.store.search(query_vector, limit=5) or []
 
         log("RESEARCH", f"Re-search query ({len(user_texts)} user msgs) -> {len(results)} candidates",
@@ -628,7 +566,6 @@ class DiagnosisService:
         existing_names = {d.get("name_en", "") for d in existing_diseases or []}
 
         for r in results:
->>>>>>> Yousef
             name = r.get("name_en", "")
             if name and name not in existing_names:
                 existing_diseases.append(r)
