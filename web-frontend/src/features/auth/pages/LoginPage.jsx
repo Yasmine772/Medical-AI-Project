@@ -12,17 +12,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth);
 
-  // const getWelcomeText = () => {
-  //   return role === "doctor"
-  //     ? "Welcome Back, Doctor"
-  //     : "Welcome Back, Administrator";
-  // };
 
-  // const getSubText = () => {
-  //   return role === "doctor"
-  //     ? "Access your diagnostic dashboard"
-  //     : "Manage your system settings";
-  // };
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/app/dashboard"); // إذا كان مسجلاً دخول، لا تظهري له صفحة اللوج إن
@@ -136,12 +126,7 @@ const LoginPage = () => {
             </div>
           </div>
 
-          {/* <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-800">
-              {getWelcomeText()}
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">{getSubText()}</p>
-          </div> */}
+         
 
           <LoginForm role={role} />
         </div>

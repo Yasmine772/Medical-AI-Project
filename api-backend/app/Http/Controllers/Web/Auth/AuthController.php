@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Web\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\Auth\LoginRequest;
+use App\Http\Requests\User\OTP\VerifyOTPRequest;
+use App\Models\User;
 use App\Services\Api\OTPService;
 use App\Traits\ApiResponseTrait;
 use Carbon\Carbon;
@@ -55,5 +57,34 @@ class AuthController extends Controller
         } catch (\Throwable $e) {
             return $this->errorResponse('Error', $e->getMessage(), 500);
         }
+    }
+    //*************************************************** */
+    public function verifyOtp(VerifyOTPRequest $request)
+    {
+        $user = User::where('email' , $request['email'])->first();
+
+        if (!$user) {
+            $this->errorResponse('User not found!', null, 422);
+        }
+
+        $isValid = $this->otpService->verifyOTP($request->validated());
+
+        if ($isValid === 'CorrectOTP') {
+            Auth::login($user);
+
+            $token = $user->createToken('auth_token', ['admin'])->plainTextToken;
+
+            $data = ['email' => $request->email, 'token' => $token];
+
+            return $this->successResponse($data, 'OTP verified successfully', 200);
+        }
+
+        return match ($isValid) {
+            'UserNotFound' => $this->errorResponse('User not found!', null, 422),
+            'NotValidOTP' => $this->errorResponse('Not valid OTP!', null, 422),
+            'OTPHasExpired' => $this->errorResponse('OTP has expired!', null, 422),
+            'OTP used' => $this->errorResponse('You have been used it!', null, 422),
+            default => $this->successResponse(null, 'OTP verified successfully', 200)
+        };
     }
 }

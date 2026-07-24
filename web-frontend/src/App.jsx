@@ -14,13 +14,23 @@ import AuditLogsPage from "./features/audit-logs/pages/AuditLogsPage";
 import DiseasesPage from "./features/diseases/pages/DiseasesPage";
 import DoctorLayout from "./features/doctor-dashboard/components/DoctorLayout";
 import HomePage from "./features/doctor-dashboard/pages/HomePage";
+import OtpVerification from "./features/auth/pages/OtpVerification";
+import ForgotPassword from "./features/auth/pages/ForgotPassword";
+import OtpVerificationPass from "./features/auth/pages/OtpVerificationPass";
+import ResetPassword from "./features/auth/pages/ResetPassword";
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<OnboardingPage />} />
         <Route path="/login" element={<LoginPage />} />
-
+        <Route path="/otp-verification" element={<OtpVerification />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route
+          path="/otp-verification-pass"
+          element={<OtpVerificationPass />}
+        />
+        <Route path="/reset-password" element={<ResetPassword />} />
         {/* admin routes */}
         <Route path="/app" element={<DashboardLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />

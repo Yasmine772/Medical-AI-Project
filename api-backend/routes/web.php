@@ -20,7 +20,7 @@ Route::get('/app/updates/latest', [settingController::class, 'latestUpdates']);
 
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'adminLogin']);
-    Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
+    Route::post('/verifyOtp', [AdminAuthController::class, 'verifyOtp']);
     Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
 
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']);

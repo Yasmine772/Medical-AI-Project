@@ -2,51 +2,91 @@ import Input from "../../../components/UI/Input";
 import Button from "../../../components/UI/Button";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useDispatch } from "react-redux";
-import api from "../../../api/axios";
+import { useDispatch } from "react-redux"; // <--- هذا كان ناقصاً
 import { loginSuccess } from "../../../store/authSlice";
+
+import api from "../../../api/axios";
+
 // import OtpVerification from "../pages/OtpVerification";
-const LoginForm = ({ role }) => {
+const LoginForm = () => {
   // const [isVerifying, setIsVerifying] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
+
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  // داخل LoginForm.jsx
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
+    const formData = new FormData();
+    formData.append("email", email.trim());
+    formData.append("password", password);
 
     try {
-      // نرسل الطلب للباك إند
-      const response = await api.post("/admin/login", { email, password });
-      console.log("الرد من السيرفر:", response.data);
-      // إذا نجح الطلب، نخزن التوكن في الـ Redux والـ localStorage
-      const token =
-        response.data.access_token || response.data.data?.access_token;
+      const response = await api.post("/admin/login", formData, {
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      console.log("Login Response Data:", response.data);
+
+      // التعديل هنا: استخدام accessToken كما يظهر في الـ JSON الخاص بكِ
+      const token = response.data.data?.accessToken;
 
       if (token) {
+        // إذا وجدنا توكن، نقوم بتخزينه والانتقال للداشبورد فوراً
         dispatch(loginSuccess({ token, email }));
-        navigate(role === "doctor" ? "/doctor/dashboard" : "/app/dashboard");
+        navigate("/app/dashboard");
       } else {
-        alert(
-          "لم يتم العثور على التوكن في استجابة السيرفر، تأكدي من الـ Console",
-        );
+        // إذا لم يرجع توكن، ننتقل للـ OTP
+        navigate("/otp-verification", { state: { email } });
       }
     } catch (error) {
-      // هذا السطر سيكشف لنا السبب الحقيقي للخطأ (هل هو خطأ 404، 422، أو 401؟)
-      console.log("Full Error Object:", error);
-      console.log("Response Data:", error.response?.data);
-      alert(
-        "خطأ في تسجيل الدخول: " +
-          (error.response?.data?.message || "Check Console"),
-      );
+      if (error.response?.status === 403) {
+        navigate("/otp-verification", { state: { email } });
+      } else {
+        alert("خطأ: " + (error.response?.data?.message || "حدث خطأ"));
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // const handleLoginSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setLoading(true);
+
+  //   const formData = new FormData();
+  //   formData.append("email", email);
+  //   formData.append("password", password);
+
+  //   try {
+  //     // بما أن الـ API لا يرسل التوكن هنا، لا نتوقع وجوده
+  //     await api.post("/admin/login", formData);
+
+  //     // إذا نجح الـ Login (بدون خطأ 403)، انتقلي لصفحة الـ OTP
+  //     // (أو ربما يرسل السيرفر كود OTP تلقائياً عند نجاح هذا الطلب)
+  //     navigate("/otp-verification", { state: { email } });
+
+  //   } catch (error) {
+  //     // الحالة 403 هي الحالة التي تعني أن المستخدم يحتاج للتحقق عبر OTP
+  //     if (error.response?.status === 403) {
+  //       console.log("Redirecting to OTP due to 403...");
+  //       navigate("/otp-verification", { state: { email } });
+  //     } else {
+  //       // أي خطأ آخر (مثل كلمة سر خاطئة)
+  //       console.log("Error object:", error);
+  //       alert("خطأ: " + (error.response?.data?.message || "حدث خطأ غير متوقع"));
+  //     }
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <form
@@ -78,21 +118,16 @@ const LoginForm = ({ role }) => {
       </div>
 
       <div className="text-left">
-        <a
-          href="#forgot"
+        <button
+          type="button"
+          onClick={() => navigate("/forgot-password")} // تأكدي من تعريف المسار في الـ Router
           className="text-[#58889B] font-normal text-sm underline underline-offset-4 decoration-1 hover:text-gray-950 transition-colors"
         >
           forgot password
-        </a>
+        </button>
       </div>
 
       <div className="flex flex-col gap-2.5 mt-2">
-        <Button
-          type="button"
-          // onClick={() => setIsVerifying(true)} // تفعيل العرض
-        >
-          confirm email
-        </Button>
         <Button type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </Button>
