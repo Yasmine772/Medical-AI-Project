@@ -76,7 +76,7 @@ def _scrape_url(url: str, max_chars: int = 3000) -> str | None:
         return None
 
 
-def search_web(query: str, limit: int = 5) -> list:
+def search_web(query: str, limit: int = 2) -> list:
     translated = translate_to_en(query)
     if translated != query:
         log("TRANS", f"Translated: '{query[:50]}' -> '{translated[:50]}'")
@@ -92,14 +92,11 @@ def search_web(query: str, limit: int = 5) -> list:
     for r in results:
         if len(enriched) >= limit:
             break
-        url = r.get("href", "")
         title = r.get("title", "")
-        if not url or not title:
+        body = r.get("body", "")
+        if not title:
             continue
-        content = _scrape_url(url)
-        if content is None:
-            continue
-        enriched.append({"title": title, "url": url, "content": content})
+        enriched.append({"title": title, "content": body[:500]})
 
-    log("WEB", f"Returning {len(enriched)}/{limit} scraped results")
+    log("WEB", f"Returning {len(enriched)}/{limit} DDG results (snippets only)")
     return enriched

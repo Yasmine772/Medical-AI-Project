@@ -1,58 +1,106 @@
-import json
 from fastapi import APIRouter, Form, Query, Header
 from app.state import get_store, get_embedder, get_session_manager, get_llm
 from app.services.logger import log
 from app.services.socrates import build_extract_prompt, parse_llm_response
-from app.services.i18n import from_english, detect_lang, translate_batch
+from app.services.i18n import detect_lang, translate_batch
 
 router = APIRouter()
 
 
 @router.get("/symptoms")
-async def search_symptoms(q: str = Query(default="", description="Search query for symptoms or illnesses")):
+async def search_symptoms(
+    q: str = Query(default="", description="Search query for symptoms or illnesses"),
+    model_name: str = Query(default=None, description="LLM model to use for extraction"),
+):
     store = get_store()
     embedder = get_embedder()
     llm = get_llm()
+    lang = detect_lang(q)
 
     if not q:
         return {"status": "success", "data": {"query": q, "results": []}}
 
     query_vector = embedder.encode(q.strip())
-    results = store.search(query_vector, limit=10)
+    results = store.search(query_vector, limit=10) or []
+    log("SYMPTOMS", f"Vector search: {len(results)} results for '{q[:50]}'")
 
     if not results:
         return {"status": "success", "data": {"query": q, "results": []}}
 
+    # Build context from PDF chunks
     context_blocks = []
     for i, r in enumerate(results):
-        doc = (r.get("document") or "").strip()
-        if not doc:
-            doc = (r.get("name_en") or r.get("name_ar") or "")
-        context_blocks.append(f"[PASSAGE {i+1}]\n{doc[:1200]}")
-
+        parts = []
+        ne = (r.get("name_en") or "").strip()
+        if ne:
+            parts.append(f"name: {ne}")
+        se = (r.get("symptoms_en") or "").strip()
+        if se:
+            parts.append(f"symptoms: {se}")
+        doc = (r.get("document") or "").strip()[:200]
+        if doc and not any('\u0600' <= c <= '\u06ff' for c in doc):
+            parts.append(f"text: {doc}")
+        if not parts:
+            parts.append(f"text: Chunk-{i+1}")
+        context_blocks.append(f"[PASSAGE {i+1}]\n" + "; ".join(parts))
     context = "\n\n".join(context_blocks)
-    lang = detect_lang(q)
 
     system_prompt = build_extract_prompt(q, context, lang)
     items = []
-    for attempt, mdl in enumerate(["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]):
+    for attempt in range(2):
         try:
             raw = llm.ask([
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {q}"},
-            ], temperature=0, max_tokens=1024, model=mdl)
+            ], temperature=0, max_tokens=1024, model=model_name)
             parsed = parse_llm_response(raw)
             items = parsed.get("results", []) if isinstance(parsed, dict) else []
+            log("SYMPTOMS", f"LLM extraction attempt {attempt+1}: {len(items)} items")
             if items:
-                log("SYMPTOMS", f"Extraction succeeded model={mdl} items={len(items)}")
                 break
         except Exception as e:
             err = str(e)
-            log("SYMPTOMS", f"Extraction attempt {attempt+1} model={mdl} failed: {err[:80]}")
-            if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower():
-                break  # non-rate-limit error, don't retry
+            log("SYMPTOMS", f"LLM attempt {attempt+1} failed: {err[:80]}")
+            if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower() and "403" not in err and "access" not in err.lower():
+                break
 
-    # Build a name→result lookup from the search results for source_id matching
+    if not items:
+        return {"status": "success", "data": {"query": q, "results": []}}
+
+    name_en_list = []
+    summary_en_list = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        name_en = (it.get("name_en") or "").strip()
+        if not name_en:
+            continue
+        summary = (it.get("summary") or "").strip()[:200]
+        name_en_list.append(name_en)
+        summary_en_list.append(summary)
+
+    if lang != "en":
+        names_local = translate_batch(name_en_list, lang)
+        summaries_local = translate_batch(summary_en_list, lang)
+    else:
+        names_local = name_en_list
+        summaries_local = summary_en_list
+
+    cleaned = []
+    for idx, ne in enumerate(name_en_list):
+        cleaned.append({
+            "id": idx,
+            "name_en": ne,
+            "name_local": names_local[idx],
+            "type": "illness",
+            "summary": summaries_local[idx],
+            "source_id": "",
+            "similarity": 1.0,
+        })
+
+    return {"status": "success", "data": {"query": q, "results": cleaned}}
+
+    # Build a name->result lookup from the search results for source_id matching
     result_by_name = {}
     for r in results:
         rname = (r.get("name_en") or "").strip().lower()
@@ -101,7 +149,6 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         if not summary_text:
             summary_text = (
                 src.get("symptoms_en")
-                or src.get("document")
                 or src.get("name_en")
                 or ""
             ).strip()
@@ -118,6 +165,7 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         summaries_ar = summary_en_list
 
     cleaned = []
+    cleaned_idx = 0
     for idx, it in enumerate(items):
         if not isinstance(it, dict):
             continue
@@ -130,32 +178,38 @@ async def search_symptoms(q: str = Query(default="", description="Search query f
         fb = int(it.get("source_chunk", 1))
         src = _find_src(name_en, fb)
         cleaned.append({
+            "id": cleaned_idx,
             "name_en": name_en,
-            "name_local": names_ar[idx] if lang != "en" else name_en,
+            "name_local": names_ar[cleaned_idx] if lang != "en" else name_en,
             "type": kind,
-            "summary": summaries_ar[idx] if lang != "en" else summary_en_list[idx],
+            "summary": summaries_ar[cleaned_idx] if lang != "en" else summary_en_list[cleaned_idx],
             "source_id": src.get("id", ""),
             "similarity": round(float(src.get("similarity", 0) or 0), 3),
         })
+        cleaned_idx += 1
 
     return {"status": "success", "data": {"query": q, "results": cleaned}}
 
 
 @router.post("/diagnosis/start")
 async def start_diagnosis(
+    user_id: str = Form(...),
     gender: str = Form(default=""),
+    age: int = Form(default=None),
     is_smoker: bool = Form(default=False),
     has_diabetes: bool = Form(default=False),
     has_hypertension: bool = Form(default=False),
     is_pregnant: bool = Form(default=None),
     activity_level: str = Form(default="moderate"),
     assessment_for: str = Form(default="myself"),
+    model_name: str = Form(default=None),
     x_user_id: str = Header(default="anonymous"),
 ):
     try:
         svc = _get_svc()
         baseline = {
             "gender": gender,
+            "age": age,
             "is_smoker": is_smoker,
             "has_diabetes": has_diabetes,
             "has_hypertension": has_hypertension,
@@ -163,7 +217,7 @@ async def start_diagnosis(
             "activity_level": activity_level,
             "assessment_for": assessment_for,
         }
-        session_id = svc.create_session(baseline, x_user_id)
+        session_id = svc.create_session(baseline, user_id, model_name=model_name)
         return {"status": "success", "data": {"session_id": session_id}}
     except Exception as e:
         import traceback

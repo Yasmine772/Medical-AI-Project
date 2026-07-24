@@ -2,7 +2,6 @@ import json
 import uuid
 
 from app.services.logger import log
-from app.services.web_search import search_web
 from app.services.bayesian import (
     compute_priors,
     bayes_update,
@@ -28,6 +27,21 @@ MIN_PER_SYMPTOM = 2
 DYNAMIC_EXTRA = 6
 
 
+def _to_qopts(options_raw: list) -> list:
+    if not options_raw:
+        return []
+    return [{"id": str(i + 1), "label": str(o)} for i, o in enumerate(options_raw)]
+
+
+def _infer_qtype(options_raw: list) -> str:
+    if not options_raw:
+        return "single_choice"
+    n = [str(o).strip().lower() for o in options_raw]
+    if n == ["yes", "no"] or n in (["y", "n"], ["نعم", "لا"]):
+        return "yes_no"
+    return "single_choice"
+
+
 class DiagnosisService:
 
     def __init__(self, store, embedder, session_mgr, llm):
@@ -38,11 +52,13 @@ class DiagnosisService:
 
     # ── Session management ──
 
-    def create_session(self, baseline: dict | None = None, user_id: str = "anonymous") -> str:
+    def create_session(self, baseline: dict | None = None, user_id: str = "anonymous", model_name: str = None) -> str:
         lang = detect_lang(json.dumps(baseline)) if baseline else "en"
+        log("MODEL", f"create_session received model_name={model_name!r}")
         candidates = {
             "phase": "diagnosis",
             "baseline": baseline or {},
+            "model_name": model_name if model_name else None,
             "language": lang,
             "selected_symptoms": [],
             "socrates_axis": 0,
@@ -96,20 +112,7 @@ class DiagnosisService:
         log("VECTOR", f"'{name_en}' -> {len(results)} results", [r.get("name_en") for r in results])
 
         if not results:
-            log("VECTOR", f"No results for '{name_en}', falling back to web search")
-            web_results = search_web(f"{name_en} medical condition symptoms", limit=5)
-            if not web_results:
-                return {"error": "No matching diseases found for this symptom"}
-            results = [
-                {
-                    "name_en": r["title"],
-                    "name_local": r["title"],
-                    "symptoms_en": r.get("content") or r.get("snippet") or "",
-                    "specialist": "General",
-                    "similarity": 0.5,
-                }
-                for r in web_results
-            ]
+            return {"error": "No matching diseases found for this symptom"}
 
         selected_entry = {
             "query": query_text,
@@ -150,10 +153,17 @@ class DiagnosisService:
     def get_current_question(self, session_id: str) -> dict:
         session = self._get_session(session_id)
         candidates = session.get("candidates", {})
+        lang = candidates.get("language", "en")
         if candidates.get("phase") != "diagnosis":
-            return {"question": None, "phase": candidates.get("phase")}
+            return {"response_type": "unknown", "question": None}
         q = candidates.get("current_question")
-        return {"question": q, "total": MAX_QUESTIONS}
+        if not q:
+            return {"response_type": "unknown", "question": None}
+        return {
+            "response_type": "question",
+            "question": self._format_question(q, lang),
+            "total": MAX_QUESTIONS,
+        }
 
     def submit_follow_up_answer(
         self, session_id: str, question_id: str, answer: str
@@ -170,6 +180,8 @@ class DiagnosisService:
         diseases = candidates.get("diseases", [])
         probabilities = candidates.get("probabilities", {})
         socrates_axis = candidates.get("socrates_axis", 0)
+        model_name = candidates.get("model_name")
+        log("MODEL", f"submit_follow_up model_name={model_name!r}")
 
         # Translate the user's answer to English for LLM/Bayes processing
         answer_en = to_english(answer)
@@ -230,11 +242,12 @@ class DiagnosisService:
             f"  {k}: {v*100:.0f}%" for k, v in sorted(probabilities.items(), key=lambda x: -x[1])
         ) if probabilities else ""
 
+        baseline = candidates.get("baseline", {})
         system_prompt = build_system_prompt(
-            diseases_text, socrates_axis, probs_text, language=lang, force=False
+            diseases_text, socrates_axis, probs_text, language=lang, force=False, baseline=baseline
         )
         messages = [{"role": "system", "content": system_prompt}, *conversation]
-        content = self.llm.ask(messages)
+        content = self.llm.ask(messages, model=model_name)
         parsed = parse_llm_response(content)
         log("LLM", f"Groq response type={parsed.get('type')} q{question_count}/{MAX_QUESTIONS}")
 
@@ -244,7 +257,7 @@ class DiagnosisService:
                 "role": "user",
                 "content": "Please respond with valid JSON using the exact format specified.",
             })
-            content = self.llm.ask(messages, temperature=0.1)
+            content = self.llm.ask(messages, temperature=0.1, model=model_name)
             parsed = parse_llm_response(content)
 
         llm_type = parsed.get("type")
@@ -256,10 +269,16 @@ class DiagnosisService:
             candidates["conversation"] = conversation
             candidates["current_question"] = None
             self._save_candidates(session_id, candidates)
+            msg = from_english(parsed.get("message", "Please search for another symptom."), lang)
             return {
-                "type": "need_more_symptoms",
-                "message": from_english(parsed.get("message", "Please search for another symptom."), lang),
-                "probabilities": _round(probabilities),
+                "response_type": "need_more_symptoms",
+                "question": {
+                    "id": "need_more",
+                    "text": msg,
+                    "type": "info",
+                    "options": [],
+                },
+                "total": MAX_QUESTIONS,
             }
 
         # LLM decided diagnosis
@@ -283,9 +302,8 @@ class DiagnosisService:
         self._save_candidates(session_id, candidates)
 
         return {
-            "question": self._localize_question(parsed, lang),
-            "type": "question",
-            "probabilities": _round(probabilities),
+            "response_type": "question",
+            "question": self._format_question(parsed, lang),
             "total": MAX_QUESTIONS,
         }
 
@@ -298,20 +316,23 @@ class DiagnosisService:
         socrates_axis = candidates.get("socrates_axis", 0)
         question_count = candidates.get("question_count", 0)
         conversation = candidates.get("conversation", [])
+        model_name = candidates.get("model_name")
+        log("MODEL", f"_ask_next model_name={model_name!r}")
 
         diseases_text = format_candidates(diseases) if diseases else "No matching diseases found."
         probs_text = "\n".join(
             f"  {k}: {v*100:.0f}%" for k, v in sorted(probabilities.items(), key=lambda x: -x[1])
         ) if probabilities else ""
 
+        baseline = candidates.get("baseline", {})
         system_prompt = build_system_prompt(
-            diseases_text, socrates_axis, probs_text, language=lang, force=False
+            diseases_text, socrates_axis, probs_text, language=lang, force=False, baseline=baseline
         )
         if initial_msg and not conversation:
             conversation = [{"role": "user", "content": f"Patient reports: {initial_msg}"}]
 
         messages = [{"role": "system", "content": system_prompt}, *conversation]
-        content = self.llm.ask(messages)
+        content = self.llm.ask(messages, model=model_name)
         parsed = parse_llm_response(content)
         log("LLM", f"First question type={parsed.get('type')} session={session_id[:8]}")
 
@@ -321,7 +342,7 @@ class DiagnosisService:
                 "role": "user",
                 "content": "Please respond with valid JSON using the exact format specified.",
             })
-            content = self.llm.ask(messages, temperature=0.1)
+            content = self.llm.ask(messages, temperature=0.1, model=model_name)
             parsed = parse_llm_response(content)
 
         llm_type = parsed.get("type")
@@ -342,10 +363,8 @@ class DiagnosisService:
         self._save_candidates(session_id, candidates)
 
         return {
-            "phase": "diagnosis",
-            "question": self._localize_question(parsed, lang),
-            "type": "question",
-            "probabilities": _round(probabilities),
+            "response_type": "question",
+            "question": self._format_question(parsed, lang),
             "total": MAX_QUESTIONS,
         }
 
@@ -353,6 +372,7 @@ class DiagnosisService:
 
     def _finalize(self, session_id, candidates, conversation, probabilities, diseases, lang, parsed_override=None, forced=False) -> dict:
         labels = candidates.get("id_labels", {})
+        model_name = candidates.get("model_name")
 
         # If the LLM already produced named diagnoses during the loop, keep them
         if parsed_override and (parsed_override.get("diagnoses") or parsed_override.get("diagnosis")):
@@ -362,10 +382,17 @@ class DiagnosisService:
                 parsed["diagnoses"] = diag.get("top_3") if isinstance(diag, dict) and "top_3" in diag else force_top3(probabilities, diseases, labels)
         else:
             # Derive named diagnoses from the top evidence passages + Bayesian weights
-            named = self._name_diagnoses(probabilities, diseases, lang)
-            parsed = {"type": "diagnosis", "diagnoses": named} if named else {"type": "diagnosis", "diagnoses": force_top3(probabilities, diseases, labels)}
+            named = self._name_diagnoses(probabilities, diseases, lang, model_name=model_name)
+            fallback = force_top3(probabilities, diseases, labels)
+            if named and len(named) < 3:
+                existing_names = {d.get("disease_name", "").lower() for d in named}
+                for fb in fallback:
+                    if fb.get("disease_name", "").lower() not in existing_names and len(named) < 3:
+                        named.append(fb)
+            parsed = {"type": "diagnosis", "diagnoses": named if named else fallback}
 
         parsed["type"] = "diagnosis"
+        parsed["diagnoses"] = self._localize_diagnoses(parsed["diagnoses"], lang)
         conversation.append({"role": "assistant", "content": json.dumps(parsed)})
         candidates["conversation"] = conversation
         candidates["current_question"] = None
@@ -373,12 +400,14 @@ class DiagnosisService:
         self.session_mgr.update_conversation(session_id, conversation, status="completed")
 
         return {
-            "type": "diagnosis",
-            "diagnoses": parsed["diagnoses"],
-            "probabilities": _round(probabilities),
+            "response_type": "diagnosis",
+            "diagnosis_summary": {
+                "diagnoses": parsed["diagnoses"],
+            },
+            "total": MAX_QUESTIONS,
         }
 
-    def _name_diagnoses(self, probabilities, diseases, lang) -> list:
+    def _name_diagnoses(self, probabilities, diseases, lang, model_name: str = None) -> list:
         try:
             top = sorted(probabilities.items(), key=lambda x: -x[1])[:5]
             chunks = []
@@ -394,7 +423,7 @@ class DiagnosisService:
             candidates_text = "\n\n".join(chunks)
             probs_text = "\n".join(f"  {k}: {v*100:.0f}%" for k, v in top)
             prompt = build_diagnosis_naming_prompt(candidates_text, probs_text, lang)
-            content = self.llm.ask([{"role": "system", "content": prompt}], temperature=0, max_tokens=1024)
+            content = self.llm.ask([{"role": "system", "content": prompt}], temperature=0, max_tokens=1024, model=model_name)
             parsed = parse_llm_response(content)
             diags = parsed.get("diagnoses", []) if isinstance(parsed, dict) else []
             if diags:
@@ -427,16 +456,55 @@ class DiagnosisService:
             if m.get("role") == "assistant":
                 parsed = parse_llm_response(m.get("content", ""))
                 if parsed.get("type") == "diagnosis" or parsed.get("diagnoses"):
-                    return parsed
+                    diags = parsed.get("diagnoses", [])
+                    if not any(d.get("disease_name_local") for d in diags):
+                        diags = self._localize_diagnoses(diags, lang)
+                    return {
+                        "response_type": "diagnosis",
+                        "diagnosis_summary": {
+                            "diagnoses": diags,
+                        },
+                        "total": MAX_QUESTIONS,
+                    }
 
         probabilities = candidates.get("probabilities", {})
         diseases = candidates.get("diseases", [])
+        diags = self._localize_diagnoses(
+            force_top3(probabilities, diseases, candidates.get("id_labels", {})),
+            lang,
+        )
         return {
-            "type": "diagnosis",
-            "diagnoses": force_top3(probabilities, diseases, candidates.get("id_labels", {})),
+            "response_type": "diagnosis",
+            "diagnosis_summary": {
+                "diagnoses": diags,
+            },
+            "total": MAX_QUESTIONS,
         }
 
     # ── Internal helpers ──
+
+    def _localize_diagnoses(self, diags: list, lang: str) -> list:
+        if not lang or lang == "en":
+            for d in diags:
+                d["disease_name_local"] = d.get("disease_name_local") or d.get("disease_name", "")
+                d["specialist_local"] = d.get("specialist_local") or d.get("specialist", "")
+                d["advice_local"] = d.get("advice_local") or d.get("advice", "")
+            return diags
+        for d in diags:
+            d["disease_name_local"] = from_english(d.get("disease_name", ""), lang)
+            d["specialist_local"] = from_english(d.get("specialist", ""), lang)
+            d["advice_local"] = from_english(d.get("advice", ""), lang)
+        return diags
+
+    def _format_question(self, parsed: dict, lang: str) -> dict:
+        localized = self._localize_question(parsed, lang)
+        opts_raw = localized.get("options", [])
+        return {
+            "id": localized.get("question_id") or localized.get("id", ""),
+            "text": localized.get("question", ""),
+            "type": _infer_qtype(opts_raw),
+            "options": _to_qopts(opts_raw),
+        }
 
     def _tag_question(self, session_id: str, parsed: dict, q_index: int) -> dict:
         """Assign a stable DB-backed id to a generated question."""
@@ -489,10 +557,13 @@ class DiagnosisService:
 
         query = " | ".join(user_texts[-5:])
         query_vector = self.embedder.encode(query)
-        results = self.store.search(query_vector, limit=5)
-        log("RESEARCH", f"Re-search query ({len(user_texts)} user msgs) -> {len(results)} new candidates", [r.get("name_en") for r in results])
+        results = self.store.search(query_vector, limit=5) or []
+
+        log("RESEARCH", f"Re-search query ({len(user_texts)} user msgs) -> {len(results)} candidates",
+            [r.get("name_en") for r in results[:3]])
 
         existing_names = {d.get("name_en", "") for d in existing_diseases or []}
+
         for r in results:
             name = r.get("name_en", "")
             if name and name not in existing_names:
