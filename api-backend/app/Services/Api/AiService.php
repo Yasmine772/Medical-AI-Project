@@ -4,6 +4,7 @@ namespace App\Services\Api;
 
 use App\Models\DiagnosisSession;
 use App\Models\PatientProfile;
+use Carbon\Carbon;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -36,8 +37,11 @@ class AiService
                 'patient_job'      => $request['patient_job'],
                 'is_pregnant' => $request['is_pregnant'],
                 'activity_level' => $request['activity_level'],
+                'birth_date' => $request['birth_date'],
             ]);
         }
+
+        $age = Carbon::parse($request['birth_date'])->age;
 
         try {
             $response = Http::timeout($this->timeout)
@@ -45,6 +49,7 @@ class AiService
                 ->post($this->fastApiUrl.'/diagnosis/start', [
                     'user_id' => $user->id,
                     'gender' => $request['gender'],
+                    'age' => $age,
                     'is_smoker' => $request['is_smoker'],
                     'has_diabetes' => $request['has_diabetes'],
                     'has_hypertension' => $request['has_hypertension'],
@@ -53,12 +58,17 @@ class AiService
                     'patient_job'      => $request['patient_job'],
                     'activity_level' => $request['activity_level'],
                     'assessment_for' => $request['assessment_for'],
+                    'model_name' => $request['model_name'],
                 ]);
 
             if ($response->successful()) {
                 $result = $response->json();
+                Log::info($result);
+
+                $sessionId = $result['data']['session_id'] ?? null;
 
                 DiagnosisSession::create([
+                    'session_hash' => $sessionId,
                     'status' => 'ACTIVE',
                     'pdf_file_path' => null,
                     'user_id' => $user->id,
