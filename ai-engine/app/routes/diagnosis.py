@@ -4,6 +4,9 @@ from app.services.logger import log
 from app.services.socrates import build_extract_prompt, parse_llm_response
 from app.services.i18n import detect_lang, translate_batch
 
+router = APIRouter()
+
+
 
 async def search_symptoms(
     q: str = Query(default="", description="Search query for symptoms or illnesses"),
