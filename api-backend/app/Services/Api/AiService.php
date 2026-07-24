@@ -58,6 +58,7 @@ class AiService
                     'patient_job'      => $request['patient_job'],
                     'activity_level' => $request['activity_level'],
                     'assessment_for' => $request['assessment_for'],
+                    'model_name' => $request['model_name'],
                 ]);
 
             if ($response->successful()) {
