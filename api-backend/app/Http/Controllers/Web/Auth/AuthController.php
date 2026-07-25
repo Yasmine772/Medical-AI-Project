@@ -47,7 +47,8 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'accessToken' => $accessToken,
-                    'token_type' => 'Bearer'
+                    'token_type' => 'Bearer',
+                    'roles'      => $user->getRoleNames(),
                 ];
 
             return $this->successResponse($data , 'Admin login successfuly' , 200);

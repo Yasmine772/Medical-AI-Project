@@ -17,7 +17,8 @@ return [
         'show-doctor-requests',
         'show-doctor-request-details',
         'approve-doctor-request',
-        'reject-doctor-request'
+        'reject-doctor-request',
+        'view-tracking-data'
     ],
 
     'roles' => [
@@ -42,7 +43,7 @@ return [
             'choose-option', 'cancel-diagnose-session',
             'recieve-notifications', 'view-notifications',
             'make-notification-as-read', 'view-medical-history',
-            'user-logout'
+            'view-tracking-data','user-logout'
         ],
 
         'doctor' => [

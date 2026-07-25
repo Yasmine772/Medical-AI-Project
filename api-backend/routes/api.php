@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Ai\AiController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Diagnosis\DiagnosisTrackingController;
 use App\Http\Controllers\Api\V1\Payment\PaymentController;
 use App\Http\Controllers\Api\V1\Reports\ReportController;
 use App\Http\Controllers\Api\V1\settingController;
@@ -66,7 +67,10 @@ Route::prefix('v1/auth')->group(function () {
        Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead']);
        Route::patch('/{notificationId}/unread', [NotificationController::class, 'markAsUnread']);
        Route::delete('/{notificationId}', [NotificationController::class, 'destroy']);
+
      });
+     //Tracking
+        Route::get('/tracking', [DiagnosisTrackingController::class, 'getTracking']);
         
     });
     
