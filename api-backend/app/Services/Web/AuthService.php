@@ -43,6 +43,7 @@ class AuthService
         return [
             'Admin' => ['email' => $user->email],
             'access_token' =>  $accessToken,
+            'role' => $user->getRoleNames()->first(),
         ];
     }
 

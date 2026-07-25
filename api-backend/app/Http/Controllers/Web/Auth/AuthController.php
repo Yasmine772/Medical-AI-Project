@@ -21,7 +21,7 @@ class AuthController extends Controller
     public function adminLogin(LoginRequest $request)
     {
         $result = $this->authService->login($request->validated());
-
+        
         return match ($result) {
             'unauthorized' => $this->errorResponse('Invalid email or password', null, 401),
             'AccessDenied' => $this->errorResponse('Access denied. This system is for administrators only.', null, 403),
@@ -32,6 +32,8 @@ class AuthController extends Controller
                     'access_token' => $result['access_token'],
                     'token_type'   => 'Bearer',
                     'expires_at'   => '1 day',
+                    'role'           => $result['role']
+
             ], 'Admin login successfully', 200)
         };
     }
