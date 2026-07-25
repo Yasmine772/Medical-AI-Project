@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log;
 use App\Http\Requests\User\Auth\LoginRequest;
 use App\Http\Requests\User\Auth\RegisterRequest;
 use App\Http\Requests\User\OTP\ResendOTPRequest;
@@ -45,6 +46,7 @@ class AuthController extends Controller
             return $this->successResponse(new UserResource($user), 'User registered successfully. Please check your email, we sent OTP', 201);
 
         } catch (Throwable $e) {
+            Log::error('Failed to register user: ' . $e->getMessage(), ['exception' => $e]);
             return $this->errorResponse('Failed to register user', $e->getMessage(), 500);
         }
     }
@@ -162,7 +164,6 @@ class AuthController extends Controller
     public function viewProfile()
     {
         $user = auth()->authenticate();
-
         $user->load('profile');
 
         $profileData = $this->authService->getUserProfile($user);

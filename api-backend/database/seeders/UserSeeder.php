@@ -17,9 +17,9 @@ class UserSeeder extends Seeder
         if (!$admin) {
             $admin = User::create([
                 'full_name' => 'Admin',
-                'email' => 'admin@mediscan.com',
+                //'email' => 'admin@mediscan.com',
+                'email' => 'ramaalwanni83@gmail.com',
                 'password' => Hash::make('password'),
-                'email_verified_at' => now(),
             ]);
         }
         $admin->assignRole('admin');
@@ -34,14 +34,6 @@ class UserSeeder extends Seeder
             ]);
         }
         $patient->assignRole('patient');
-
-        // $doctor = User::create([
-        //     'full_name' => 'Doctor',
-        //     'email' => 'doctor@mediscan.com',
-        //     'password' => Hash::make('password'),
-        //     'email_verified_at' => now(),
-        // ]);
-        // $doctor->assignRole('doctor');
 
         User::factory(50)->create()->each(function ($user) {
         $user->assignRole('patient');

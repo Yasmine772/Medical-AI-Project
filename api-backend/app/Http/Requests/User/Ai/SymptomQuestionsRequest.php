@@ -25,7 +25,8 @@ class SymptomQuestionsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'symptom_name' => 'required|string|max:255',
+            'session_id'   => 'required|string',
+            'name'         => 'required|string|max:255',
         ];
     }
 

@@ -12,14 +12,6 @@ use Illuminate\Support\Facades\Storage;
 use App\Notifications\WelcomeMessageNotification;
 class AuthService
 {
-    // protected OTPService $otpService;
-
-    // public function __construct(OTPService $otpService)
-    // {
-    //     $this->otpService = $otpService;
-    // }
-
-    // -------------------------------------------------------------------------------------------
     public function register(array $data)
     {
         $user = User::create([
@@ -61,17 +53,6 @@ class AuthService
             'message' => 'We are thrilled to have you back! Explore our app and discover new features tailored just for you.',
             'user_id' => $user->id,
         ]);
-
-
-        // if ($user->hasRole('admin') && $user->otp_verified_at === null) {
-        //     $this->otpService->sendOTP($user);
-
-        //     return [
-        //         'user' => $user,
-        //         'access_token' =>  $accessToken,
-        //         'access_token_expires_at' => '1 day',
-        //         'token_type' => 'Bearer',] 
-        // }
 
             return [
             'user' => $user,

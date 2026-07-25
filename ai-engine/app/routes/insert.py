@@ -8,8 +8,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.models.schemas import DiseaseItem
 from app.state import get_store, get_embedder, set_insert_progress, get_insert_progress
+from app.services.logger import log
 
 router = APIRouter()
+
+# Serialize PDF insertion so only one PDF is processed at a time (avoids
+# spawning a thread per file and burning RAM when many are uploaded at once).
+_pdf_lock = threading.Lock()
 
 
 def _insert_disease(disease: DiseaseItem):
@@ -85,6 +90,11 @@ def _process_pdf(task_id: str, content: bytes, filename: str):
             chunks = splitter.split_text(text)
             for idx, chunk_text in enumerate(chunks):
                 chunk_text = chunk_text.strip()
+                # Strip null bytes and other non-printable control chars
+                # that Postgres/Supabase reject (e.g. \u0000 -> 22P05).
+                chunk_text = "".join(
+                    c for c in chunk_text if c == "\n" or c == "\t" or ord(c) >= 32
+                )
                 if not chunk_text:
                     continue
                 raw_id = f"pdf_api_{filename}_p{page_num}_c{idx}"
@@ -121,9 +131,19 @@ def _process_pdf(task_id: str, content: bytes, filename: str):
             store_rows.append((chunk_id, chunk_text, emb.tolist(), "pdf", meta))
 
         set_insert_progress(task_id, "inserting", 0, total_chunks)
-        insert_bs = 500
+        insert_bs = 25
         for i in range(0, len(store_rows), insert_bs):
-            store.insert_batch(store_rows[i:i + insert_bs], batch_size=insert_bs)
+            batch = store_rows[i:i + insert_bs]
+            for attempt in range(3):
+                try:
+                    store.insert_batch(batch, batch_size=insert_bs)
+                    break
+                except Exception as ins_err:
+                    if attempt == 2:
+                        raise
+                    log("INSERT", f"batch insert retry {attempt+1}: {str(ins_err)[:80]}")
+                    import time as _t
+                    _t.sleep(2 * (attempt + 1))
             set_insert_progress(task_id, "inserting", min(i + insert_bs, total_chunks), total_chunks)
 
         result = {"filename": filename, "pages": page_count, "chunks_added": total_chunks}
@@ -141,7 +161,11 @@ async def insert_pdf(file: UploadFile = File(...)):
     task_id = str(uuid.uuid4())
     set_insert_progress(task_id, "starting", 0, 0)
 
-    thread = threading.Thread(target=_process_pdf, args=(task_id, content, file.filename), daemon=True)
+    def _run():
+        with _pdf_lock:
+            _process_pdf(task_id, content, file.filename)
+
+    thread = threading.Thread(target=_run, daemon=True)
     thread.start()
 
     return {"task_id": task_id, "status": "started", "filename": file.filename}

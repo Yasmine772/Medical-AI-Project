@@ -24,6 +24,26 @@ def translate_to_en(text: str) -> str:
         return text
 
 
+_translator_ar = None
+
+
+def _get_translator_ar():
+    global _translator_ar
+    if _translator_ar is None:
+        _translator_ar = GoogleTranslator(source="en", target="ar")
+    return _translator_ar
+
+
+def translate_to_ar(text: str) -> str:
+    if not text:
+        return ""
+    try:
+        return _get_translator_ar().translate(text) or text
+    except Exception as e:
+        log("TRANS", f"AR translation failed", str(e)[:80])
+        return text
+
+
 def _rate_limited_ddg(keywords: str, max_results: int = 5) -> list:
     global _LAST_DDG
     elapsed = time.time() - _LAST_DDG

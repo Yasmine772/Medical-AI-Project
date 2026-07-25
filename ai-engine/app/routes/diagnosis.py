@@ -1,50 +1,204 @@
 import json
-from fastapi import APIRouter, Form, Query, Header, HTTPException
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from fastapi import APIRouter, Form, Query, Header
 from app.state import get_store, get_embedder, get_session_manager, get_llm
-from app.services.socrates import format_candidates
+from app.services.logger import log
+from app.services.socrates import build_extract_prompt, parse_llm_response
+from app.services.i18n import detect_lang, translate_batch
+from app.services.web_search import search_web
 
 router = APIRouter()
 
 
 @router.get("/symptoms")
-async def search_symptoms(q: str = Query(default="", description="Search query")):
+async def search_symptoms(q: str = Query(default="", description="Search query for symptoms or illnesses")):
     store = get_store()
     embedder = get_embedder()
+    llm = get_llm()
 
     if not q:
-        return {"results": []}
+        return {"status": "success", "data": {"query": q, "results": []}}
 
-    query_vector = embedder.encode_query(q.strip())
-    results = store.search(query_vector, limit=10)
+    query_vector = embedder.encode(q.strip())
 
-    formatted = []
+    # Run vector search and web search in parallel
+    vector_results = []
+    web_results = []
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = {
+            pool.submit(store.search, query_vector, 10): "vector",
+            pool.submit(search_web, f"{q} medical condition symptoms", 5): "web",
+        }
+        for fut in as_completed(futures):
+            kind = futures[fut]
+            try:
+                res = fut.result()
+                if kind == "vector":
+                    vector_results = res or []
+                else:
+                    web_results = res or []
+            except Exception as e:
+                log("SYMPTOMS", f"{kind} search failed: {str(e)[:80]}")
+
+    log("SYMPTOMS", f"Search '{q[:50]}': {len(vector_results)} vector + {len(web_results)} web")
+
+    if not vector_results and not web_results:
+        return {"status": "success", "data": {"query": q, "results": []}}
+
+    # Merge: vector results first, then web results (avoid duplicates)
+    results = list(vector_results)
+    existing_names = {(r.get("name_en") or "").lower() for r in results}
+    for r in web_results:
+        title = (r.get("title") or "").strip()
+        if title and title.lower() not in existing_names:
+            results.append({
+                "name_en": title,
+                "name_local": title,
+                "symptoms_en": (r.get("content") or "")[:500],
+                "specialist": "General",
+                "similarity": 0.4,
+            })
+            existing_names.add(title.lower())
+
+    # Build context from search results using ONLY English fields
+    context_blocks = []
+    for i, r in enumerate(results):
+        parts = []
+        ne = (r.get("name_en") or "").strip()
+        if ne:
+            parts.append(f"name: {ne}")
+        se = (r.get("symptoms_en") or "").strip()
+        if se:
+            parts.append(f"symptoms: {se}")
+        sp = (r.get("specialist") or "").strip()
+        if sp:
+            parts.append(f"specialist: {sp}")
+        if not parts:
+            doc = (r.get("document") or "").strip()[:200]
+            if doc and not any('\u0600' <= c <= '\u06ff' for c in doc):
+                parts.append(f"text: {doc}")
+            else:
+                parts.append(f"name: Chunk-{i+1}")
+        context_blocks.append(f"[PASSAGE {i+1}]\n" + "; ".join(parts))
+
+    context = "\n\n".join(context_blocks)
+    lang = detect_lang(q)
+
+    system_prompt = build_extract_prompt(q, context, lang)
+    items = []
+    for attempt in range(2):
+        try:
+            raw = llm.ask([
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {q}"},
+            ], temperature=0, max_tokens=1024)
+            parsed = parse_llm_response(raw)
+            items = parsed.get("results", []) if isinstance(parsed, dict) else []
+            if items:
+                log("SYMPTOMS", f"Extraction succeeded items={len(items)}")
+                break
+        except Exception as e:
+            err = str(e)
+            log("SYMPTOMS", f"Extraction attempt {attempt+1} failed: {err[:80]}")
+            if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower() and "403" not in err and "access" not in err.lower():
+                break
+
+    # Build a name->result lookup from the search results for source_id matching
+    result_by_name = {}
     for r in results:
-        rtype = r.get("type", "")
-        if rtype == "disease":
-            label_en = r.get("name_en") or ""
-            label_ar = r.get("name_ar") or ""
-            snippet = r.get("symptoms_en") or ""
-        else:
-            label_en = (r.get("document") or "")[:120]
-            label_ar = (r.get("document") or "")[:120]
-            snippet = r.get("document") or ""
-        formatted.append({
-            "key": r.get("id", ""),
-            "type": rtype,
-            "en": label_en,
-            "ar": label_ar,
-            "symptoms_en": snippet,
-            "symptoms_ar": r.get("symptoms_ar") or "",
-            "specialist": r.get("specialist") or "",
-        })
+        rname = (r.get("name_en") or "").strip().lower()
+        if rname and rname not in result_by_name:
+            result_by_name[rname] = r
+        for word in rname.split()[:3]:
+            if word and word not in result_by_name:
+                result_by_name[word] = r
 
-    return {"results": formatted}
+    def _find_src(name_en: str, fallback_chunk: int = 1) -> dict:
+        key = name_en.strip().lower()
+        if key in result_by_name:
+            return result_by_name[key]
+        for r in results:
+            rname = (r.get("name_en") or "").strip().lower()
+            if key in rname or rname in key:
+                return r
+        tokens = set(key.split())
+        best, best_score = None, 0
+        for r in results:
+            rname = (r.get("name_en") or "").strip().lower()
+            if not rname:
+                continue
+            overlap = len(tokens & set(rname.split()))
+            if overlap > best_score:
+                best, best_score = r, overlap
+        if best and best_score > 0:
+            return best
+        chunk_idx = max(0, min(fallback_chunk - 1, len(results) - 1))
+        return results[chunk_idx]
+
+    name_en_list = []
+    summary_en_list = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        name_en = (it.get("name_en") or "").strip()
+        if not name_en:
+            continue
+        kind = (it.get("type") or "").strip().lower()
+        if kind not in ("illness", "symptom"):
+            kind = "illness"
+        fb = int(it.get("source_chunk", 1))
+        src = _find_src(name_en, fb)
+        summary_text = (it.get("summary") or "").strip()
+        if not summary_text:
+            summary_text = (
+                src.get("symptoms_en")
+                or src.get("name_en")
+                or ""
+            ).strip()
+        if len(summary_text) > 200:
+            summary_text = summary_text[:200]
+        name_en_list.append(name_en)
+        summary_en_list.append(summary_text)
+
+    if lang != "en":
+        names_ar = translate_batch(name_en_list, lang)
+        summaries_ar = translate_batch(summary_en_list, lang)
+    else:
+        names_ar = name_en_list
+        summaries_ar = summary_en_list
+
+    cleaned = []
+    cleaned_idx = 0
+    for idx, it in enumerate(items):
+        if not isinstance(it, dict):
+            continue
+        name_en = (it.get("name_en") or "").strip()
+        if not name_en:
+            continue
+        kind = (it.get("type") or "").strip().lower()
+        if kind not in ("illness", "symptom"):
+            kind = "illness"
+        fb = int(it.get("source_chunk", 1))
+        src = _find_src(name_en, fb)
+        cleaned.append({
+            "id": cleaned_idx,
+            "name_en": name_en,
+            "name_local": names_ar[cleaned_idx] if lang != "en" else name_en,
+            "type": kind,
+            "summary": summaries_ar[cleaned_idx] if lang != "en" else summary_en_list[cleaned_idx],
+            "source_id": src.get("id", ""),
+            "similarity": round(float(src.get("similarity", 0) or 0), 3),
+        })
+        cleaned_idx += 1
+
+    return {"status": "success", "data": {"query": q, "results": cleaned}}
 
 
 @router.post("/diagnosis/start")
 async def start_diagnosis(
     user_id: str = Form(...),
     gender: str = Form(default=""),
+    age: int = Form(default=None),
     is_smoker: bool = Form(default=False),
     has_diabetes: bool = Form(default=False),
     has_hypertension: bool = Form(default=False),
@@ -57,6 +211,7 @@ async def start_diagnosis(
         svc = _get_svc()
         baseline = {
             "gender": gender,
+            "age": age,
             "is_smoker": is_smoker,
             "has_diabetes": has_diabetes,
             "has_hypertension": has_hypertension,
@@ -71,36 +226,18 @@ async def start_diagnosis(
         return {"status": "error", "detail": str(e), "traceback": traceback.format_exc()}
 
 
-@router.get("/symptoms/questions")
-async def get_symptom_questions(
-    session_id: str = Query(...),
-    symptom_name: str = Query(..., description="Symptom name from search results"),
-):
-    try:
-        svc = _get_svc()
-        result = svc.get_symptom_questions(session_id, symptom_name)
-        if "error" in result:
-            return {"status": "error", "detail": result["error"]}
-        return {"status": "success", "data": result}
-    except Exception as e:
-        import traceback
-        return {"status": "error", "detail": str(e), "traceback": traceback.format_exc()}
-
-
-@router.post("/symptoms/answers")
-async def submit_symptom_answers(
+@router.post("/symptom/select")
+async def select_symptom(
     session_id: str = Form(...),
-    symptom_name: str = Form(...),
-    answers: str = Form(..., description="JSON array of {question_id, answer}"),
-    symptoms_complete: bool = Form(default=False),
+    name: str = Form(..., description="Name of the chosen symptom/illness"),
 ):
     try:
         svc = _get_svc()
-        parsed_answers = json.loads(answers) if isinstance(answers, str) else answers
-        result = svc.submit_symptom_answers(session_id, symptom_name, parsed_answers, symptoms_complete)
-        if "error" in result:
-            return {"status": "error", "detail": result["error"]}
-        return {"status": "success", "data": result}
+        parsed = {"name_en": name, "search_query": name}
+        out = svc.select_symptom(session_id, parsed)
+        if "error" in out:
+            return {"status": "error", "detail": out["error"]}
+        return {"status": "success", "data": out}
     except Exception as e:
         import traceback
         return {"status": "error", "detail": str(e), "traceback": traceback.format_exc()}

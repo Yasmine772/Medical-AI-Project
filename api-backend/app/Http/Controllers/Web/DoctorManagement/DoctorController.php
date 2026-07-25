@@ -42,7 +42,7 @@ class DoctorController extends Controller
         if($doctorReq === null) {
             return $this->errorResponse('Doctor request not found!', null, 404);    
         }
-        return $this->successResponse($doctorReq, 'Doctor request approved successfully!', 200);
+        return $this->successResponse(null, 'Doctor request approved successfully!', 200);
     }
 //************************************************************ */
     public function reject(int $id , RejectDoctorRequest $request)
@@ -56,8 +56,8 @@ class DoctorController extends Controller
     //************************************************************ */
     public function sendJoinRequest(DoctorRequest $request)
     {
-        $doctorRequest = $this->doctorService->sendJoinRequest($request->validated());
-        return $this->successResponse($doctorRequest, 'Doctor join request sent successfully!',200);
+        $this->doctorService->sendJoinRequest($request->validated());
+        return $this->successResponse(null, 'Doctor join request sent successfully!',200);
     }
 
     
