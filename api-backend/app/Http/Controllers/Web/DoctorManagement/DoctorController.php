@@ -51,7 +51,9 @@ class DoctorController extends Controller
         if($result === null) {
             return $this->errorResponse('Doctor request not found!', null, 404);    
         }
-        return $this->successResponse($result, 'Doctor request rejected successfully!', 200);
+        if ($result === 'Success') {
+            return $this->successResponse($result, 'Doctor request rejected successfully!', 200);
+        }
     }
     //************************************************************ */
     public function sendJoinRequest(DoctorRequest $request)

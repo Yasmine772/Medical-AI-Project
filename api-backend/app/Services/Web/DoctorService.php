@@ -7,12 +7,14 @@ use App\Http\Resources\doctorResource;
 use App\Jobs\ProcessDoctorApproval;
 use App\Jobs\SendRejectionEmailJob;
 use App\Jobs\UploadDoctorRequestFiles;
+use App\Models\Doctor;
 use App\Models\DoctorRequest;
 use App\Models\User;
 use App\Notifications\NewDoctorRequestNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class DoctorService
 {
@@ -41,7 +43,15 @@ class DoctorService
         if($doctorReq === null) {
             return null;
         }
-        ProcessDoctorApproval::dispatch($doctorReq)->onQueue('default');
+
+        $user = User::create([
+            'full_name' => $doctorReq->full_name,
+            'email' => $doctorReq->email,
+            'password' => $doctorReq->password,
+        ]);
+        $user->assignRole('doctor');
+
+        ProcessDoctorApproval::dispatch($doctorReq , $user)->onQueue('default');
 
         return new doctorResource($doctorReq);
     }
@@ -52,17 +62,18 @@ class DoctorService
         if($doctorReq === null) {
             return null;
         }
-        $doctorReq->status = 'rejected';
-        $doctorReq->rejection_reason = $array['rejection_reason'];
-        $doctorReq->save();
+        // $doctorReq->status = 'rejected';
+        // $doctorReq->rejection_reason = $array['rejection_reason'];
+        // $doctorReq->save();
 
-        SendRejectionEmailJob::dispatch($doctorReq, $doctorReq->rejection_reason)->onQueue('default');
+        SendRejectionEmailJob::dispatch($doctorReq, $array['rejection_reason'])->onQueue('default');
 
         $user = User::where('email', $doctorReq->email)->first();
         if ($user) {
             $user->delete();
         }
-        return $doctorReq;
+        // $doctorReq->delete();
+        return 'Success';
     }
     //************************************************************ */
     public function sendJoinRequest(array $data)

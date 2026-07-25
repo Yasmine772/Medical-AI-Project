@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Doctor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -16,10 +17,10 @@ class DoctorWelcomeMail extends Mailable
     public $user;
     public $doctorRequest;
 
-    public function __construct($user, $doctorRequest)
+    public function __construct($user, Doctor $doctor)
     {
         $this->user = $user;
-        $this->doctorRequest = $doctorRequest;
+        $this->doctorRequest = $doctor;
     }
 
     public function envelope(): Envelope

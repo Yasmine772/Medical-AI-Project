@@ -32,5 +32,6 @@ class SendRejectionEmailJob implements ShouldQueue
                 $this->rejectionReason
             )
         );
+        
     }
 }
