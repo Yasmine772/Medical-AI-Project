@@ -2,7 +2,7 @@ from fastapi import APIRouter, Form, Query, Header
 from app.state import get_store, get_embedder, get_session_manager, get_llm
 from app.services.logger import log
 from app.services.socrates import build_extract_prompt, parse_llm_response
-from app.services.i18n import detect_lang, translate_batch
+from app.services.i18n import detect_lang, translate_batch, to_english
 
 router = APIRouter()
 
@@ -20,9 +20,10 @@ async def search_symptoms(
     if not q:
         return {"status": "success", "data": {"query": q, "results": []}}
 
-    query_vector = embedder.encode(q.strip())
+    query_en = to_english(q.strip()).lower()
+    query_vector = embedder.encode(query_en)
     results = store.search(query_vector, limit=10) or []
-    log("SYMPTOMS", f"Vector search: {len(results)} results for '{q[:50]}'")
+    log("SYMPTOMS", f"Vector search: {len(results)} results for '{query_en[:50]}' (original: '{q[:50]}')")
 
     if not results:
         return {"status": "success", "data": {"query": q, "results": []}}
@@ -45,13 +46,13 @@ async def search_symptoms(
         context_blocks.append(f"[PASSAGE {i+1}]\n" + "; ".join(parts))
     context = "\n\n".join(context_blocks)
 
-    system_prompt = build_extract_prompt(q, context, lang)
+    system_prompt = build_extract_prompt(query_en, context, lang)
     items = []
     for attempt in range(2):
         try:
             raw = llm.ask([
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {q}"},
+                {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {query_en}"},
             ], temperature=0, max_tokens=1024, model=model_name)
             parsed = parse_llm_response(raw)
             items = parsed.get("results", []) if isinstance(parsed, dict) else []
@@ -194,6 +195,7 @@ async def search_symptoms(
 @router.post("/diagnosis/start")
 async def start_diagnosis(
     user_id: str = Form(...),
+    patient_name: str = Form(default=None, description="Optional display name for the patient"),
     gender: str = Form(default=""),
     age: int = Form(default=None),
     is_smoker: bool = Form(default=False),
@@ -208,6 +210,7 @@ async def start_diagnosis(
     try:
         svc = _get_svc()
         baseline = {
+            "patient_name": patient_name or "",
             "gender": gender,
             "age": age,
             "is_smoker": is_smoker,
