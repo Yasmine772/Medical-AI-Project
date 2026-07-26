@@ -23,7 +23,7 @@ class GenerateReportResponse(BaseModel):
 async def generate_report(session_id: str, language_code: str = Query(default="en", description="Language code for the report content")):
     try:
         pdf_bytes = await run_in_threadpool(generate_pdf, session_id, language_code)
-        pdf_path = save_pdf(session_id, pdf_bytes)
+        pdf_path = save_pdf(session_id, pdf_bytes, language_code)
         return GenerateReportResponse(
             session_id=session_id,
             pdf_path=pdf_path,
@@ -38,11 +38,11 @@ async def generate_report(session_id: str, language_code: str = Query(default="e
 
 @router.get("/reports/{session_id}/download")
 async def download_report(session_id: str, language_code: str = Query(default="en", description="Language code for the report content")):
-    pdf_path = get_pdf_path(session_id)
+    pdf_path = get_pdf_path(session_id, language_code)
     if not pdf_path:
         try:
             pdf_bytes = await run_in_threadpool(generate_pdf, session_id, language_code)
-            pdf_path = save_pdf(session_id, pdf_bytes)
+            pdf_path = save_pdf(session_id, pdf_bytes, language_code)
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
         except Exception as e:
@@ -51,9 +51,9 @@ async def download_report(session_id: str, language_code: str = Query(default="e
     return FileResponse(
         pdf_path,
         media_type="application/pdf",
-        filename=f"diagnostic_report_{session_id[:8]}.pdf",
+        filename=f"diagnostic_report_{session_id[:8]}_{language_code}.pdf",
         headers={
-            "Content-Disposition": f"attachment; filename=\"diagnostic_report_{session_id[:8]}.pdf\""
+            "Content-Disposition": f"attachment; filename=\"diagnostic_report_{session_id[:8]}_{language_code}.pdf\""
         },
     )
 

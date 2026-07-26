@@ -289,15 +289,15 @@ def generate_pdf(session_id: str, language_code: str = "en") -> bytes:
     return pdf_bytes
 
 
-def save_pdf(session_id: str, pdf_bytes: bytes) -> str:
+def save_pdf(session_id: str, pdf_bytes: bytes, language_code: str = "en") -> str:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    filepath = REPORTS_DIR / f"{session_id}.pdf"
+    filepath = REPORTS_DIR / f"{session_id}_{language_code}.pdf"
     filepath.write_bytes(pdf_bytes)
     return str(filepath)
 
 
-def get_pdf_path(session_id: str) -> str | None:
-    filepath = REPORTS_DIR / f"{session_id}.pdf"
+def get_pdf_path(session_id: str, language_code: str = "en") -> str | None:
+    filepath = REPORTS_DIR / f"{session_id}_{language_code}.pdf"
     if filepath.exists():
         return str(filepath)
     return None

@@ -223,12 +223,13 @@ class AiService
     }
 
     // ************************************************************ */
-    public function getDiagnosisHistory(string $userId)
+    public function getDiagnosisHistory(string $userId, string $languageCode = 'en')
     {
         try {
             $response = Http::timeout($this->timeout)
                     ->get($this->fastApiUrl . '/diagnosis-history' ,[
-                        'user_id' => $userId
+                        'user_id' => $userId,
+                        'language_code' => $languageCode,
                     ]);
 
             if ($response->successful()) 
@@ -249,11 +250,11 @@ class AiService
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////
-    public function generateReport(string $sessionId)
+    public function generateReport(string $sessionId, string $languageCode = 'en')
     {
         try {
             $response = Http::timeout($this->reportTimeout)
-                ->post($this->fastApiUrl."/generate-report/{$sessionId}");
+                ->post($this->fastApiUrl."/generate-report/{$sessionId}", ['language_code' => $languageCode]);
 
             if ($response->successful()) {
                 return $response->json();
@@ -278,11 +279,11 @@ class AiService
         }
     }
 
-    public function downloadReport(string $sessionId)
+    public function downloadReport(string $sessionId, string $languageCode = 'en')
     {
         try {
             $response = Http::timeout($this->reportTimeout)
-                ->get($this->fastApiUrl."/reports/{$sessionId}/download");
+                ->get($this->fastApiUrl."/reports/{$sessionId}/download", ['language_code' => $languageCode]);
 
             if ($response->successful()) {
                 $filename = "diagnostic_report_{$sessionId}.pdf";
@@ -320,11 +321,11 @@ class AiService
         }
     }
 
-    public function previewReport(string $sessionId)
+    public function previewReport(string $sessionId, string $languageCode = 'en')
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl."/reports/{$sessionId}/preview");
+                ->get($this->fastApiUrl."/reports/{$sessionId}/preview", ['language_code' => $languageCode]);
 
             if ($response->successful()) {
                 return response()->make(
