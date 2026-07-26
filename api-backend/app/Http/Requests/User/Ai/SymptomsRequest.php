@@ -17,10 +17,7 @@ class SymptomsRequest extends FormRequest
     {
         return [
             'q' => 'nullable|string|max:255',
-<<<<<<< HEAD
-=======
-            'model_name' => 'required|string',
->>>>>>> Yousef
+            'model_name' => 'nullable|string',
         ];
     }
 

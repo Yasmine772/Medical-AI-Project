@@ -33,8 +33,8 @@ class AiService
                 'is_smoker' => $request['is_smoker'],
                 'has_diabetes' => $request['has_diabetes'],
                 'has_hypertension' => $request['has_hypertension'],
-                'is_alcoholic'     => $request['is_alcoholic'],
-                'patient_job'      => $request['patient_job'],
+                'drinks_alcohol'     => $request['is_alcoholic'],
+                'occupation'      => $request['patient_job'],
                 'is_pregnant' => $request['is_pregnant'],
                 'activity_level' => $request['activity_level'],
                 'birth_date' => $request['birth_date'],
@@ -93,19 +93,11 @@ class AiService
     }
 
     // *********************************************** */
-<<<<<<< HEAD
-    public function searchSymptoms(string $query): ?array
-    {
-        try {
-            $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl.'/symptoms', ['q' => $query]);
-=======
-    public function searchSymptoms(string $query, string $modelName): ?array
+    public function searchSymptoms(string $query, ?string $modelName = null): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
                 ->get($this->fastApiUrl.'/symptoms', ['q' => $query, 'model_name' => $modelName]);
->>>>>>> Yousef
 
             if ($response->successful()) {
                 return $response->json();

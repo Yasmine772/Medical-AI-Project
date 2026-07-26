@@ -35,7 +35,7 @@ class StartDiagnoseRequest extends FormRequest
             'activity_level'   => 'required|string|in:sedentary,moderate,active',
             'assessment_for'   => 'required|string|in:myself,other',
             'birth_date'       => 'required|date',
-            'model_name'       => 'required|string',
+            'model_name'       => 'nullable|string',
         ];
     }
 

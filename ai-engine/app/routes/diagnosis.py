@@ -7,7 +7,7 @@ from app.services.i18n import detect_lang, translate_batch
 router = APIRouter()
 
 
-
+@router.get("/symptoms")
 async def search_symptoms(
     q: str = Query(default="", description="Search query for symptoms or illnesses"),
     model_name: str = Query(default=None, description="LLM model to use for extraction"),
@@ -24,28 +24,7 @@ async def search_symptoms(
     results = store.search(query_vector, limit=10) or []
     log("SYMPTOMS", f"Vector search: {len(results)} results for '{q[:50]}'")
 
-    # Run vector search and web search in parallel
-    vector_results = []
-    web_results = []
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        futures = {
-            pool.submit(store.search, query_vector, 10): "vector",
-            pool.submit(search_web, f"{q} medical condition symptoms", 5): "web",
-        }
-        for fut in as_completed(futures):
-            kind = futures[fut]
-            try:
-                res = fut.result()
-                if kind == "vector":
-                    vector_results = res or []
-                else:
-                    web_results = res or []
-            except Exception as e:
-                log("SYMPTOMS", f"{kind} search failed: {str(e)[:80]}")
-
-    log("SYMPTOMS", f"Search '{q[:50]}': {len(vector_results)} vector + {len(web_results)} web")
-
-    if not vector_results and not web_results:
+    if not results:
         return {"status": "success", "data": {"query": q, "results": []}}
 
     # Build context from PDF chunks
