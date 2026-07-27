@@ -27,8 +27,6 @@ services:
     restart: always
     ports:
       - "8080:80"
-    volumes:
-      - ./api-backend:/var/www/html
     environment:
       - DB_CONNECTION=mysql
       - DB_HOST=database
@@ -36,6 +34,9 @@ services:
       - DB_DATABASE=laravel_db
       - DB_USERNAME=laravel_user
       - DB_PASSWORD=laravel_password
+      - FASTAPI_URL=http://ai-engine:5000
+      - APP_ENV=production
+      - APP_DEBUG=false
     depends_on:
       - database
     networks:
@@ -50,9 +51,6 @@ services:
     restart: always
     ports:
       - "3000:80"
-    volumes:
-      - ./web-frontend:/app
-      - /app/node_modules
     networks:
       - app-network
     depends_on:
@@ -67,8 +65,6 @@ services:
     restart: always
     ports:
       - "5000:5000"
-    volumes:
-      - ./ai-engine:/app
     environment:
       - PYTHONUNBUFFERED=1
     depends_on:

@@ -47,6 +47,7 @@ class AiService
             $response = Http::timeout($this->timeout)
                 ->asForm()
                 ->post($this->fastApiUrl.'/diagnosis/start', [
+                    'patient_name' => $user->full_name,
                     'user_id' => $user->id,
                     'gender' => $request['gender'],
                     'age' => $age,
