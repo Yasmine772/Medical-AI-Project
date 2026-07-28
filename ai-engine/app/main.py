@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     store.connect()
     embedder = EmbeddingService()
     init(store, embedder)
-    print(f"Connected to Supabase pgvector. Existing records: {store.count()}")
+    print(f"Connected to Supabase pgvector.  Existing records: {store.count()}")
     yield
     if store:
         store.close()
