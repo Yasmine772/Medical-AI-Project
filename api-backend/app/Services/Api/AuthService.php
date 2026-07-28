@@ -47,13 +47,7 @@ class AuthService
              $user->notify(new WelcomeMessageNotification());
         }
 
-        Notification::create([
-            'type' => 'welcome_message',
-            'title' => 'Welcome Back!',
-            'message' => 'We are thrilled to have you back! Explore our app and discover new features tailored just for you.',
-            'notifiable_type' => get_class($user),
-            'notifiable_id' => $user->id,
-        ]);
+        $user->notify(new WelcomeMessageNotification());
 
             return [
             'user' => $user,
