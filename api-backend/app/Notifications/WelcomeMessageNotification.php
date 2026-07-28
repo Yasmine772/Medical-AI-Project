@@ -27,7 +27,7 @@ class WelcomeMessageNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return [FcmChannel::class];
+        return [FcmChannel::class , 'database'];
     }
 
     /**
@@ -65,6 +65,15 @@ class WelcomeMessageNotification extends Notification
                 ],
             ]);
         }
+
+    public function toDatabase(object $notifiable): array
+    {
+    return [
+        'title' => 'Welcome Back!',
+        'message' => 'We are thrilled to have you back! Explore our app and discover new features tailored just for you.',
+        'type' => 'welcome_message',
+    ];
+    }
 
     /**
      * Get the array representation of the notification.

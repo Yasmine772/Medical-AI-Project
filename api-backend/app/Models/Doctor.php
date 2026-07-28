@@ -16,9 +16,9 @@ class Doctor extends Model implements Auditable
     protected $auditExclude = ['updated_at'];
 
     protected $fillable = [
-        'full_name',
-        'email',
-        'password',
+        // 'full_name',
+        // 'email',
+        // 'password',
         'phone',
         'specialization',
         'years_of_experience',
@@ -30,6 +30,7 @@ class Doctor extends Model implements Auditable
         'cv_file',
         'license_file',
         'is_active',
+        'user_id',
     ];
 
     public function user()

@@ -164,6 +164,7 @@ class AuthController extends Controller
     public function viewProfile()
     {
         $user = auth()->authenticate();
+        
         $user->load('profile');
 
         $profileData = $this->authService->getUserProfile($user);

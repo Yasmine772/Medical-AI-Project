@@ -29,14 +29,16 @@ class NewDoctorRequestNotification extends Notification implements ShouldQueue
     /**
      * Get the array representation of the notification.
      */
-    public function toArray($notifiable): array
+    public function toArray($notifiable)
     {
         return [
-            'id' => $this->doctorRequest->id,
+            'type' => 'new_doctor_request',
+            'title' => 'New Doctor Request',
+            'message' => "New doctor request from {$this->doctorRequest->full_name}",
+            'doctor_request_id' => $this->doctorRequest->id,
             'full_name' => $this->doctorRequest->full_name,
             'email' => $this->doctorRequest->email,
             'specialization' => $this->doctorRequest->specialization,
-            'message' => "New doctor request from {$this->doctorRequest->full_name}",
             'url' => "/admin/doctor-requests/{$this->doctorRequest->id}",
         ];
     }

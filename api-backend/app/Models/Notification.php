@@ -15,7 +15,6 @@ class Notification extends Model
         'notifiable_id',
         'is_read',
         'read_at',
-        'user_id'
     ];
 
     public function user()
