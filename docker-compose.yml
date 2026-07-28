@@ -27,6 +27,8 @@ services:
     restart: always
     ports:
       - "8080:80"
+    volumes:
+      - laravel_storage:/var/www/html/storage
     environment:
       - DB_CONNECTION=mysql
       - DB_HOST=database
@@ -65,6 +67,8 @@ services:
     restart: always
     ports:
       - "5000:5000"
+    volumes:
+      - ai_reports:/app/reports
     environment:
       - PYTHONUNBUFFERED=1
     depends_on:
@@ -78,3 +82,5 @@ networks:
 
 volumes:
   db_data:
+  laravel_storage:
+  ai_reports:
