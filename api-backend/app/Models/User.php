@@ -107,4 +107,9 @@ class User extends Authenticatable implements Auditable
         return $this->hasOne(Doctor::class);
     }
 
+    // public function notifictions()
+    // {
+    //     return $this->hasMany(Notification::class, 'user_id');
+    // }
+
 }

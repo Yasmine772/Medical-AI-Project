@@ -39,7 +39,7 @@ class AuthService
 
         $user->tokens()->delete();
         $accessTokenExpiresAt = Carbon::now()->addDays(1);
-        $accessToken = $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken;
+        $accessToken = $user->createToken('access_token', [$role], $accessTokenExpiresAt)->plainTextToken;
 
         return [
             'user' => ['email' => $user->email],

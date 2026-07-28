@@ -12,17 +12,17 @@ class Notification extends Model implements Auditable
 
     protected $fillable = [
         'type',
-        'title',
-        'message',
+        // 'title',
+        // 'message',
         'data',
-        'is_read',
+        'notifiable_type',
+        'notifiable_id',
         'read_at',
-        'user_id'
     ];
 
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+    // public function user()
+    // {
+    //     return $this->belongsTo(User::class);
+    // }
 }

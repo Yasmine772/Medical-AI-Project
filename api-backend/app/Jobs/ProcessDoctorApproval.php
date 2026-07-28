@@ -26,7 +26,7 @@ class ProcessDoctorApproval implements ShouldQueue
 
     public function handle(): void
     {
+        $this->doctorRequest->update(['status' => 'approved']);
         event(new DoctorRegisterEvent($this->doctorRequest, $this->user));
-        // $this->doctorRequest->update(['status' => 'approved']);
     }
 }

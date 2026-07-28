@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
+use function Illuminate\Log\log;
+
 class RegisterNewDoctorListener
 {
     public function handle(DoctorRegisterEvent $event): void
@@ -36,8 +38,6 @@ class RegisterNewDoctorListener
             DB::commit();
 
             Mail::to($user->email)->send(new DoctorWelcomeMail($user, $doctor));
-
-            $doctorRequest->delete();
 
         } catch (\Throwable $e) {
             DB::rollBack();
