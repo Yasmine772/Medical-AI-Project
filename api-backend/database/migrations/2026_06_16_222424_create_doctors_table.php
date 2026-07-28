@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('doctors', function (Blueprint $table) {
             $table->id();
-            $table->string('full_name');
-            $table->string('email')->unique();
-            $table->string('password');
+            // $table->string('full_name');
+            // $table->string('email')->unique();
+            // $table->string('password');
             $table->string('phone')->nullable();
             $table->string('specialization');
             $table->integer('years_of_experience');
@@ -27,6 +27,7 @@ return new class extends Migration
             $table->string('cv_file')->nullable();
             $table->string('license_file')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->timestamps();
         });
     }

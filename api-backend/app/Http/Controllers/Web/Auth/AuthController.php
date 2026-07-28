@@ -17,34 +17,34 @@ class AuthController extends Controller
     {
         $this->authService = $authService;
     }
-
+//************************************************************************************* */
     public function adminLogin(LoginRequest $request)
     {
-        $result = $this->authService->login($request->validated());
-        
+        $result = $this->authService->login($request->validated(), 'admin');
+
         return match ($result) {
             'unauthorized' => $this->errorResponse('Invalid email or password', null, 401),
-            'AccessDenied' => $this->errorResponse('Access denied. This system is for administrators only.', null, 403),
+            'adminOnly' => $this->errorResponse('Access denied. This system is for administrators only.', null, 403),
+            'doctorOnly' => $this->errorResponse('Access denied. This system is for doctors only.', null, 403),
             'EmailNotVerified' => $this->errorResponse('Please verify your email first. Check your email for OTP code.', null, 403),
 
             default => $this->successResponse([
-                    'user'         => $result['Admin'],
+                    'user'         => $result['user'],
                     'access_token' => $result['access_token'],
                     'token_type'   => 'Bearer',
                     'expires_at'   => '1 day',
-                    'role'           => $result['role']
-
             ], 'Admin login successfully', 200)
         };
     }
-
+//*********************************************************************** */
     public function doctorLogin(LoginRequest $request)
     {
-        $result = $this->authService->login($request->validated());
+        $result = $this->authService->login($request->validated(), 'doctor');
 
         return match ($result) {
             'unauthorized' => $this->errorResponse('Invalid email or password', null, 401),
-            'AccessDenied' => $this->errorResponse('Access denied. This system is for administrators only.', null, 403),
+            'adminOnly' => $this->errorResponse('Access denied. This system is for administrators only.', null, 403),
+            'doctorOnly' => $this->errorResponse('Access denied. This system is for doctors only.', null, 403),
             'EmailNotVerified' => $this->errorResponse('Please verify your email first. Check your email for OTP code.', null, 403),
 
             default => $this->successResponse([
@@ -55,7 +55,7 @@ class AuthController extends Controller
             ], 'Doctor login successfully', 200)
         };
     }
-
+//*************************************************************************************** */
     public function adminVerifyOtp(VerifyOTPRequest $request)
     {
         $result = $this->authService->verifyOtp($request->validated(), 'admin');
@@ -65,11 +65,11 @@ class AuthController extends Controller
             'NotValidOTP' => $this->errorResponse('Not valid OTP!', null, 422),
             'OTPHasExpired' => $this->errorResponse('OTP has expired!', null, 400),
             'OTP used' => $this->errorResponse('You have been used it!', null, 422),
+            'emailVerified' => $this->errorResponse('Your email has been verified!', null, 422),
             default => $this->successResponse($result, 'OTP verified successfully', 200)
         };
     }
-
-
+//************************************************************************************* */
     public function doctorVerifyOtp(VerifyOTPRequest $request)
     {
         $result = $this->authService->verifyOtp($request->validated(), 'doctor');
@@ -79,9 +79,8 @@ class AuthController extends Controller
             'NotValidOTP' => $this->errorResponse('Not valid OTP!', null, 422),
             'OTPHasExpired' => $this->errorResponse('OTP has expired!', null, 400),
             'OTP used' => $this->errorResponse('You have been used it!', null, 422),
+            'emailVerified' => $this->errorResponse('Your email has been verified!', null, 422),
             default => $this->successResponse($result, 'OTP verified successfully', 200)
         };
     }
-
-
 }

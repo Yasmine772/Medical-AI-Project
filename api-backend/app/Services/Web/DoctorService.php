@@ -7,18 +7,21 @@ use App\Http\Resources\doctorResource;
 use App\Jobs\ProcessDoctorApproval;
 use App\Jobs\SendRejectionEmailJob;
 use App\Jobs\UploadDoctorRequestFiles;
+use App\Models\Doctor;
 use App\Models\DoctorRequest;
+use App\Models\Notification;
 use App\Models\User;
 use App\Notifications\NewDoctorRequestNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class DoctorService
 {
     public function index()
     {
-       $allDoctorRequests = DoctorRequest::all();
+       $allDoctorRequests = DoctorRequest::where('status' , 'pending')->get();
 
        if($allDoctorRequests->isEmpty()) {
            return null; 
@@ -41,7 +44,20 @@ class DoctorService
         if($doctorReq === null) {
             return null;
         }
-        ProcessDoctorApproval::dispatch($doctorReq)->onQueue('default');
+
+        $doctorExist = User::where('email', $doctorReq->email)->first();
+
+        if ($doctorExist) {
+            return 'DoctorExist';
+        }
+        $user = User::create([
+            'full_name' => $doctorReq->full_name,
+            'email' => $doctorReq->email,
+            'password' => $doctorReq->password,
+        ]);
+        $user->assignRole('doctor');
+
+        ProcessDoctorApproval::dispatch($doctorReq , $user)->onQueue('default');
 
         return new doctorResource($doctorReq);
     }
@@ -56,7 +72,7 @@ class DoctorService
         $doctorReq->rejection_reason = $array['rejection_reason'];
         $doctorReq->save();
 
-        SendRejectionEmailJob::dispatch($doctorReq, $doctorReq->rejection_reason)->onQueue('default');
+        SendRejectionEmailJob::dispatch($doctorReq, $array['rejection_reason'])->onQueue('default');
 
         $user = User::where('email', $doctorReq->email)->first();
         if ($user) {
@@ -103,6 +119,19 @@ class DoctorService
             UploadDoctorRequestFiles::dispatch($doctorRequest->id, $tempFiles)->onQueue('default');
 
             $admin = User::role('admin')->first();
+            // Notification::create([
+            //     'user_id' => $admin->id,
+            //     'type' => 'new_doctor_request',
+            //     'title' => 'New Doctor Request',
+            //     'message' => "New doctor request from Dr. {$doctorRequest->full_name}",
+            //     'data' => [
+            //         'doctor_request_id' => $doctorRequest->id,
+            //         'full_name' => $doctorRequest->full_name,
+            //         'email' => $doctorRequest->email,
+            //         'specialization' => $doctorRequest->specialization,
+            //         'url' => "/admin/doctor-requests/{$doctorRequest->id}",
+            //     ],
+            // ]);
             $admin->notify(new NewDoctorRequestNotification($doctorRequest));
 
             return $doctorRequest;
