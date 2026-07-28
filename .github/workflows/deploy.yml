@@ -19,7 +19,7 @@ jobs:
         run: az vm start -g medical-ai-rg -n medical-ai-vm
 
       - name: Wait for VM
-        run: sleep 90
+        run: sleep 30
 
       - name: Copy files to VM
         uses: appleboy/scp-action@v0.1.7
