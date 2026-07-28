@@ -14,7 +14,6 @@ jobs:
         uses: azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-          subscription-id: fc9e2546-4d72-4569-b669-464514638a35
 
       - name: Start VM
         run: az vm start -g medical-ai-rg -n medical-ai-vm
