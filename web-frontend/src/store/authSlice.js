@@ -9,19 +9,19 @@ const authSlice = createSlice({
     userName: localStorage.getItem("full_name") || "Dr. Sarah Chen",
     userImage: localStorage.getItem("userImage") || null,
     userRole: localStorage.getItem("userRole") || "",
-    birthDate: localStorage.getItem("birthDate") || null, // عدل هذه
-    gender: localStorage.getItem("gender") || null, // عدل هذه
+    birthDate: localStorage.getItem("birthDate") || null, 
+    gender: localStorage.getItem("gender") || null,
     age: localStorage.getItem("age") || null,
   },
   reducers: {
     updateProfile: (state, action) => {
       state.userName = action.payload.name;
-      state.userImage = action.payload.image; // قد تكون null أو رابط صورة
+      state.userImage = action.payload.image; 
       state.userRole = action.payload.role || state.userRole;
       state.birthDate = action.payload.birthDate;
       state.gender = action.payload.gender;
       state.age = action.payload.age;
-      // حفظ في الـ localStorage لضمان بقائها حتى لو تم إغلاق الـ session
+    
       if (action.payload.name)
         localStorage.setItem("full_name", action.payload.name);
       if (action.payload.birthDate)
@@ -40,9 +40,7 @@ const authSlice = createSlice({
         state.userEmail = email;
         state.isAuthenticated = true;
 
-        // تخزين التوكن كـ نص (String) فقط
         localStorage.setItem("token", token);
-        // تخزين الإيميل كـ نص (String)
         localStorage.setItem("email", email);
       }
     },
@@ -55,7 +53,6 @@ const authSlice = createSlice({
       localStorage.removeItem("token");
       localStorage.removeItem("persist:root");
       localStorage.removeItem("userRole");
-      // أضف هذه السطور هنا:
       localStorage.removeItem("full_name");
       localStorage.removeItem("birthDate");
       localStorage.removeItem("gender");

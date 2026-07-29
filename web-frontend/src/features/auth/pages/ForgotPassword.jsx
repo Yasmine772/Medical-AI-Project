@@ -14,15 +14,14 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      // إرسال الإيميل للـ API
+      // send email to api
       await api.post("/api/v1/auth/forget-password", { email });
 
-      // في حال النجاح، ننتقل لصفحة OTP مع تمرير الإيميل
       navigate("/otp-verification-pass", { state: { email } });
     } catch (error) {
       alert(
-        "خطأ: " +
-          (error.response?.data?.message || "حدث خطأ أثناء إرسال الرمز"),
+        "wrong" +
+          (error.response?.data?.message || "something went wrong while sending otp"),
       );
     } finally {
       setLoading(false);

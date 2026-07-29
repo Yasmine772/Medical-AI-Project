@@ -15,7 +15,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/app/dashboard"); // إذا كان مسجلاً دخول، لا تظهري له صفحة اللوج إن
+      navigate("/app/dashboard"); // if authenticated dont show otp verification
     }
   }, [isAuthenticated, navigate]);
   return (

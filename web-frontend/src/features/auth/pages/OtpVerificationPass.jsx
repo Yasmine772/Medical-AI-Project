@@ -11,7 +11,7 @@ const OtpVerificationPass = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // استلام الإيميل الممرر من صفحة الـ ForgotPassword
+  // email to gorget password page
   const email = location.state?.email;
 
   const handleVerifyOtp = async (e) => {
@@ -19,14 +19,12 @@ const OtpVerificationPass = () => {
     setLoading(true);
 
     try {
-      // إرسال الـ OTP والإيميل للتحقق
       await api.post("/api/v1/auth/verifyOtp", {
         email: email,
         otp: otp,
       });
 
-      // إذا نجح التحقق، ننتقل لصفحة تعيين كلمة السر الجديدة
-      // سنمرر الإيميل والـ OTP لأننا سنحتاجهما في طلب التغيير النهائي
+      // go to reset password page
       navigate("/reset-password", { state: { email, otp } });
     } catch (error) {
       alert(
@@ -42,11 +40,9 @@ const OtpVerificationPass = () => {
     setResending(true);
     try {
       await api.post("/api/v1/auth/resendOtp", { email });
-      alert("تم إرسال رمز جديد بنجاح!");
+      alert("otp resend to your email");
     } catch (error) {
-      alert(
-        "خطأ: " + (error.response?.data?.message || "فشلت عملية إعادة الإرسال"),
-      );
+      alert("wrong: " + (error.response?.data?.message || "resend failed"));
     } finally {
       setResending(false);
     }
@@ -70,7 +66,7 @@ const OtpVerificationPass = () => {
         required
         maxLength="6"
         value={otp}
-        onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))} // السماح بالأرقام فقط
+        onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
       />
 
       <Button type="submit" disabled={loading}>

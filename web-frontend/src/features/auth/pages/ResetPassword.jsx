@@ -12,7 +12,6 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // استقبال الإيميل والـ OTP من الصفحة السابقة
   const { email, otp } = location.state || {};
 
   const handleResetSubmit = async (e) => {
@@ -21,7 +20,6 @@ const ResetPassword = () => {
     
 
     try {
-      // إرسال البيانات للـ API
       await api.post("/api/v1/auth/reset-password", {
         email,
         otp,
@@ -29,11 +27,11 @@ const ResetPassword = () => {
         password_confirmation: passwordConfirmation,
       });
 
-      alert("تم تغيير كلمة السر بنجاح! يمكنك الآن تسجيل الدخول.");
-      navigate("/login"); // توجيه المستخدم لصفحة تسجيل الدخول
+      alert("password reset successfuly , you can go to login page");
+      navigate("/login"); 
       
     } catch (error) {
-      alert("خطأ: " + (error.response?.data?.message || "حدث خطأ أثناء تغيير كلمة السر"));
+      alert("wrong :: " + (error.response?.data?.message || "something went wrong"));
     } finally {
       setLoading(false);
     }

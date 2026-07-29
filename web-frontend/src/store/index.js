@@ -11,6 +11,7 @@ import {
 } from "redux-persist";
 import authReducer from "./authSlice";
 import dashboardReducer from "../features/dashboard/dashboardSlice";
+import joiningRequestsReducer from "../features/joiningRequests/joiningRequestsSlice";
 const storage = {
   getItem: (key) => Promise.resolve(localStorage.getItem(key)),
   setItem: (key, value) => Promise.resolve(localStorage.setItem(key, value)),
@@ -19,11 +20,11 @@ const storage = {
 import doctorsReducer from "../features/doctors/doctorsSlice";
 import usersReducer from "../features/users/usersSlice";
 import auditLogsReducer from "../features/audit-logs/auditLogsSlice";
-
+import doctorRequestsReducer from "../features/doctors/doctorRequestsSlice";
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["doctors", "users","auth"],
+  whitelist: ["doctors", "users","auth","joiningRequests","doctorRequests"],
 };
 
 const persistedReducer = persistReducer(
@@ -34,6 +35,8 @@ const persistedReducer = persistReducer(
     users: usersReducer,
     auditLogs: auditLogsReducer,
     dashboard: dashboardReducer,
+    joiningRequests: joiningRequestsReducer,
+    doctorRequests: doctorRequestsReducer,
     
   }),
 );

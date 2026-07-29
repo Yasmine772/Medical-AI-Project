@@ -18,6 +18,7 @@ import OtpVerification from "./features/auth/pages/OtpVerification";
 import ForgotPassword from "./features/auth/pages/ForgotPassword";
 import OtpVerificationPass from "./features/auth/pages/OtpVerificationPass";
 import ResetPassword from "./features/auth/pages/ResetPassword";
+import JoiningRequestsPage from "./features/joiningRequests/pages/JoiningRequestsPage";
 function App() {
   return (
     <Router>
@@ -39,6 +40,14 @@ function App() {
           <Route path="audit-logs" element={<AuditLogsPage />} />
           <Route path="/app/diseases" element={<DiseasesPage />} />
         </Route>
+
+        {/* doctors routes*/}
+        <Route path="/doctor" element={<DoctorLayout />}>
+          <Route path="dashboard" element={<HomePage />} />
+        </Route>
+
+        {/* joining requests */}
+        <Route path="/joining-requests" element={<JoiningRequestsPage />} />
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

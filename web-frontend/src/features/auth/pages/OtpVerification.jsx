@@ -11,7 +11,7 @@ const OtpVerification = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // استقبال الإيميل الممرر من صفحة اللوجين
+  // email from login page
   const email = location.state?.email;
   const dispatch = useDispatch();
   const handleVerify = async (e) => {
@@ -20,18 +20,17 @@ const OtpVerification = () => {
     try {
       const response = await api.post("/admin/verifyOtp", { email, otp });
 
-      // استخرجي التوكن من استجابة الـ OTP
-      // تأكدي من المسار الصحيح (response.data.data.access_token مثلاً)
+      // token from otp response
       const token = response.data.data?.token;
       if (token) {
-        // هنا نقوم بتخزين التوكن في Redux والـ localStorage
+        // storage token in local storage
         dispatch(loginSuccess({ token, email }));
 
-        // الآن انتقلي للداشبورد
+        // go to dashboard
         navigate("/app/dashboard");
       }
     } catch (error) {
-      alert("فشل التحقق: " + (error.response?.data?.message || "حدث خطأ"));
+      alert("verification failed " + (error.response?.data?.message || " something went wrong"));
     } finally {
       setLoading(false);
     }
@@ -40,10 +39,10 @@ const OtpVerification = () => {
   const handleResend = async () => {
     try {
       await api.post("/admin/resendOtp", { email });
-      alert("تم إرسال كود جديد إلى إيميلك");
+      alert("otp resended to your email");
     } catch (error) {
       console.log(error);
-      alert("فشل إرسال الكود");
+      alert("resend failed");
     }
   };
 

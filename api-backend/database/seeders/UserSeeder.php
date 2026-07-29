@@ -18,7 +18,7 @@ class UserSeeder extends Seeder
             $admin = User::create([
                 'full_name' => 'Admin',
                 //'email' => 'admin@mediscan.com',
-                'email' => 'ramaalwanni83@gmail.com',
+                'email' => 'razangung@gmail.com',
                 'password' => Hash::make('password'),
             ]);
         }
