@@ -30,7 +30,7 @@ Route::prefix('v1/auth')->group(function () {
     Route::get('/privacyPolicy', [settingController::class, 'privacyPolicyUrl']);
 
     Route::middleware(['auth:sanctum'])->group(function () {
-
+        
         Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:user-logout');
         // Profile routes
         Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
@@ -45,13 +45,13 @@ Route::prefix('v1/auth')->group(function () {
         Route::get('/diagnose/history', [AiController::class, 'getDiagnosisHistory'])->middleware('permission:view-medical-history');
 
         // Report routes
-        Route::post('/reports/{sessionId}/generate', [ReportController::class, 'generate'])->middleware('permission:download-report');
+        Route::post('/reports/{sessionId}/generate', [ReportController::class, 'generate'])->middleware('permission:generate-report');
         Route::get('/reports/{sessionId}/download', [ReportController::class, 'download'])->middleware('permission:download-report');
-        Route::get('/reports/{sessionId}/preview', [ReportController::class, 'preview'])->middleware('permission:download-report');
+        Route::get('/reports/{sessionId}/preview', [ReportController::class, 'preview'])->middleware('permission:preview-report');
 
         // Payment routes
-        Route::post('/payments/create-intent', [PaymentController::class, 'createIntent']);
-        Route::get('/payments/{paymentIntentId}/status', [PaymentController::class, 'status']);
+        Route::post('/payments/create-intent', [PaymentController::class, 'createIntent'])->middleware('permission:create-intent');
+        Route::get('/payments/{paymentIntentId}/status', [PaymentController::class, 'status'])->middleware('permission:status-payment-intent');
 
         // Check if the user is authenticated
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
@@ -70,7 +70,7 @@ Route::prefix('v1/auth')->group(function () {
      });
      //Tracking
         Route::get('/tracking', [DiagnosisTrackingController::class, 'getTracking']);
-        
+
     });
     
 });

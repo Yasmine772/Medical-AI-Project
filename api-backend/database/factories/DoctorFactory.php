@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Doctor;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,9 +19,10 @@ class DoctorFactory extends Factory
     public function definition(): array
     {
         return [
-        'full_name' => $this->faker->name(),     
-        'email' => $this->faker->unique()->safeEmail(),
-        'password' => bcrypt('password'),
+        'user_id' => User::factory(),
+        // 'full_name' => $this->faker->name(),     
+        // 'email' => $this->faker->unique()->safeEmail(),
+        // 'password' => bcrypt('password'),
         'phone' => $this->faker->phoneNumber(),
         'is_active' => $this->faker->boolean(80), 
         'specialization' => $this->faker->word(), 

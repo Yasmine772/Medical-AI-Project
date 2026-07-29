@@ -17,8 +17,8 @@ class UserSeeder extends Seeder
         if (!$admin) {
             $admin = User::create([
                 'full_name' => 'Admin',
-                //'email' => 'admin@mediscan.com',
-                'email' => 'ramaalwanni83@gmail.com',
+                'email' => 'admin@mediscan.com',
+                //  'email' => 'ramaalwanni83@gmail.com',
                 'password' => Hash::make('password'),
             ]);
         }

@@ -4,6 +4,7 @@ namespace App\Services\Api;
 
 use App\Models\DiagnosisSession;
 use App\Models\PatientProfile;
+use Carbon\Carbon;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -32,19 +33,24 @@ class AiService
                 'is_smoker' => $request['is_smoker'],
                 'has_diabetes' => $request['has_diabetes'],
                 'has_hypertension' => $request['has_hypertension'],
-                'is_alcoholic'     => $request['is_alcoholic'],
-                'patient_job'      => $request['patient_job'],
+                'drinks_alcohol'     => $request['is_alcoholic'],
+                'occupation'      => $request['patient_job'],
                 'is_pregnant' => $request['is_pregnant'],
                 'activity_level' => $request['activity_level'],
+                'birth_date' => $request['birth_date'],
             ]);
         }
+
+        $age = Carbon::parse($request['birth_date'])->age;
 
         try {
             $response = Http::timeout($this->timeout)
                 ->asForm()
                 ->post($this->fastApiUrl.'/diagnosis/start', [
+                    'patient_name' => $user->full_name,
                     'user_id' => $user->id,
                     'gender' => $request['gender'],
+                    'age' => $age,
                     'is_smoker' => $request['is_smoker'],
                     'has_diabetes' => $request['has_diabetes'],
                     'has_hypertension' => $request['has_hypertension'],
@@ -53,12 +59,17 @@ class AiService
                     'patient_job'      => $request['patient_job'],
                     'activity_level' => $request['activity_level'],
                     'assessment_for' => $request['assessment_for'],
+                    'model_name' => $request['model_name'],
                 ]);
 
             if ($response->successful()) {
                 $result = $response->json();
+                Log::info($result);
+
+                $sessionId = $result['data']['session_id'] ?? null;
 
                 DiagnosisSession::create([
+                    'session_hash' => $sessionId,
                     'status' => 'ACTIVE',
                     'pdf_file_path' => null,
                     'user_id' => $user->id,
@@ -83,11 +94,11 @@ class AiService
     }
 
     // *********************************************** */
-    public function searchSymptoms(string $query): ?array
+    public function searchSymptoms(string $query, ?string $modelName = null): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl.'/symptoms', ['q' => $query]);
+                ->get($this->fastApiUrl.'/symptoms', ['q' => $query, 'model_name' => $modelName]);
 
             if ($response->successful()) {
                 return $response->json();
@@ -213,12 +224,13 @@ class AiService
     }
 
     // ************************************************************ */
-    public function getDiagnosisHistory(string $userId)
+    public function getDiagnosisHistory(string $userId, string $languageCode = 'en')
     {
         try {
             $response = Http::timeout($this->timeout)
                     ->get($this->fastApiUrl . '/diagnosis-history' ,[
-                        'user_id' => $userId
+                        'user_id' => $userId,
+                        'language_code' => $languageCode,
                     ]);
 
             if ($response->successful()) 
@@ -239,11 +251,11 @@ class AiService
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////
-    public function generateReport(string $sessionId)
+    public function generateReport(string $sessionId, string $languageCode = 'en')
     {
         try {
             $response = Http::timeout($this->reportTimeout)
-                ->post($this->fastApiUrl."/generate-report/{$sessionId}");
+                ->post($this->fastApiUrl."/generate-report/{$sessionId}", ['language_code' => $languageCode]);
 
             if ($response->successful()) {
                 return $response->json();
@@ -268,11 +280,11 @@ class AiService
         }
     }
 
-    public function downloadReport(string $sessionId)
+    public function downloadReport(string $sessionId, string $languageCode = 'en')
     {
         try {
             $response = Http::timeout($this->reportTimeout)
-                ->get($this->fastApiUrl."/reports/{$sessionId}/download");
+                ->get($this->fastApiUrl."/reports/{$sessionId}/download", ['language_code' => $languageCode]);
 
             if ($response->successful()) {
                 $filename = "diagnostic_report_{$sessionId}.pdf";
@@ -310,11 +322,11 @@ class AiService
         }
     }
 
-    public function previewReport(string $sessionId)
+    public function previewReport(string $sessionId, string $languageCode = 'en')
     {
         try {
             $response = Http::timeout($this->timeout)
-                ->get($this->fastApiUrl."/reports/{$sessionId}/preview");
+                ->get($this->fastApiUrl."/reports/{$sessionId}/preview", ['language_code' => $languageCode]);
 
             if ($response->successful()) {
                 return response()->make(

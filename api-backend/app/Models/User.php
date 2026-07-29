@@ -27,7 +27,6 @@ class User extends Authenticatable implements Auditable
         'full_name',
         'email',
         'password',
-        'role',
         'status',
         'diagnose_num',
         'email_verified_at',
@@ -103,9 +102,14 @@ class User extends Authenticatable implements Auditable
     return $this->fcm_token;
     }
 
-    // public function doctor()
+    public function doctor()
+    {
+        return $this->hasOne(Doctor::class);
+    }
+
+    // public function notifictions()
     // {
-    //     return $this->hasOne(Doctor::class);
+    //     return $this->hasMany(Notification::class, 'user_id');
     // }
 
 }

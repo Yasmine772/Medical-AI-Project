@@ -10,6 +10,7 @@ from app.routes.insert import router as insert_router
 from app.routes.diagnosis import router as diagnosis_router
 from app.routes.report import router as report_router
 from app.routes.history import router as history_router
+from app.routes.models import router as models_router
 from app.state import init
 from app.services.pgvector_client import PgVectorClient
 from app.services.embedding_service import EmbeddingService
@@ -21,7 +22,7 @@ async def lifespan(app: FastAPI):
     store.connect()
     embedder = EmbeddingService()
     init(store, embedder)
-    print(f"Connected to Supabase pgvector. Existing records: {store.count()}")
+    print(f"Connected to Supabase pgvector.  Existing records: {store.count()}")
     yield
     if store:
         store.close()
@@ -48,6 +49,7 @@ app.include_router(insert_router)
 app.include_router(report_router)
 app.include_router(diagnosis_router)
 app.include_router(history_router)
+app.include_router(models_router)
 
 
 if __name__ == "__main__":

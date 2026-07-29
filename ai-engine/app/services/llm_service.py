@@ -1,3 +1,4 @@
+import json
 import os
 from openai import OpenAI
 from app.services.logger import log
@@ -5,12 +6,13 @@ from app.services.logger import log
 
 class LLMService:
 
-    def __init__(self, api_key: str = None, model: str = "llama-3.1-8b-instant"):
-        key = api_key or os.environ.get("GROQ_KEY")
-        if not key:
-            raise ValueError("GROQ_KEY not set")
+    def __init__(self, api_key: str = None, model: str = "@cf/qwen/qwen2.5-coder-32b-instruct"):
+        key = api_key or os.environ.get("CLOUDFLARE_API_KEY")
+        account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+        if not key or not account_id:
+            raise ValueError("CLOUDFLARE_API_KEY and CLOUDFLARE_ACCOUNT_ID must be set")
         self._client = OpenAI(
-            base_url="https://api.groq.com/openai/v1",
+            base_url=f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1/",
             api_key=key,
         )
         self._model = model
@@ -23,10 +25,11 @@ class LLMService:
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            response_format={"type": "json_object"},
         )
         content = resp.choices[0].message.content or ""
-        log("LLM", f"API response tokens={resp.usage.total_tokens if resp.usage else '?'} len={len(content)}")
+        if not isinstance(content, str):
+            content = json.dumps(content) if isinstance(content, (dict, list)) else str(content)
+        log("LLM", f"API response type={type(content).__name__} tokens={resp.usage.total_tokens if resp.usage else '?'} len={len(content)}")
         return content
 
     def ask_raw(self, messages: list, temperature: float = 0.2, max_tokens: int = 1024) -> str:

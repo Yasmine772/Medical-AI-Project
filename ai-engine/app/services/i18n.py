@@ -75,7 +75,10 @@ def from_english(text: str, target_lang: str) -> str:
     if not target_lang or target_lang == "en":
         return text
     try:
-        return _translator(target_lang).translate(text) or text
+        result = _translator(target_lang).translate(text)
+        if result and len(result) < len(text) * 10 and "Error" not in result and "500" not in result:
+            return result
+        return text
     except Exception as e:
         log("I18N", f"from_english failed: {str(e)[:60]}")
         return text

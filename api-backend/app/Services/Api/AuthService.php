@@ -40,19 +40,14 @@ class AuthService
 
         $accessTokenExpiresAt = Carbon::now()->addDays(1);
 
-        $accessToken = $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken;
+        $accessToken = $user->createToken('access_token', ['patient'], $accessTokenExpiresAt)->plainTextToken;
 
         if (isset($data['fcm_token'])) {
              $user->update(['fcm_token' => $data['fcm_token']]);
              $user->notify(new WelcomeMessageNotification());
         }
 
-        Notification::create([
-            'type' => 'welcome_message',
-            'title' => 'Welcome Back!',
-            'message' => 'We are thrilled to have you back! Explore our app and discover new features tailored just for you.',
-            'user_id' => $user->id,
-        ]);
+        $user->notify(new WelcomeMessageNotification());
 
             return [
             'user' => $user,

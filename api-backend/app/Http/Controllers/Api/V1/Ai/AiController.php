@@ -10,6 +10,7 @@ use App\Http\Requests\User\Ai\SymptomQuestionsRequest;
 use App\Http\Requests\User\Ai\SymptomsRequest;
 use App\Services\Api\AiService;
 use App\Traits\ApiResponseTrait;
+use Illuminate\Http\Request;
 
 
 class AiController extends Controller
@@ -34,7 +35,7 @@ class AiController extends Controller
     //************************************************* */
     public function searchSymptoms(SymptomsRequest $request)
     {
-        $result = $this->aiService->searchSymptoms($request->query('q', ''));
+        $result = $this->aiService->searchSymptoms($request->query('q', ''), $request->query('model_name'));
 
         if ($result === null) {
             return $this->errorResponse('Diagnosis service error. Please check storage/logs/laravel.log for details', null, 503);
@@ -76,9 +77,9 @@ class AiController extends Controller
         return $this->successResponse($result, 'Answer submitted successfully', 200);
     }
 //*************************************************************** */
-    public function getDiagnosisHistory()
+    public function getDiagnosisHistory(Request $request)
     {
-        $result = $this->aiService->getDiagnosisHistory(auth()->user()->id);
+        $result = $this->aiService->getDiagnosisHistory(auth()->user()->id, $request->query('language_code', 'en'));
 
         if ($result === null) {
             return $this->errorResponse('Diagnosis service error. Please check storage/logs/laravel.log for details', null, 503);
