@@ -29,7 +29,7 @@ Route::prefix('v1/auth')->group(function () {
     Route::get('/privacyPolicy', [settingController::class, 'privacyPolicyUrl']);
 
     Route::middleware(['auth:sanctum'])->group(function () {
-
+        
         Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:user-logout');
         // Profile routes
         Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
@@ -44,29 +44,27 @@ Route::prefix('v1/auth')->group(function () {
         Route::get('/diagnose/history', [AiController::class, 'getDiagnosisHistory'])->middleware('permission:view-medical-history');
 
         // Report routes
-        Route::post('/reports/{sessionId}/generate', [ReportController::class, 'generate'])->middleware('permission:download-report');
+        Route::post('/reports/{sessionId}/generate', [ReportController::class, 'generate'])->middleware('permission:generate-report');
         Route::get('/reports/{sessionId}/download', [ReportController::class, 'download'])->middleware('permission:download-report');
-        Route::get('/reports/{sessionId}/preview', [ReportController::class, 'preview'])->middleware('permission:download-report');
+        Route::get('/reports/{sessionId}/preview', [ReportController::class, 'preview'])->middleware('permission:preview-report');
 
         // Payment routes
-        Route::post('/payments/create-intent', [PaymentController::class, 'createIntent']);
-        Route::get('/payments/{paymentIntentId}/status', [PaymentController::class, 'status']);
+        Route::post('/payments/create-intent', [PaymentController::class, 'createIntent'])->middleware('permission:create-intent');
+        Route::get('/payments/{paymentIntentId}/status', [PaymentController::class, 'status'])->middleware('permission:status-payment-intent');
 
         // Check if the user is authenticated
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
         // Notifications routes
-       Route::prefix('notifications')->group(function () {
-       Route::get('/', [NotificationController::class, 'index']);
-       Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
-       Route::delete('/destroy-all', [NotificationController::class, 'destroyAll']);
-       Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications']);
-
-       Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead']);
-       Route::patch('/{notificationId}/unread', [NotificationController::class, 'markAsUnread']);
-       Route::delete('/{notificationId}', [NotificationController::class, 'destroy']);
-     });
-        
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [NotificationController::class, 'index'])->middleware('permission:show-all-notifications');
+            Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:mark-all-as-read-notifications');
+            Route::delete('/destroy-all', [NotificationController::class, 'destroyAll'])->middleware('permission:destroy-all-notifications');
+            Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications'])->middleware('permission:show-count-unread-notifications');
+            Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:mark-as-read-notifications');
+            Route::patch('/{notificationId}/unread', [NotificationController::class, 'markAsUnread'])->middleware('permission:mark-as-unread-notifications');
+            Route::delete('/{notificationId}', [NotificationController::class, 'destroy'])->middleware('permission:destroy-notification');
+        });
     });
     
 });

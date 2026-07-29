@@ -17,6 +17,7 @@ class SymptomsRequest extends FormRequest
     {
         return [
             'q' => 'nullable|string|max:255',
+            'model_name' => 'nullable|string',
         ];
     }
 

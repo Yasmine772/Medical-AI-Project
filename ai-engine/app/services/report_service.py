@@ -5,6 +5,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from app.state import get_session_manager
+from app.services.i18n import from_english
 
 REPORTS_DIR = Path(__file__).resolve().parent.parent.parent / "reports"
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -105,7 +106,31 @@ def _format_timestamp(ts: str | None) -> str:
         return ts[:19] if ts else "—"
 
 
-def build_report_json(session_id: str) -> dict:
+def _extract_patient_info(data: dict) -> dict:
+    """Extract patient demographics from session data."""
+    candidates = data.get("candidates") or {}
+    if isinstance(candidates, str):
+        try:
+            candidates = json.loads(candidates)
+        except (json.JSONDecodeError, TypeError):
+            candidates = {}
+    baseline = candidates.get("baseline") or {}
+    display_name = baseline.get("patient_name") or data.get("user_id", "—")
+    return {
+        "display_name": display_name,
+        "user_id": data.get("user_id", "—"),
+        "gender": baseline.get("gender", ""),
+        "age": baseline.get("age"),
+        "is_smoker": baseline.get("is_smoker", False),
+        "has_diabetes": baseline.get("has_diabetes", False),
+        "has_hypertension": baseline.get("has_hypertension", False),
+        "is_pregnant": baseline.get("is_pregnant"),
+        "activity_level": baseline.get("activity_level", ""),
+        "assessment_for": baseline.get("assessment_for", ""),
+    }
+
+
+def build_report_json(session_id: str, language_code: str = "en") -> dict:
     sm = get_session_manager()
     data = sm.get_session(session_id)
     if not data:
@@ -116,9 +141,14 @@ def build_report_json(session_id: str) -> dict:
     advice = _extract_advice(diagnoses)
 
     for d in diagnoses:
-        d["disease_name_local"] = d.get("disease_name_local") or d.get("disease_name_ar") or d.get("disease_name", "")
-        d["specialist_local"] = d.get("specialist_local") or d.get("specialist_ar") or d.get("specialist", "")
-        d["advice_local"] = d.get("advice_local") or d.get("advice", "")
+        if language_code != "en":
+            d["disease_name_local"] = from_english(d.get("disease_name", ""), language_code) or d.get("disease_name", "")
+            d["specialist_local"] = from_english(d.get("specialist", ""), language_code) or d.get("specialist", "")
+            d["advice_local"] = from_english(d.get("advice", ""), language_code) or d.get("advice", "")
+        else:
+            d["disease_name_local"] = d.get("disease_name_local") or d.get("disease_name_ar") or d.get("disease_name", "")
+            d["specialist_local"] = d.get("specialist_local") or d.get("specialist_ar") or d.get("specialist", "")
+            d["advice_local"] = d.get("advice_local") or d.get("advice", "")
 
     conversation = data.get("conversation") or []
     if isinstance(conversation, str):
@@ -142,9 +172,20 @@ def build_report_json(session_id: str) -> dict:
                 pass
         transcript.append({"role": role, "text": content})
 
+    patient_info = _extract_patient_info(data)
     return {
         "session_id": session_id,
-        "patient_name": data.get("user_id", "—"),
+        "patient_name": patient_info["display_name"],
+        "user_id": patient_info["user_id"],
+        "patient_info": {
+            "gender": patient_info["gender"],
+            "age": patient_info["age"],
+            "is_smoker": patient_info["is_smoker"],
+            "has_diabetes": patient_info["has_diabetes"],
+            "has_hypertension": patient_info["has_hypertension"],
+            "is_pregnant": patient_info["is_pregnant"],
+            "activity_level": patient_info["activity_level"],
+        },
         "started_at": _format_timestamp(data.get("created_at")),
         "completed_at": _format_timestamp(data.get("updated_at")),
         "status": data.get("status", "COMPLETED"),
@@ -154,7 +195,7 @@ def build_report_json(session_id: str) -> dict:
     }
 
 
-def generate_report_html(session_id: str) -> str:
+def generate_report_html(session_id: str, language_code: str = "en") -> str:
     sm = get_session_manager()
     data = sm.get_session(session_id)
     if not data:
@@ -164,6 +205,32 @@ def generate_report_html(session_id: str) -> str:
     diagnoses = _extract_diagnoses(data)
     advice = _extract_advice(diagnoses)
 
+    candidates = data.get("candidates") or {}
+    if isinstance(candidates, str):
+        try:
+            candidates = json.loads(candidates)
+        except (json.JSONDecodeError, TypeError):
+            candidates = {}
+
+    # Translate diagnoses if requested
+    if language_code != "en":
+        for d in diagnoses:
+            d["disease_name_local"] = from_english(d.get("disease_name", ""), language_code) or d.get("disease_name", "")
+            d["disease_name_ar"] = d["disease_name_local"]
+            d["specialist_local"] = from_english(d.get("specialist", ""), language_code) or d.get("specialist", "")
+            d["advice_local"] = from_english(d.get("advice", ""), language_code) or d.get("advice", "")
+            d["reasoning_local"] = from_english(d.get("reasoning", ""), language_code) or d.get("reasoning", "")
+
+    # Resolve real initial symptom from selected_symptoms
+    selected = candidates.get("selected_symptoms") or []
+    initial_symptom = "—"
+    if selected:
+        first = selected[0]
+        initial_symptom = (first.get("name_local") or first.get("name_en") or "—")
+
+    # Localize advice string if requested
+    advice_local = from_english(advice, language_code) if language_code != "en" and advice else advice
+
     conversation = data.get("conversation") or []
     if isinstance(conversation, str):
         try:
@@ -171,23 +238,47 @@ def generate_report_html(session_id: str) -> str:
         except (json.JSONDecodeError, TypeError):
             conversation = []
 
+    patient_info = _extract_patient_info(data)
+
+    # Translate patient-facing fields if requested
+    if language_code != "en":
+        if patient_info["gender"]:
+            patient_info["gender"] = from_english(patient_info["gender"], language_code) or patient_info["gender"]
+        if patient_info["activity_level"]:
+            patient_info["activity_level"] = from_english(patient_info["activity_level"], language_code) or patient_info["activity_level"]
+        patient_info["is_smoker_label"] = from_english("Yes" if patient_info["is_smoker"] else "No", language_code)
+        patient_info["has_diabetes_label"] = from_english("Yes" if patient_info["has_diabetes"] else "No", language_code)
+        patient_info["has_hypertension_label"] = from_english("Yes" if patient_info["has_hypertension"] else "No", language_code)
+        if patient_info["is_pregnant"] is not None:
+            patient_info["is_pregnant_label"] = from_english("Yes" if patient_info["is_pregnant"] else "No", language_code)
+    else:
+        patient_info["is_smoker_label"] = "Yes" if patient_info["is_smoker"] else "No"
+        patient_info["has_diabetes_label"] = "Yes" if patient_info["has_diabetes"] else "No"
+        patient_info["has_hypertension_label"] = "Yes" if patient_info["has_hypertension"] else "No"
+        if patient_info["is_pregnant"] is not None:
+            patient_info["is_pregnant_label"] = "Yes" if patient_info["is_pregnant"] else "No"
+
     template = env.get_template("report.html")
     html = template.render(
         generation_date=datetime.now().strftime("%Y-%m-%d %H:%M"),
-        patient_name=data.get("user_id", "—"),
+        patient_name=patient_info["display_name"],
+        user_id=patient_info["user_id"],
+        patient_info=patient_info,
+        language_code=language_code,
         started_at=_format_timestamp(data.get("created_at")),
         completed_at=_format_timestamp(data.get("updated_at")),
-        initial_symptoms=data.get("initial_symptoms", "—"),
+        initial_symptoms=initial_symptom,
         session_status=data.get("status", "COMPLETED"),
         top_diagnoses=diagnoses,
         advice=advice,
+        advice_local=advice_local,
         conversation=conversation,
     )
     return html
 
 
-def generate_pdf(session_id: str) -> bytes:
-    html = generate_report_html(session_id)
+def generate_pdf(session_id: str, language_code: str = "en") -> bytes:
+    html = generate_report_html(session_id, language_code)
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -198,15 +289,15 @@ def generate_pdf(session_id: str) -> bytes:
     return pdf_bytes
 
 
-def save_pdf(session_id: str, pdf_bytes: bytes) -> str:
+def save_pdf(session_id: str, pdf_bytes: bytes, language_code: str = "en") -> str:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    filepath = REPORTS_DIR / f"{session_id}.pdf"
+    filepath = REPORTS_DIR / f"{session_id}_{language_code}.pdf"
     filepath.write_bytes(pdf_bytes)
     return str(filepath)
 
 
-def get_pdf_path(session_id: str) -> str | None:
-    filepath = REPORTS_DIR / f"{session_id}.pdf"
+def get_pdf_path(session_id: str, language_code: str = "en") -> str | None:
+    filepath = REPORTS_DIR / f"{session_id}_{language_code}.pdf"
     if filepath.exists():
         return str(filepath)
     return None

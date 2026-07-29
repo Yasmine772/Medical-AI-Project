@@ -11,8 +11,7 @@ class EventServiceProvider extends ServiceProvider
      */
     protected $listen = [
         \App\Events\DoctorRegisterEvent::class => [
-            \App\Listeners\CreateDoctorListener::class,
-            \App\Listeners\SendWelcomeEmailListener::class,
+            \App\Listeners\RegisterNewDoctorListener::class,
         ],
     ];
 

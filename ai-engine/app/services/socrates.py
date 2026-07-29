@@ -32,7 +32,11 @@ def format_candidates(results: list) -> str:
     return "\n\n".join(lines)
 
 
-def parse_llm_response(content: str) -> dict:
+def parse_llm_response(content) -> dict:
+    if isinstance(content, dict):
+        return content
+    if not isinstance(content, str):
+        return {"type": "error", "raw": str(content)[:300]}
     content = content.strip()
     start = content.find("{")
     end = content.rfind("}")

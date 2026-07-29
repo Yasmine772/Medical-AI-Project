@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\DoctorRequest;
+use App\Models\User;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -18,9 +19,12 @@ class DoctorRegisterEvent implements ShouldQueue
      * Create a new event instance.
      */
     public DoctorRequest $doctorRequest;
-    public function __construct(DoctorRequest $doctorRequest)
+    public User $user;
+
+    public function __construct(DoctorRequest $doctorRequest, User $user)
     {
         $this->doctorRequest = $doctorRequest;
+        $this->user = $user;
     }
 
     /**

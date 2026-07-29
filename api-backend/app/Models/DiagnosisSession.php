@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class DiagnosisSession extends Model
 {
     protected $fillable = [
+        'session_hash',
         'status',
         'pdf_file_path',
         'user_id',
