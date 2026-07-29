@@ -39,6 +39,9 @@ jobs:
           script: |
             cd /home/azureuser/app
 
+            # Remove old lowercase web directory (if any)
+            rm -rf api-backend/app/Http/Controllers/web
+
             # Laravel .env
             cat > api-backend/.env << 'ENVEOF'
             APP_NAME=MediScan
@@ -91,7 +94,7 @@ jobs:
             DEBUG=false
             ENVEOF
 
-            docker compose build
+            docker compose build --no-cache
             docker compose up -d
             sleep 10
             docker exec laravel-app php artisan migrate --force
