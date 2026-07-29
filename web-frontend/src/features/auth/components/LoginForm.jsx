@@ -32,7 +32,7 @@ const LoginForm = () => {
 
       console.log("Login Response Data:", response.data);
 
-      const token = response.data.data?.accessToken;
+      const token = response.data.data?.access_token;
 
       if (token) {
         // when we found token go to dashboard

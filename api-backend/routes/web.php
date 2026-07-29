@@ -75,6 +75,7 @@ Route::prefix('admin')->group(function () {
             Route::patch('approve/{id}', [DoctorController::class, 'approve'])->middleware('permission:approve-doctor-request');
             Route::patch('reject/{id}', [DoctorController::class, 'reject'])->middleware('permission:reject-doctor-request');
         });
+        
     });
 
     Route::prefix('notifications')->group(function () {
