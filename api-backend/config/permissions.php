@@ -31,16 +31,25 @@ return [
         'reject-doctor-request',
         'view-tracking-data',
 
-        // patient
-        'start-diagnose', 'search-symptom', 'view-symptom-questions', 'continue-diagnose',
+
+        //doctor
+        'doctor-logout',
+
+        //patient
+        'user-logout',
+        'start-diagnose',
+        'search-symptom',
+        'view-symptom-questions',
+        'continue-diagnose',
         'view-medical-history',
-        'generate-report', 'download-report', 'preview-report',
-        'create-intent', 'status-payment-intent',
-        'destroy-all-notifications', 'destroy-notification', 'mark-as-unread-notifications',
-
-        // doctor
-        'doctor-logout'
-
+        'generate-report',
+        'download-report',
+        'preview-report',
+        'create-intent',
+        'status-payment-intent',
+        'mark-as-unread-notifications',
+        'destroy-all-notifications',
+        'destroy-notification', 
 
     ],
 
