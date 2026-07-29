@@ -93,4 +93,4 @@ jobs:
             docker exec laravel-app php artisan storage:link --force
 
       - name: Stop VM
-        run: az vm stop -g medical-ai-rg -n medical-ai-vm
+        run: az vm deallocate -g medical-ai-rg -n medical-ai-vm
