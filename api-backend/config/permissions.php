@@ -28,10 +28,8 @@ return [
         'show-doctor-request-details',
         'approve-doctor-request',
         'reject-doctor-request',
-<<<<<<< HEAD
         'view-tracking-data'
 
-=======
 
         //doctor
         'doctor-logout',
@@ -51,7 +49,6 @@ return [
         'mark-as-unread-notifications',
         'destroy-all-notifications',
         'destroy-notification', 
->>>>>>> main
 
     ],
 
@@ -80,16 +77,6 @@ return [
         ],
 
         'patient' => [
-<<<<<<< HEAD
-            'edit-profile', 'view-profile', 'search-symptom',
-            'view-symptom-questions', 'submit-symptom-answers',
-            'start-diagnose', 'continue-diagnose', 'download-report', 'contact-doctor',
-            'cancel-diagnose-session',
-            'recieve-notifications', 'view-notifications',
-            'make-notification-as-read', 'view-medical-history',
-            'view-tracking-data','user-logout',
-=======
->>>>>>> main
             'user-logout',
 
             'view-profile', 'edit-profile',
