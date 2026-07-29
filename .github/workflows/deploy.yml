@@ -39,9 +39,6 @@ jobs:
           script: |
             cd /home/azureuser/app
 
-            # Remove old lowercase web directory (if any)
-            rm -rf api-backend/app/Http/Controllers/web
-
             # Laravel .env
             cat > api-backend/.env << 'ENVEOF'
             APP_NAME=MediScan
@@ -79,6 +76,7 @@ jobs:
             ENVEOF
 
             # Firebase credentials
+            mkdir -p api-backend/storage/app
             cat > api-backend/storage/app/firebase-credentials.json << 'FIREBASEEOF'
             ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
             FIREBASEEOF
@@ -94,7 +92,7 @@ jobs:
             DEBUG=false
             ENVEOF
 
-            docker compose build --no-cache
+            docker compose build
             docker compose up -d
             sleep 10
             docker exec laravel-app php artisan migrate --force
