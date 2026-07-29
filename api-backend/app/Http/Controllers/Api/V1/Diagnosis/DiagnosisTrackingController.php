@@ -16,11 +16,11 @@ class DiagnosisTrackingController extends Controller
         protected DiagnosisTrackingService $trackingService
     ) {}
 
-    public function getTracking(Request $request, int $sessionId): JsonResponse
+    public function getTracking(Request $request, string $sessionHash): JsonResponse
     {
         $data = $this->trackingService->getTrackingData(
             $request->user()->id,
-            $sessionId
+            $sessionHash
         );
 
         if (!$data) {

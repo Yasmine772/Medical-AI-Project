@@ -71,6 +71,7 @@ class AiService
                 DiagnosisSession::create([
                     'session_hash' => $sessionId,
                     'status' => 'ACTIVE',
+                    'phase'  => 'doctor_review',
                     'pdf_file_path' => null,
                     'user_id' => $user->id,
                     'started_at' => now(),
@@ -190,23 +191,7 @@ class AiService
                 ]);
 
             if ($response->successful()) {
-                $responseData = $response->json();
-
-                $responseType = $responseData['data']['response_type'] ?? null;
-
-                if ($responseType === 'diagnosis') {
-                    $currentSession = DiagnosisSession::where('user_id', $user->id)
-                        ->where('status', 'ACTIVE')
-                        ->first();
-
-                    if ($currentSession) {
-                        $currentSession->update([
-                            'status' => 'COMPLETED',
-                            'completed_at' => now(),
-                        ]);
-                    }
-                }
-                return $responseData;
+                return $response->json();
             }
             Log::error('FastAPI submit diagnosis answer failed', ['body' => $response->body()]);
 
@@ -258,7 +243,14 @@ class AiService
                 ->post($this->fastApiUrl."/generate-report/{$sessionId}", ['language_code' => $languageCode]);
 
             if ($response->successful()) {
-                return $response->json();
+                $result = $response->json();
+
+                DiagnosisSession::where('session_hash', $sessionId)->update([
+                    'phase'               => 'completed',
+                    'report_generated_at' => now(),
+                ]);
+
+                return $result;
             }
 
             Log::error('FastAPI generate-report failed', [

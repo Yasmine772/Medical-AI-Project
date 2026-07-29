@@ -11,6 +11,7 @@ return [
         'mark-as-read-notifications',
         //admin
         'admin-logout',
+        'user-logout',
         'view-users',
         'toggle-user',
         'show-logs',
@@ -28,30 +29,18 @@ return [
         'show-doctor-request-details',
         'approve-doctor-request',
         'reject-doctor-request',
-<<<<<<< HEAD
-        'view-tracking-data'
+        'view-tracking-data',
 
-=======
-
-        //doctor
-        'doctor-logout',
-
-        //patient
-        'user-logout',
-        'start-diagnose',
-        'search-symptom',
-        'view-symptom-questions',
-        'continue-diagnose',
+        // patient
+        'start-diagnose', 'search-symptom', 'view-symptom-questions', 'continue-diagnose',
         'view-medical-history',
-        'generate-report',
-        'download-report',
-        'preview-report',
-        'create-intent',
-        'status-payment-intent',
-        'mark-as-unread-notifications',
-        'destroy-all-notifications',
-        'destroy-notification', 
->>>>>>> main
+        'generate-report', 'download-report', 'preview-report',
+        'create-intent', 'status-payment-intent',
+        'destroy-all-notifications', 'destroy-notification', 'mark-as-unread-notifications',
+
+        // doctor
+        'doctor-logout'
+
 
     ],
 
@@ -80,16 +69,6 @@ return [
         ],
 
         'patient' => [
-<<<<<<< HEAD
-            'edit-profile', 'view-profile', 'search-symptom',
-            'view-symptom-questions', 'submit-symptom-answers',
-            'start-diagnose', 'continue-diagnose', 'download-report', 'contact-doctor',
-            'cancel-diagnose-session',
-            'recieve-notifications', 'view-notifications',
-            'make-notification-as-read', 'view-medical-history',
-            'view-tracking-data','user-logout',
-=======
->>>>>>> main
             'user-logout',
 
             'view-profile', 'edit-profile',
