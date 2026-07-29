@@ -10,15 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create Firebase credentials file
-        env:
-          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
-        run: |
-          mkdir -p api-backend/storage/app
-          cat > api-backend/storage/app/firebase-credentials.json << EOF
-          $FIREBASE_CREDENTIALS
-          EOF
-
       - name: Azure login
         uses: azure/login@v3
         with:
