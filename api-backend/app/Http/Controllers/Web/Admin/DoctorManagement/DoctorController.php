@@ -45,10 +45,10 @@ class DoctorController extends Controller
     public function show(int $id)
     {
         $doctorReq = $this->doctorService->show($id);
-        if($doctorReq === null) {
-            return $this->errorResponse('Doctor request not found!', null, 404);    
+        if ($doctorReq === null) {
+            return $this->errorResponse('Doctor request not found!', null, 404);
         }
-        return $this->successResponse($doctorReq, 'Doctor request retrieved successfully!', 200); 
+        return $this->successResponse($doctorReq, 'Doctor request retrieved successfully!', 200);
     }
 //************************************************************ */
     /**
@@ -64,10 +64,13 @@ class DoctorController extends Controller
     public function approve(int $id)
     {
         $doctorReq = $this->doctorService->approve($id);
-        if($doctorReq === null) {
-            return $this->errorResponse('Doctor request not found!', null, 404);    
+        if ($doctorReq === null) {
+            return $this->errorResponse('Doctor request not found!', null, 404);
         }
-        return $this->successResponse($doctorReq, 'Doctor request approved successfully!', 200);
+        if ($doctorReq === 'DoctorExist') {
+            return $this->errorResponse('Doctor exist!', null, 404);
+        }
+        return $this->successResponse(null, 'Doctor request approved successfully!', 200);
     }
 //************************************************************ */
     /**
@@ -80,13 +83,13 @@ class DoctorController extends Controller
      * @note Requires Queue Worker ==> php artisan queue:work
      * @note Sends rejection email to doctor
      */
-    public function reject(int $id , RejectDoctorRequest $request)
+    public function reject(int $id, RejectDoctorRequest $request)
     {
         $result = $this->doctorService->reject($id, $request->validated());
-        if($result === null) {
-            return $this->errorResponse('Doctor request not found!', null, 404);    
+        if ($result === null) {
+            return $this->errorResponse('Doctor request not found!', null, 404);
         }
-        return $this->successResponse($result, 'Doctor request rejected successfully!', 200);
+        return $this->successResponse(null, 'Doctor request rejected successfully!', 200);
     }
     //************************************************************ */
     /**
@@ -99,12 +102,8 @@ class DoctorController extends Controller
      */
     public function sendJoinRequest(DoctorRequest $request)
     {
-        $doctorRequest = $this->doctorService->sendJoinRequest($request->validated());
-        
-        if($doctorRequest == null){
-            return $this->errorResponse('Error', 'Failed to send doctor request, check laravel.log file for more details!', 500 );
-        }
-        return $this->successResponse(null, 'Doctor join request sent successfully!',200);
+        $this->doctorService->sendJoinRequest($request->validated());
+        return $this->successResponse(null, 'Doctor join request sent successfully!', 200);
     }
 
     

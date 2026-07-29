@@ -31,6 +31,8 @@ return [
 
         //doctor
         'doctor-logout',
+        'get-doctor-summary',
+        'update-availability',
 
         //patient
         'user-logout',
@@ -96,6 +98,8 @@ return [
 
         'doctor' => [
             'doctor-logout',
+            'get-doctor-summary',
+            'update-availability',
 
         ],
     ],
