@@ -1,37 +1,40 @@
 import { useSelector, useDispatch } from "react-redux";
-import { useOutletContext } from "react-router-dom";
 
-import { approveDoctor, rejectDoctor } from "../doctorsSlice";
+import { useEffect } from "react";
+import { fetchDoctorRequests } from "../doctorRequestsSlice";
 import JoinRequestCard from "./JoinRequestCard";
 
-const JoinRequestsList = () => {
-  const requests = useSelector((state) => state.doctors?.pending || []);
+const JoinRequestsList = ({ onViewDetails }) => {
   const dispatch = useDispatch();
+
   
-  const { setActionModal } = useOutletContext(); 
+  const { requests, loading, error } = useSelector(
+    (state) => state.doctorRequests,
+  );
+
+  useEffect(() => {
+    dispatch(fetchDoctorRequests());
+  }, [dispatch]);
+
+  if (loading)
+    return (
+      <div className="text-center py-10 text-gray-500">Loading requests...</div>
+    );
+  if (error)
+    return <div className="text-center py-10 text-red-500">Error: {error}</div>;
 
   return (
     <div className="mt-6">
       {requests.length > 0 ? (
-        requests.map((req) => (
+        requests.map((doctor) => (
           <JoinRequestCard
-            key={req.id}
-            doctor={req}
-           
-            onApprove={() => setActionModal({ 
-                isOpen: true, 
-                type: "Approve", 
-                onConfirm: () => dispatch(approveDoctor(req.id)) 
-            })}
-            onReject={() => setActionModal({ 
-                isOpen: true, 
-                type: "Reject", 
-                onConfirm: () => dispatch(rejectDoctor(req.id)) 
-            })}
+            key={doctor.id}
+            doctor={doctor}
+            onViewDetails={onViewDetails} 
           />
         ))
       ) : (
-        <p>No pending requests.</p>
+        <p className="text-center py-6 text-gray-500">No pending requests.</p>
       )}
     </div>
   );

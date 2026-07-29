@@ -1,8 +1,23 @@
 import LoginForm from "../components/LoginForm";
 import logoImg from "../../../assets/medical-logo.png";
 import medicalImg from "../../../assets/medical-illustration.png";
+import { useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const LoginPage = () => {
+  const [searchParams] = useSearchParams();
+  const role = searchParams.get("role");
+  const navigate = useNavigate();
+  const { isAuthenticated } = useSelector((state) => state.auth);
+
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/app/dashboard"); // if authenticated dont show otp verification
+    }
+  }, [isAuthenticated, navigate]);
   return (
     
     <div className="min-h-screen w-full bg-[#BACED6] flex items-center justify-center p-6 antialiased font-sans relative overflow-hidden">
@@ -125,7 +140,8 @@ const LoginPage = () => {
           </div>
 
          
-          <LoginForm />
+
+          <LoginForm role={role} />
         </div>
       </div>
     </div>

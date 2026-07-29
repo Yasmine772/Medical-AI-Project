@@ -1,15 +1,17 @@
 import { useState } from "react"; 
-
 import DoctorsTable from "../components/DoctorsTable";
-
 import JoinRequestsList from "../components/JoinRequestsList";
+import ContractDetails from "../components/ContractDetails";
 
 const DoctorsManagementPage = () => {
-  
-  
-
- 
   const [activeTab, setActiveTab] = useState("Doctors Directory");
+  const [selectedDoctorId, setSelectedDoctorId] = useState(null); // id doctor
+
+  
+  const handleViewDetails = (doctorId) => {
+    setSelectedDoctorId(doctorId);
+    setActiveTab("Contract Details");
+  };
 
   return (
     <div className="w-full">
@@ -19,17 +21,20 @@ const DoctorsManagementPage = () => {
           <h1 className="text-4xl font-bold text-gray-800">
             Doctors Management
           </h1>
-         
-          
         </div>
 
-       
         <div className="flex gap-4 border-b border-gray-200 pb-2">
           {["Doctors Directory", "Join Requests", "Contract Details"].map(
             (tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)} 
+                onClick={() => {
+                  setActiveTab(tab);
+                  
+                  if (tab !== "Contract Details") {
+                    setSelectedDoctorId(null);
+                  }
+                }} 
                 className={`px-4 py-2 transition-all duration-300 ${
                   activeTab === tab
                     ? "text-[#72A6BB] border-b-2 border-[#72A6BB] font-bold" 
@@ -43,26 +48,32 @@ const DoctorsManagementPage = () => {
         </div>
 
       {/* template */}
-        
         <div className="bg-white/30 backdrop-blur-md p-6 rounded-3xl border border-white/50">
           {activeTab === "Doctors Directory" && (
-            <DoctorsTable  />
+            <DoctorsTable />
           )}
 
           {activeTab === "Join Requests" && (
-            <JoinRequestsList />
+            <JoinRequestsList onViewDetails={handleViewDetails} />
           )}
 
           {activeTab === "Contract Details" && (
-            <div className="text-gray-500 text-center py-10">
-              Contract Details Section Coming Soon...
-            </div>
+            selectedDoctorId ? (
+              <ContractDetails 
+                doctorId={selectedDoctorId} 
+                onBack={() => {
+                  setActiveTab("Join Requests");
+                  setSelectedDoctorId(null);
+                }} 
+              />
+            ) : (
+              <div className="text-gray-500 text-center py-10">
+                Please select a doctor request first from the "Join Requests" tab.
+              </div>
+            )
           )}
         </div>
       </div>
-
-     
-      
     </div>
   );
 };
