@@ -4,9 +4,9 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\settingController;
 use App\Http\Controllers\Api\V1\User\NotificationController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\web\Admin\AuditLogs\AuditContoller;
+use App\Http\Controllers\Web\Admin\AuditLogs\AuditContoller;
 use App\Http\Controllers\Web\Admin\Dashboard\DashboardController;
-use App\Http\Controllers\web\Admin\UserManagement\UserController;
+use App\Http\Controllers\Web\Admin\UserManagement\UserController;
 use App\Http\Controllers\Web\Auth\AuthController as WebAuthController;
 use App\Http\Controllers\Web\DoctorManagement\DoctorController;
 
