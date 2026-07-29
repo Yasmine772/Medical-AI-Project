@@ -1,5 +1,5 @@
 # Use the official PHP image with Apache
-FROM php:8.2-apache
+FROM php:8.5-apache
 
 # Install required system dependencies
 RUN apt-get update && apt-get install -y \
@@ -24,7 +24,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY . /var/www/html
 
 # Install dependencies
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --optimize-autoloader
 
 # Set directory permissions
 RUN chown -R www-data:www-data /var/www/html \

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MySQL
   database:
@@ -27,6 +25,8 @@ services:
     restart: always
     ports:
       - "8080:80"
+    volumes:
+      - laravel_storage:/var/www/html/storage
     environment:
       - DB_CONNECTION=mysql
       - DB_HOST=database
@@ -56,6 +56,32 @@ services:
     depends_on:
       - laravel-app
 
+  # Queue Worker
+  queue-worker:
+    build:
+      context: ./api-backend
+      dockerfile: Dockerfile
+    container_name: queue-worker
+    restart: always
+    command: php artisan queue:work
+    volumes:
+      - laravel_storage:/var/www/html/storage
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_DATABASE=laravel_db
+      - DB_USERNAME=laravel_user
+      - DB_PASSWORD=laravel_password
+      - FASTAPI_URL=http://ai-engine:5000
+      - APP_ENV=production
+      - APP_DEBUG=false
+    depends_on:
+      - database
+      - laravel-app
+    networks:
+      - app-network
+
   # AI Engine (Python)
   ai-engine:
     build:
@@ -65,6 +91,8 @@ services:
     restart: always
     ports:
       - "5000:5000"
+    volumes:
+      - ai_reports:/app/reports
     environment:
       - PYTHONUNBUFFERED=1
     depends_on:
@@ -78,3 +106,5 @@ networks:
 
 volumes:
   db_data:
+  laravel_storage:
+  ai_reports:
