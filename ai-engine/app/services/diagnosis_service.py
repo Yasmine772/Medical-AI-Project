@@ -102,7 +102,7 @@ class DiagnosisService:
         lang = candidates.get("language", "en")
 
         name_en = result.get("name_en") or result.get("name") or "unknown"
-        name_local = result.get("name_local") or result.get("name_ar") or name_en
+        name_local = from_english(name_en, lang) if lang != "en" else name_en
         query_text = result.get("search_query") or name_en
         snippet = result.get("snippet") or result.get("document") or ""
 
@@ -201,7 +201,7 @@ Respond ONLY with valid JSON:
                         results.append(
                             {
                                 "name_en": disease_name,
-                                "name_local": "",
+                                "name_local": from_english(disease_name, lang) if lang != "en" else disease_name,
                                 "symptoms_en": (it.get("summary") or "").strip()[:500],
                                 "specialist": (
                                     it.get("specialist") or "General"
@@ -324,7 +324,7 @@ Respond ONLY with valid JSON:
         if socrates_axis >= 3 and socrates_axis % 3 == 0:
             log("VECTOR", f"Re-search at axis {socrates_axis}")
             probabilities = self._re_search(
-                conversation, diseases, probabilities, model_name=model_name
+                conversation, diseases, probabilities, lang, model_name=model_name
             )
 
         questions_on_current = candidates.get("questions_on_current", 0) + 1
@@ -640,15 +640,8 @@ Respond ONLY with valid JSON:
                 text = (
                     d.get("document") or d.get("snippet") or d.get("name_en") or ""
                 )[:800]
-                ar_name = d.get("name_ar") or ""
-                ar_sym = d.get("symptoms_ar") or ""
-                ar_block = ""
-                if ar_name or ar_sym:
-                    ar_block = (
-                        f"\n  Arabic reference: name='{ar_name}' symptoms='{ar_sym}'"
-                    )
                 chunks.append(
-                    f"[PASSAGE id={key} weight={round(prob,2)}]\n{text}{ar_block}"
+                    f"[PASSAGE id={key} weight={round(prob,2)}]\n{text}"
                 )
             candidates_text = "\n\n".join(chunks)
             probs_text = "\n".join(f"  {k}: {v*100:.0f}%" for k, v in top)
@@ -810,6 +803,7 @@ Respond ONLY with valid JSON:
         conversation: list,
         existing_diseases: list,
         existing_probs: dict,
+        lang: str = "en",
         model_name: str = None,
     ) -> dict:
         user_texts = [
@@ -819,7 +813,7 @@ Respond ONLY with valid JSON:
             return existing_probs
 
         query = " | ".join(user_texts[-5:])
-        query_vector = self.embedder.encode(query)
+        query_vector = self.embedder.encode_query(query)
         results = self.store.search(query_vector, limit=10) or []
 
         log(
@@ -897,7 +891,7 @@ Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Special
                             existing_diseases.append(
                                 {
                                     "name_en": name,
-                                    "name_local": "",
+                                    "name_local": from_english(name, lang) if lang != "en" else name,
                                     "symptoms_en": combined_text,
                                     "specialist": spec,
                                     "similarity": max_sim if max_sim > 0 else 0.5,
@@ -922,7 +916,7 @@ Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Special
                     existing_diseases.append(
                         {
                             "name_en": name,
-                            "name_local": "",
+                            "name_local": from_english(name, lang) if lang != "en" else name,
                             "symptoms_en": combined_text,
                             "specialist": "General",
                             "similarity": max_sim if max_sim > 0 else 0.5,

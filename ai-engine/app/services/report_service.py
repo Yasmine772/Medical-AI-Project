@@ -74,7 +74,6 @@ def _extract_diagnoses(data: dict) -> list:
                 info = disease_map.get(name, {})
                 diagnoses.append({
                     "disease_name": name,
-                    "disease_name_ar": info.get("name_ar") or "",
                     "confidence": "Strong" if i == 0 else "Moderate" if i == 1 else "Less Likely",
                     "probability": prob,
                     "specialist": info.get("specialist") or "",
@@ -146,7 +145,7 @@ def build_report_json(session_id: str, language_code: str = "en") -> dict:
             d["specialist_local"] = from_english(d.get("specialist", ""), language_code) or d.get("specialist", "")
             d["advice_local"] = from_english(d.get("advice", ""), language_code) or d.get("advice", "")
         else:
-            d["disease_name_local"] = d.get("disease_name_local") or d.get("disease_name_ar") or d.get("disease_name", "")
+            d["disease_name_local"] = d.get("disease_name_local") or d.get("disease_name", "")
             d["specialist_local"] = d.get("specialist_local") or d.get("specialist_ar") or d.get("specialist", "")
             d["advice_local"] = d.get("advice_local") or d.get("advice", "")
 
@@ -216,7 +215,6 @@ def generate_report_html(session_id: str, language_code: str = "en") -> str:
     if language_code != "en":
         for d in diagnoses:
             d["disease_name_local"] = from_english(d.get("disease_name", ""), language_code) or d.get("disease_name", "")
-            d["disease_name_ar"] = d["disease_name_local"]
             d["specialist_local"] = from_english(d.get("specialist", ""), language_code) or d.get("specialist", "")
             d["advice_local"] = from_english(d.get("advice", ""), language_code) or d.get("advice", "")
             d["reasoning_local"] = from_english(d.get("reasoning", ""), language_code) or d.get("reasoning", "")

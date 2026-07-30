@@ -21,8 +21,8 @@ async def search_symptoms(
         return {"status": "success", "data": {"query": q, "results": []}}
 
     query_en = to_english(q.strip()).lower()
-    query_vector = embedder.encode(query_en)
-    results = store.search(query_vector, limit=10) or []
+    query_vector = embedder.encode_query(query_en)
+    results = store.search(query_vector, limit=20) or []
     log("SYMPTOMS", f"Vector search: {len(results)} results for '{query_en[:50]}' (original: '{q[:50]}')")
 
     if not results:
@@ -48,22 +48,17 @@ async def search_symptoms(
 
     system_prompt = build_extract_prompt(query_en, context, lang)
     items = []
-    for attempt in range(2):
-        try:
-            raw = llm.ask([
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {query_en}"},
-            ], temperature=0, max_tokens=1024, model=model_name)
-            parsed = parse_llm_response(raw)
-            items = parsed.get("results", []) if isinstance(parsed, dict) else []
-            log("SYMPTOMS", f"LLM extraction attempt {attempt+1}: {len(items)} items")
-            if items:
-                break
-        except Exception as e:
-            err = str(e)
-            log("SYMPTOMS", f"LLM attempt {attempt+1} failed: {err[:80]}")
-            if "429" not in err and "quota" not in err.lower() and "rate" not in err.lower() and "403" not in err and "access" not in err.lower():
-                break
+    try:
+        raw = llm.ask([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {query_en}"},
+        ], temperature=0, max_tokens=2048, model=model_name)
+        log("SYMPTOMS", f"LLM raw response ({len(raw)} chars): {raw[:600]}")
+        parsed = parse_llm_response(raw)
+        items = parsed.get("results", []) if isinstance(parsed, dict) else []
+        log("SYMPTOMS", f"LLM parsed: {len(items)} items, type={type(parsed).__name__}, keys={list(parsed.keys()) if isinstance(parsed, dict) else 'N/A'}")
+    except Exception as e:
+        log("SYMPTOMS", f"LLM extraction failed: {str(e)[:80]}")
 
     if not items:
         return {"status": "success", "data": {"query": q, "results": []}}
@@ -98,96 +93,6 @@ async def search_symptoms(
             "source_id": "",
             "similarity": 1.0,
         })
-
-    return {"status": "success", "data": {"query": q, "results": cleaned}}
-
-    # Build a name->result lookup from the search results for source_id matching
-    result_by_name = {}
-    for r in results:
-        rname = (r.get("name_en") or "").strip().lower()
-        if rname and rname not in result_by_name:
-            result_by_name[rname] = r
-        for word in rname.split()[:3]:
-            if word and word not in result_by_name:
-                result_by_name[word] = r
-
-    def _find_src(name_en: str, fallback_chunk: int = 1) -> dict:
-        key = name_en.strip().lower()
-        if key in result_by_name:
-            return result_by_name[key]
-        for r in results:
-            rname = (r.get("name_en") or "").strip().lower()
-            if key in rname or rname in key:
-                return r
-        tokens = set(key.split())
-        best, best_score = None, 0
-        for r in results:
-            rname = (r.get("name_en") or "").strip().lower()
-            if not rname:
-                continue
-            overlap = len(tokens & set(rname.split()))
-            if overlap > best_score:
-                best, best_score = r, overlap
-        if best and best_score > 0:
-            return best
-        chunk_idx = max(0, min(fallback_chunk - 1, len(results) - 1))
-        return results[chunk_idx]
-
-    name_en_list = []
-    summary_en_list = []
-    for it in items:
-        if not isinstance(it, dict):
-            continue
-        name_en = (it.get("name_en") or "").strip()
-        if not name_en:
-            continue
-        kind = (it.get("type") or "").strip().lower()
-        if kind not in ("illness", "symptom"):
-            kind = "illness"
-        fb = int(it.get("source_chunk", 1))
-        src = _find_src(name_en, fb)
-        summary_text = (it.get("summary") or "").strip()
-        if not summary_text:
-            summary_text = (
-                src.get("symptoms_en")
-                or src.get("name_en")
-                or ""
-            ).strip()
-        if len(summary_text) > 200:
-            summary_text = summary_text[:200]
-        name_en_list.append(name_en)
-        summary_en_list.append(summary_text)
-
-    if lang != "en":
-        names_ar = translate_batch(name_en_list, lang)
-        summaries_ar = translate_batch(summary_en_list, lang)
-    else:
-        names_ar = name_en_list
-        summaries_ar = summary_en_list
-
-    cleaned = []
-    cleaned_idx = 0
-    for idx, it in enumerate(items):
-        if not isinstance(it, dict):
-            continue
-        name_en = (it.get("name_en") or "").strip()
-        if not name_en:
-            continue
-        kind = (it.get("type") or "").strip().lower()
-        if kind not in ("illness", "symptom"):
-            kind = "illness"
-        fb = int(it.get("source_chunk", 1))
-        src = _find_src(name_en, fb)
-        cleaned.append({
-            "id": cleaned_idx,
-            "name_en": name_en,
-            "name_local": names_ar[cleaned_idx] if lang != "en" else name_en,
-            "type": kind,
-            "summary": summaries_ar[cleaned_idx] if lang != "en" else summary_en_list[cleaned_idx],
-            "source_id": src.get("id", ""),
-            "similarity": round(float(src.get("similarity", 0) or 0), 3),
-        })
-        cleaned_idx += 1
 
     return {"status": "success", "data": {"query": q, "results": cleaned}}
 
