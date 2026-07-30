@@ -10,7 +10,7 @@ import SessionStatusChart from "../components/SessionStatusChart";
 import aiDoctorImg from "../../../assets/ai-doctors.png";
 import { UserCircle } from "lucide-react";
 import ProfileDrawer from "../components/ProfileDrawer";
-
+import NotificationDropdown from "../../notifications/NotificationDropdown";
 const DashboardPage = () => {
   const dispatch = useDispatch();
   const dashboardState = useSelector((state) => state.dashboard) || {};
@@ -40,6 +40,7 @@ const DashboardPage = () => {
       {/* Header */}
       <div className="flex justify-between items-center shrink-0">
         <h1 className="text-4xl font-bold text-gray-800">HOME PAGE</h1>
+        <NotificationDropdown />
         <button
           onClick={() => setIsDrawerOpen(true)}
           className="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition"
