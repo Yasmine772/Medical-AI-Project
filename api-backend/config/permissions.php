@@ -11,6 +11,7 @@ return [
         'mark-as-read-notifications',
         //admin
         'admin-logout',
+        'user-logout',
         'view-users',
         'toggle-user',
         'show-logs',
@@ -28,6 +29,8 @@ return [
         'show-doctor-request-details',
         'approve-doctor-request',
         'reject-doctor-request',
+        'view-tracking-data',
+
 
         //doctor
         'doctor-logout',

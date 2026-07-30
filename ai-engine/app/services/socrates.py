@@ -1,4 +1,6 @@
 import json
+import re
+
 
 SOCRATES_AXES = [
     "Site — Where exactly is the symptom located?",
@@ -23,29 +25,52 @@ def format_candidates(results: list) -> str:
     lines = []
     for r in results:
         lines.append(
-            f"- {r.get('name_en') or '?'} / {r.get('name_ar') or '?'} "
+            f"- {r.get('name_en') or '?'} "
             f"(id: '{r.get('name_en') or r.get('id')}', similarity: {r.get('similarity', 0):.2f})\n"
             f"  Symptoms: {r.get('symptoms_en') or '?'}\n"
-            f"  \u0627\u0644\u0623\u0639\u0631\u0627\u0636: {r.get('symptoms_ar') or '?'}\n"
-            f"  Specialist: {r.get('specialist') or '?'} / {r.get('specialist_ar') or '?'}"
+            f"  Specialist: {r.get('specialist') or '?'}"
         )
     return "\n\n".join(lines)
+
+
+def _repair_json(text: str) -> str:
+    """Fix common LLM JSON errors: missing commas, trailing commas, unclosed brackets."""
+    # Close any unclosed brackets at the end
+    opens = text.count("{")
+    closes = text.count("}")
+    for _ in range(opens - closes):
+        text += "}"
+    opens = text.count("[")
+    closes = text.rstrip().count("]")
+    for _ in range(opens - closes):
+        text += "]"
+    # Add missing commas between a closing quote and a new opening quote on next line
+    text = re.sub(r'"\s*\n\s*"', r'",\n"', text)
+    # Remove trailing commas before closing brackets
+    text = re.sub(r",\s*([}\]])", r"\1", text)
+    return text
 
 
 def parse_llm_response(content) -> dict:
     if isinstance(content, dict):
         return content
     if not isinstance(content, str):
-        return {"type": "error", "raw": str(content)[:300]}
+        return {"results": []}
     content = content.strip()
     start = content.find("{")
-    end = content.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        content = content[start : end + 1]
+    if start == -1:
+        return {"results": []}
     try:
-        return json.loads(content)
+        decoder = json.JSONDecoder()
+        parsed, _ = decoder.raw_decode(content, start)
+        return parsed if isinstance(parsed, dict) else {"results": []}
     except (json.JSONDecodeError, TypeError):
-        return {"type": "error", "raw": content[:300]}
+        pass
+    try:
+        repaired = _repair_json(content)
+        return json.loads(repaired)
+    except (json.JSONDecodeError, TypeError):
+        return {"results": []}
 
 
 def build_system_prompt(
@@ -161,31 +186,28 @@ Possible diseases:
 
 
 def build_extract_prompt(query: str, context_blocks: str, language: str) -> str:
-    return f"""You are a medical information extractor. A user searched for the medical term: "{query}".
-
-Below are excerpted passages from a medical knowledge base (PDF documents) that matched the search.
+    return f"""You are a medical information extractor. Below are excerpted passages from a medical knowledge base (PDF documents).
 
 {context_blocks}
 
-Your job: extract a clean, human-readable list of distinct medical items mentioned in the passages that are relevant to the search. Each item must be classified as exactly one of:
+Extract a clean, human-readable list of distinct medical items mentioned in the passages. Each item must be classified as exactly one of:
 - "illness": a disease, disorder, or medical condition (e.g. Migraine, Tension-type headache)
 - "symptom": a sign, complaint, or manifestation (e.g. nausea, photophobia)
 
 For each item provide:
 - "name_en": the English name (required)
-- "name_ar": an EMPTY string (the system will translate later — do NOT write Arabic yourself)
 - "type": "illness" or "symptom"
 - "summary": one short sentence (<= 20 words) describing it, IN ENGLISH
 - "source_chunk": the 1-based index of the passage it came from
 
 Rules:
+- Extract from ALL passages. Do NOT filter by relevance to the search term.
 - Do NOT invent items not supported by the passages.
 - Deduplicate; merge the same illness/symptom mentioned in multiple passages.
 - Prefer specific illness names over vague ones.
 - ALL text fields (name_en, summary) MUST be in English only. Never output Arabic or any non-English text.
--     Respond ONLY with valid JSON, no other text, of this exact shape:
-{{"results": [{{"name_en": string, "name_ar": string, "type": "illness"|"symptom", "summary": string, "source_chunk": int}}]}}
-- If a passage is irrelevant, ignore it. If nothing relevant is found, return {{"results": []}}."""
+- Respond ONLY with valid JSON, no other text, of this exact shape:
+{{"results": [{{"name_en": string, "type": "illness"|"symptom", "summary": string, "source_chunk": int}}]}}"""
 
 
 def build_diagnosis_naming_prompt(candidates_text: str, probs_text: str, language: str) -> str:

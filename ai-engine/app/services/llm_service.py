@@ -6,7 +6,7 @@ from app.services.logger import log
 
 class LLMService:
 
-    def __init__(self, api_key: str = None, model: str = "@cf/qwen/qwen2.5-coder-32b-instruct"):
+    def __init__(self, api_key: str = None, model: str = "@cf/meta/llama-3.1-8b-instruct-fp8"):
         key = api_key or os.environ.get("CLOUDFLARE_API_KEY")
         account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
         if not key or not account_id:
@@ -14,18 +14,18 @@ class LLMService:
         self._client = OpenAI(
             base_url=f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1/",
             api_key=key,
+            timeout=120,
+            max_retries=0,
         )
         self._model = model
 
     def ask(self, messages: list, temperature: float = 0.2, max_tokens: int = 1024, model: str = None) -> str:
         actual = model or self._model
+        kwargs = dict(model=actual, messages=messages, temperature=temperature)
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
         log("LLM", f"API call model={actual} temp={temperature} max={max_tokens} msgs={len(messages)}")
-        resp = self._client.chat.completions.create(
-            model=actual,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        resp = self._client.chat.completions.create(**kwargs)
         content = resp.choices[0].message.content or ""
         if not isinstance(content, str):
             content = json.dumps(content) if isinstance(content, (dict, list)) else str(content)
