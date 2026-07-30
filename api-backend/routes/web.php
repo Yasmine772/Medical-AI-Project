@@ -6,9 +6,10 @@ use App\Http\Controllers\Api\V1\User\NotificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\Admin\AuditLogs\AuditContoller;
 use App\Http\Controllers\Web\Admin\Dashboard\DashboardController;
-use App\Http\Controllers\Web\Admin\UserManagement\UserController;
+use App\Http\Controllers\Web\Doctor\Dashboard\DashboardController as DoctorDashboardController;
+use App\Http\Controllers\web\Admin\UserManagement\UserController;
 use App\Http\Controllers\Web\Auth\AuthController as WebAuthController;
-use App\Http\Controllers\Web\DoctorManagement\DoctorController;
+use App\Http\Controllers\Web\Admin\DoctorManagement\DoctorController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -94,5 +95,7 @@ Route::prefix('doctor')->group(function () {
 
     Route::middleware(['auth:sanctum', 'role:doctor'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:doctor-logout');
+        Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
+        Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
     });
 });
