@@ -52,11 +52,12 @@ async def search_symptoms(
         raw = llm.ask([
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Extract relevant illnesses/symptoms for the search: {query_en}"},
-        ], temperature=0, max_tokens=2048, model=model_name)
-        log("SYMPTOMS", f"LLM raw response ({len(raw)} chars): {raw[:600]}")
+        ], temperature=0, max_tokens=4096, model=model_name)
+        log("SYMPTOMS", f"LLM raw response ({len(raw)} chars): {raw[:200]}")
         parsed = parse_llm_response(raw)
-        items = parsed.get("results", []) if isinstance(parsed, dict) else []
-        log("SYMPTOMS", f"LLM parsed: {len(items)} items, type={type(parsed).__name__}, keys={list(parsed.keys()) if isinstance(parsed, dict) else 'N/A'}")
+        results_val = parsed.get("results") if isinstance(parsed, dict) else None
+        items = results_val if isinstance(results_val, list) else []
+        log("SYMPTOMS", f"LLM parsed: {len(items)} items")
     except Exception as e:
         log("SYMPTOMS", f"LLM extraction failed: {str(e)[:80]}")
 

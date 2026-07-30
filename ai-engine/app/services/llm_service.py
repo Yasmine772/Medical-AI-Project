@@ -21,13 +21,11 @@ class LLMService:
 
     def ask(self, messages: list, temperature: float = 0.2, max_tokens: int = 1024, model: str = None) -> str:
         actual = model or self._model
+        kwargs = dict(model=actual, messages=messages, temperature=temperature)
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
         log("LLM", f"API call model={actual} temp={temperature} max={max_tokens} msgs={len(messages)}")
-        resp = self._client.chat.completions.create(
-            model=actual,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        resp = self._client.chat.completions.create(**kwargs)
         content = resp.choices[0].message.content or ""
         if not isinstance(content, str):
             content = json.dumps(content) if isinstance(content, (dict, list)) else str(content)

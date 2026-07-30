@@ -60,15 +60,15 @@ def parse_llm_response(content) -> dict:
     start = content.find("{")
     if start == -1:
         return {"results": []}
-    end = content.rfind("}")
-    if end != -1 and end > start:
-        content = content[start : end + 1]
     try:
-        return json.loads(content)
+        decoder = json.JSONDecoder()
+        parsed, _ = decoder.raw_decode(content, start)
+        return parsed if isinstance(parsed, dict) else {"results": []}
     except (json.JSONDecodeError, TypeError):
         pass
     try:
-        return json.loads(_repair_json(content))
+        repaired = _repair_json(content)
+        return json.loads(repaired)
     except (json.JSONDecodeError, TypeError):
         return {"results": []}
 
