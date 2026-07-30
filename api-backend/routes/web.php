@@ -91,10 +91,16 @@ Route::prefix('doctor')->group(function () {
     Route::post('/login', [WebAuthController::class, 'doctorLogin']);
     Route::post('/verifyOtp', [WebAuthController::class, 'doctorVerifyOtp']);
     Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
+    Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 
     Route::middleware(['auth:sanctum', 'role:doctor'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:doctor-logout');
+        // Profile routes
+        Route::get('/profile', [WebAuthController::class, 'viewProfile'])->middleware('permission:view-profile');
+        Route::patch('/profile', [WebAuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
+
         Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
         Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
     });

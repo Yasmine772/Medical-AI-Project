@@ -2,13 +2,13 @@
 
 namespace App\Jobs;
 
-use App\Models\DoctorRequest;
+use App\Models\Doctor;
 use App\Services\Web\FileService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-class UploadDoctorRequestFiles implements ShouldQueue
+class UploadDoctorProfileFiles implements ShouldQueue
 {
     use Queueable;
 
@@ -16,12 +16,12 @@ class UploadDoctorRequestFiles implements ShouldQueue
      * Create a new job instance.
      */
 
-    protected int $doctorRequestId;
+    protected int $doctorId;
     protected array $filePaths;
 
-    public function __construct(int $doctorRequestId, array $filePaths)
+    public function __construct(int $doctorId, array $filePaths)
     {
-        $this->doctorRequestId = $doctorRequestId;
+        $this->doctorId = $doctorId;
         $this->filePaths = $filePaths;
     }
 
@@ -30,10 +30,10 @@ class UploadDoctorRequestFiles implements ShouldQueue
      */
     public function handle(FileService $fileService): void
     {
-        $doctorRequest = DoctorRequest::find($this->doctorRequestId);
+        $doctor = Doctor::find($this->doctorId);
 
-        if (!$doctorRequest) {
-            Log::error('Doctor request not found for file upload', ['id' => $this->doctorRequestId]);
+        if (!$doctor) {
+            Log::error('Doctor not found for file upload', ['id' => $this->doctorId]);
             return;
         }
 
@@ -59,7 +59,6 @@ class UploadDoctorRequestFiles implements ShouldQueue
                 'doctor/photos'
             );
         }
-
-        $doctorRequest->update($uploadedFiles);
+        $doctor->update($uploadedFiles);     
     }
 }

@@ -98,6 +98,8 @@ return [
 
         'doctor' => [
             'doctor-logout',
+            'view-profile',
+            'edit-profile',
             'get-doctor-summary',
             'update-availability',
 
