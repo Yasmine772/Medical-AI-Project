@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Web\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\Auth\LoginRequest;
 use App\Http\Requests\User\OTP\VerifyOTPRequest;
+use App\Http\Requests\Web\Doctor\DoctorProfileRequest;
+use App\Models\Doctor;
 use App\Services\Web\AuthService;
 use App\Traits\ApiResponseTrait;
 
@@ -83,4 +85,31 @@ class AuthController extends Controller
             default => $this->successResponse($result, 'OTP verified successfully', 200)
         };
     }
+    //*************************************************************************************** */
+    public function viewProfile()
+    {
+        $doctor_profile = $this->authService->viewProfile();
+
+        if($doctor_profile == null){
+            return $this->errorResponse('Doctor not found!', null, 404);
+        }
+        return $this->successResponse($doctor_profile , 'Doctor profile retrieved successfully', 200);
+    }
+    //***************************************************************************************** */
+    public function updateProfile(DoctorProfileRequest $request)
+    {
+        $doctor_profile = $this->authService->updateProfile($request->validated());
+
+        if ($doctor_profile == null) {
+            return $this->errorResponse('Doctor not found!', null, 404);
+        }
+        return $this->successResponse($doctor_profile, 'Doctor profile updated successfully', 200);
+    }
+
+
+
+
+
+
+
 }

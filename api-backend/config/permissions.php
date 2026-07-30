@@ -11,7 +11,6 @@ return [
         'mark-as-read-notifications',
         //admin
         'admin-logout',
-        'user-logout',
         'view-users',
         'toggle-user',
         'show-logs',
@@ -75,8 +74,8 @@ return [
             'approve-doctor-request', 'reject-doctor-request',
 
             'show-all-notifications', 'show-count-unread-notifications',
-            'mark-all-as-read-notifications', 'mark-as-read-notifications', 
-
+            'mark-all-as-read-notifications', 'mark-as-read-notifications',
+            'view-tracking-data'
         ],
 
         'patient' => [
@@ -101,6 +100,8 @@ return [
 
         'doctor' => [
             'doctor-logout',
+            'view-profile',
+            'edit-profile',
             'get-doctor-summary',
             'update-availability',
 
