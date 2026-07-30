@@ -59,7 +59,7 @@ class AiService
                     'patient_job'      => $request['patient_job'],
                     'activity_level' => $request['activity_level'],
                     'assessment_for' => $request['assessment_for'],
-                    'model_name' => $request['model_name'],
+                    'model_name' => $request['model_name'] ?? null,
                 ]);
 
             if ($response->successful()) {
@@ -124,7 +124,7 @@ class AiService
     public function getSymptomQuestions($data): ?array
     {
         try {
-            $response = Http::timeout($this->timeout)
+            $response = Http::timeout(120)
                 ->asForm()
                 ->post($this->fastApiUrl.'/symptom/select', [
                     'session_id' => $data['session_id'],

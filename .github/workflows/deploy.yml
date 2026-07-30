@@ -91,6 +91,7 @@ jobs:
             sleep 10
             docker exec laravel-app php artisan migrate --force
             docker exec laravel-app php artisan storage:link --force
+            docker image prune -f
 
       - name: Stop VM
         run: az vm deallocate -g medical-ai-rg -n medical-ai-vm
