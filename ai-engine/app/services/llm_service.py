@@ -6,7 +6,7 @@ from app.services.logger import log
 
 class LLMService:
 
-    def __init__(self, api_key: str = None, model: str = "@cf/meta/llama-3.2-3b-instruct"):
+    def __init__(self, api_key: str = None, model: str = "@cf/meta/llama-3.1-8b-instruct-fp8"):
         key = api_key or os.environ.get("CLOUDFLARE_API_KEY")
         account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
         if not key or not account_id:
@@ -14,7 +14,7 @@ class LLMService:
         self._client = OpenAI(
             base_url=f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1/",
             api_key=key,
-            timeout=60,
+            timeout=120,
             max_retries=0,
         )
         self._model = model

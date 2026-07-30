@@ -10,7 +10,7 @@ router = APIRouter()
 @router.get("/symptoms")
 async def search_symptoms(
     q: str = Query(default="", description="Search query for symptoms or illnesses"),
-    model_name: str = Query(default=None, description="LLM model to use for extraction"),
+    model_name: str = Query(default="@cf/meta/llama-3.2-3b-instruct", description="LLM model to use for extraction"),
 ):
     store = get_store()
     embedder = get_embedder()
