@@ -79,12 +79,12 @@ Route::prefix('admin')->group(function () {
         
     });
 
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', [NotificationController::class, 'index'])->middleware('permission:show-all-notifications');
-        Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications'])->middleware('permission:show-count-unread-notifications');
-        Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:mark-all-as-read-notifications');
-        Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:mark-as-read-notifications');
-    });
+    // Route::prefix('notifications')->group(function () {
+    //     Route::get('/', [NotificationController::class, 'index'])->middleware('permission:show-all-notifications');
+    //     Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications'])->middleware('permission:show-count-unread-notifications');
+    //     Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:mark-all-as-read-notifications');
+    //     Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:mark-as-read-notifications');
+    // });
 });
 
 Route::prefix('doctor')->group(function () {

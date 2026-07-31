@@ -47,6 +47,7 @@ class AuthService
         return [
             'user' => ['email' => $user->email],
             'access_token' =>  $accessToken,
+            'role' => $role
         ];
     }
     //**************************************************** */
@@ -62,7 +63,7 @@ class AuthService
                 $accessTokenExpiresAt = Carbon::now()->addDays(1);
                 $token = $user->createToken('access_token', [$role], $accessTokenExpiresAt)->plainTextToken;
 
-                $data = ['email' => $request['email'], 'token' => $token];
+                $data = ['email' => $request['email'], 'token' => $token , 'role' => $role];
                 return  $data;
             }
             return $result;

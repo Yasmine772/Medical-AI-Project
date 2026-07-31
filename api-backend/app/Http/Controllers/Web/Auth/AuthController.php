@@ -35,6 +35,7 @@ class AuthController extends Controller
                     'access_token' => $result['access_token'],
                     'token_type'   => 'Bearer',
                     'expires_at'   => '1 day',
+                    'role'         => $result['role']
             ], 'Admin login successfully', 200)
         };
     }
@@ -54,6 +55,7 @@ class AuthController extends Controller
                 'access_token' => $result['access_token'],
                 'token_type'   => 'Bearer',
                 'expires_at'   => '1 day',
+                'role'         => $result['role']
             ], 'Doctor login successfully', 200)
         };
     }
