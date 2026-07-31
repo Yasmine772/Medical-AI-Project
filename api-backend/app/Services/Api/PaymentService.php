@@ -5,6 +5,8 @@ namespace App\Services\Api;
 use App\Models\DiagnosisSession;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\Api\DoctorAssignmentService;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class PaymentService
@@ -76,6 +78,55 @@ class PaymentService
 
         User::where('id', $payment->user_id)
             ->increment('diagnose_num');
+
+        $this->assignDoctorAfterPayment($payment);
+    }
+
+    private function assignDoctorAfterPayment(Payment $payment): void
+    {
+        $session = DiagnosisSession::find($payment->diagnosis_session_id);
+
+        if (!$session || $session->doctor_id) {
+            return;
+        }
+
+        try {
+            $fastApiUrl = config('services.fastapi.url');
+            $preview = Http::timeout(config('services.fastapi.timeout'))
+                ->get($fastApiUrl."/reports/{$session->session_hash}/preview", ['language_code' => 'en']);
+
+            if (!$preview->successful()) {
+                Log::warning('Doctor assignment: preview failed', [
+                    'session_hash' => $session->session_hash,
+                    'status' => $preview->status(),
+                ]);
+                return;
+            }
+
+            $diagnoses = $preview->json()['diagnoses'] ?? [];
+            $specialist = $diagnoses[0]['specialist'] ?? null;
+
+            if (!$specialist) {
+                Log::warning('Doctor assignment: no specialist in preview', [
+                    'session_hash' => $session->session_hash,
+                ]);
+                return;
+            }
+
+            $doctorId = app(DoctorAssignmentService::class)->assign($session->id, $specialist);
+
+            Log::info('Doctor assigned after payment', [
+                'session_hash' => $session->session_hash,
+                'specialist' => $specialist,
+                'doctor_id' => $doctorId,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Doctor assignment after payment failed', [
+                'session_hash' => $session->session_hash,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function getPaymentStatus(string $paymentIntentId): ?array

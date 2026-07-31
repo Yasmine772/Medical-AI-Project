@@ -48,4 +48,17 @@ class Doctor extends Model implements Auditable
         return $this->belongsToMany(Disease::class, 'disease_specialists', 'doctor_id', 'disease_id');
     }
 
+    public function diagnosisSessions()
+    {
+        return $this->hasMany(DiagnosisSession::class);
+    }
+
+    /**
+     * Get the doctor's schedules.
+     */
+    public function schedules()
+    {
+    return $this->hasMany(DoctorSchedule::class, 'doctor_id');
+    }
+
 }

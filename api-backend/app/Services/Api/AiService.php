@@ -4,6 +4,7 @@ namespace App\Services\Api;
 
 use App\Models\DiagnosisSession;
 use App\Models\PatientProfile;
+use App\Services\Api\DoctorAssignmentService;
 use Carbon\Carbon;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -245,10 +246,30 @@ class AiService
             if ($response->successful()) {
                 $result = $response->json();
 
-                DiagnosisSession::where('session_hash', $sessionId)->update([
-                    'phase'               => 'completed',
-                    'report_generated_at' => now(),
-                ]);
+                $session = DiagnosisSession::where('session_hash', $sessionId)->first();
+
+                if ($session) {
+                    $session->update([
+                        'phase'               => 'completed',
+                        'report_generated_at' => now(),
+                    ]);
+
+                    if (!$session->doctor_id) {
+                        $preview = Http::timeout($this->timeout)
+                            ->get($this->fastApiUrl."/reports/{$sessionId}/preview", ['language_code' => $languageCode]);
+
+                        if ($preview->successful()) {
+                            $previewData = $preview->json();
+                            $diagnoses = $previewData['diagnoses'] ?? [];
+                            $specialist = $diagnoses[0]['specialist'] ?? null;
+
+                            if ($specialist) {
+                                $doctorAssignmentService = app(DoctorAssignmentService::class);
+                                $doctorAssignmentService->assign($session->id, $specialist);
+                            }
+                        }
+                    }
+                }
 
                 return $result;
             }

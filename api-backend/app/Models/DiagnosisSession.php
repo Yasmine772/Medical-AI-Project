@@ -12,6 +12,8 @@ class DiagnosisSession extends Model
         'phase',
         'pdf_file_path',
         'user_id',
+        'disease_id',
+        'doctor_id',
         'started_at',
         'completed_at',
         'doctor_reviewed_at',
@@ -37,6 +39,11 @@ class DiagnosisSession extends Model
     public function payment()
     {
         return $this->hasOne(Payment::class);
+    }
+
+    public function doctor()
+    {
+        return $this->belongsTo(Doctor::class);
     }
 
     public function getWorkflowStepsAttribute(): array
