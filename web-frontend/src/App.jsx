@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter as Router,
   Routes,
@@ -19,12 +20,14 @@ import ForgotPassword from "./features/auth/pages/ForgotPassword";
 import OtpVerificationPass from "./features/auth/pages/OtpVerificationPass";
 import ResetPassword from "./features/auth/pages/ResetPassword";
 import JoiningRequestsPage from "./features/joiningRequests/pages/JoiningRequestsPage";
+import DoctorLoginPage from "./features/doctorAuth/pages/DoctorLoginPage";
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<OnboardingPage />} />
         <Route path="/login" element={<LoginPage />} />
+
         <Route path="/otp-verification" element={<OtpVerification />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
@@ -42,9 +45,10 @@ function App() {
         </Route>
 
         {/* doctors routes*/}
-        <Route path="/doctor" element={<DoctorLayout />}>
+        <Route path="/Layout" element={<DoctorLayout />}>
           <Route path="dashboard" element={<HomePage />} />
         </Route>
+        <Route path="/loginDoctor" element={<DoctorLoginPage />} />
 
         {/* joining requests */}
         <Route path="/joining-requests" element={<JoiningRequestsPage />} />

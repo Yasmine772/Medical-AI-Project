@@ -6,12 +6,20 @@ const api = axios.create({
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
-    
   },
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  if (
+    config.url.includes("/admin/login") ||
+    config.url.includes("/doctor/login")
+  ) {
+    return config;
+  }
+
+  // const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("doctor_token") || localStorage.getItem("token");
 
   if (token) {
     const cleanToken = token.replace(/['"]+/g, "").trim();
