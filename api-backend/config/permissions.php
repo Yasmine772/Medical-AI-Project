@@ -28,9 +28,13 @@ return [
         'show-doctor-request-details',
         'approve-doctor-request',
         'reject-doctor-request',
+        'view-tracking-data',
+
 
         //doctor
         'doctor-logout',
+        'get-doctor-summary',
+        'update-availability',
 
         //patient
         'user-logout',
@@ -70,8 +74,8 @@ return [
             'approve-doctor-request', 'reject-doctor-request',
 
             'show-all-notifications', 'show-count-unread-notifications',
-            'mark-all-as-read-notifications', 'mark-as-read-notifications', 
-
+            'mark-all-as-read-notifications', 'mark-as-read-notifications',
+            'view-tracking-data'
         ],
 
         'patient' => [
@@ -96,6 +100,10 @@ return [
 
         'doctor' => [
             'doctor-logout',
+            'view-profile',
+            'edit-profile',
+            'get-doctor-summary',
+            'update-availability',
 
         ],
     ],

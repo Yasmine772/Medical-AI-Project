@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Ai\AiController;
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Diagnosis\DiagnosisTrackingController;
 use App\Http\Controllers\Api\V1\Payment\PaymentController;
 use App\Http\Controllers\Api\V1\Reports\ReportController;
 use App\Http\Controllers\Api\V1\settingController;
@@ -56,15 +57,34 @@ Route::prefix('v1/auth')->group(function () {
         Route::get('/check-auth', [AuthController::class, 'checkAuthentication']);
 
         // Notifications routes
-        Route::prefix('notifications')->group(function () {
-            Route::get('/', [NotificationController::class, 'index'])->middleware('permission:show-all-notifications');
-            Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:mark-all-as-read-notifications');
-            Route::delete('/destroy-all', [NotificationController::class, 'destroyAll'])->middleware('permission:destroy-all-notifications');
-            Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications'])->middleware('permission:show-count-unread-notifications');
-            Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:mark-as-read-notifications');
-            Route::patch('/{notificationId}/unread', [NotificationController::class, 'markAsUnread'])->middleware('permission:mark-as-unread-notifications');
-            Route::delete('/{notificationId}', [NotificationController::class, 'destroy'])->middleware('permission:destroy-notification');
-        });
+       Route::prefix('notifications')->group(function () {
+       Route::get('/', [NotificationController::class, 'index']);
+       Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
+       Route::delete('/destroy-all', [NotificationController::class, 'destroyAll']);
+       Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications']);
+
+       Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead']);
+       Route::patch('/{notificationId}/unread', [NotificationController::class, 'markAsUnread']);
+       Route::delete('/{notificationId}', [NotificationController::class, 'destroy']);
+
+     });
+     //Tracking
+        Route::get('/tracking', [DiagnosisTrackingController::class, 'getUserSessions'])->middleware('permission:view-tracking');
+        Route::get('/tracking/{sessionHash}', [DiagnosisTrackingController::class, 'getTracking'])->middleware('permission:view-tracking');
+
     });
     
+});
+
+Route::prefix('admin')->group(function () {
+
+    Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [NotificationController::class, 'index'])->middleware('permission:show-all-notifications');
+            Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications'])->middleware('permission:show-count-unread-notifications');
+            Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:mark-all-as-read-notifications');
+            Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:mark-as-read-notifications');
+        });
+    });
 });

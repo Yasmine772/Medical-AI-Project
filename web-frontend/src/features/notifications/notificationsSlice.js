@@ -11,7 +11,7 @@ export const fetchNotifications = createAsyncThunk(
     );
     try {
       
-      const response = await api.get("/admin/notifications");
+      const response = await api.get("api/admin/notifications");
       // بناءً على شكل الرد في البوستمان، الـ data غالباً تكون مصفوفة مباشرة أو داخل data.data
       return response.data.data || response.data;
     } catch (error) {

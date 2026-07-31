@@ -97,10 +97,8 @@ def force_top3(probs: dict, diseases: list = None, labels: dict = None) -> list:
         info = disease_map.get(name, {})
         label = (labels or {}).get(name, {})
         display_en = label.get("name_en") or info.get("name_en") or name
-        display_ar = label.get("name_ar") or info.get("name_ar") or ""
         result.append({
             "disease_name": display_en,
-            "disease_name_ar": display_ar,
             "confidence": conf,
             "probability": round(prob, 2),
             "specialist": info.get("specialist") or "",

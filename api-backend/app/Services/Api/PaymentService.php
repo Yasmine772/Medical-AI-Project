@@ -74,9 +74,6 @@ class PaymentService
             'paid_at' => now(),
         ]);
 
-        DiagnosisSession::where('id', $payment->diagnosis_session_id)
-            ->update(['status' => 'COMPLETED']);
-
         User::where('id', $payment->user_id)
             ->increment('diagnose_num');
     }
