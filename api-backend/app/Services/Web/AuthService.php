@@ -51,24 +51,31 @@ class AuthService
         ];
     }
     //**************************************************** */
-    public function verifyOtp(array $request ,string $role)
+    public function verifyOtp(array $request ,string $role, string $source)
     {
-        $user = User::where('email', $request['email'])->first();
-
-        if($user->email_verified_at === null )
+        if($source == 'email')
         {
-            $result = $this->otpService->verifyOTP($request);
+            $user = User::where('email', $request['email'])->first();
 
-            if ($result === 'CorrectOTP') {
-                $accessTokenExpiresAt = Carbon::now()->addDays(1);
-                $token = $user->createToken('access_token', [$role], $accessTokenExpiresAt)->plainTextToken;
+            if ($user->email_verified_at === null) {
+                $result = $this->otpService->verifyOTP($request);
 
-                $data = ['email' => $request['email'], 'token' => $token , 'role' => $role];
-                return  $data;
+                if ($result === 'CorrectOTP') {
+                    $accessTokenExpiresAt = Carbon::now()->addDays(1);
+                    $token = $user->createToken('access_token', [$role], $accessTokenExpiresAt)->plainTextToken;
+
+                    $data = ['email' => $request['email'], 'token' => $token, 'role' => $role];
+                    return  $data;
+                }
+                return $result;
             }
+            return 'emailVerified';
+        }
+
+        if ($source == 'password') {
+            $result = $this->otpService->verifyOTP($request);
             return $result;
         }
-        return 'emailVerified';
     }
     //**************************************************** */
     public function viewProfile() 

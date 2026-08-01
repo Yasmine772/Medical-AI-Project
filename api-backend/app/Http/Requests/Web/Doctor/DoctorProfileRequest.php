@@ -26,7 +26,7 @@ class DoctorProfileRequest extends FormRequest
     {
         return [
             'full_name'           => 'sometimes|string|max:255',
-            'email'               => 'sometimes|email|unique:users',
+            'email'               => 'sometimes|email|unique:users,email,'.auth()->id(),
             'phone'               => 'sometimes|string|size:10|starts_with:09,9',
             'specialization'      => 'sometimes|string|max:255',
             'years_of_experience' => 'sometimes|integer|min:0',
