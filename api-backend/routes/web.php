@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\settingController;
-use App\Http\Controllers\Api\V1\User\NotificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\Admin\AuditLogs\AuditContoller;
 use App\Http\Controllers\Web\Admin\Dashboard\DashboardController;
@@ -90,7 +89,8 @@ Route::prefix('admin')->group(function () {
 Route::prefix('doctor')->group(function () {
     Route::post('/sendJoinRequest', [DoctorController::class, 'sendJoinRequest']);
     Route::post('/login', [WebAuthController::class, 'doctorLogin']);
-    Route::post('/verifyOtp', [WebAuthController::class, 'doctorVerifyOtp']);
+    Route::post('/verifyOtpForEmail', [WebAuthController::class, 'doctorVerifyOtpForEmail']);
+    Route::post('/verifyOtpForPassword', [WebAuthController::class, 'doctorVerifyOtpForPassword']);
     Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
     Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
