@@ -2,13 +2,13 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\settingController;
-use App\Http\Controllers\Api\V1\User\NotificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\Admin\AuditLogs\AuditContoller;
 use App\Http\Controllers\Web\Admin\Dashboard\DashboardController;
-use App\Http\Controllers\Web\Admin\UserManagement\UserController;
+use App\Http\Controllers\Web\Doctor\Dashboard\DashboardController as DoctorDashboardController;
+use App\Http\Controllers\web\Admin\UserManagement\UserController;
 use App\Http\Controllers\Web\Auth\AuthController as WebAuthController;
-use App\Http\Controllers\Web\DoctorManagement\DoctorController;
+use App\Http\Controllers\Web\Admin\DoctorManagement\DoctorController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -75,24 +75,34 @@ Route::prefix('admin')->group(function () {
             Route::patch('approve/{id}', [DoctorController::class, 'approve'])->middleware('permission:approve-doctor-request');
             Route::patch('reject/{id}', [DoctorController::class, 'reject'])->middleware('permission:reject-doctor-request');
         });
+        
     });
 
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', [NotificationController::class, 'index'])->middleware('permission:show-all-notifications');
-        Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications'])->middleware('permission:show-count-unread-notifications');
-        Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:mark-all-as-read-notifications');
-        Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:mark-as-read-notifications');
-    });
+    // Route::prefix('notifications')->group(function () {
+    //     Route::get('/', [NotificationController::class, 'index'])->middleware('permission:show-all-notifications');
+    //     Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications'])->middleware('permission:show-count-unread-notifications');
+    //     Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:mark-all-as-read-notifications');
+    //     Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:mark-as-read-notifications');
+    // });
 });
 
 Route::prefix('doctor')->group(function () {
     Route::post('/sendJoinRequest', [DoctorController::class, 'sendJoinRequest']);
     Route::post('/login', [WebAuthController::class, 'doctorLogin']);
-    Route::post('/verifyOtp', [WebAuthController::class, 'doctorVerifyOtp']);
+    Route::post('/verifyOtpForEmail', [WebAuthController::class, 'doctorVerifyOtpForEmail']);
+    Route::post('/verifyOtpForPassword', [WebAuthController::class, 'doctorVerifyOtpForPassword']);
     Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
+    Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 
     Route::middleware(['auth:sanctum', 'role:doctor'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:doctor-logout');
+        // Profile routes
+        Route::get('/profile', [WebAuthController::class, 'viewProfile'])->middleware('permission:view-profile');
+        Route::patch('/profile', [WebAuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
+
+        Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
+        Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
     });
 });
