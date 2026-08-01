@@ -29,9 +29,13 @@ const DoctorVerifyResetOtp = () => {
     formData.append("otp", otp.trim());
 
     try {
-      const response = await api.post("/doctor/verifyOtp", formData, {
-        headers: { Accept: "application/json" },
-      });
+      const response = await api.post(
+        "/doctor/verifyOtpForPassword",
+        formData,
+        {
+          headers: { Accept: "application/json" },
+        },
+      );
 
       const token = response.data.data?.token || response.data.token;
       toast.success("OTP verified successfully!");

@@ -4,6 +4,7 @@ import {
   fetchDoctorProfile,
   updateDoctorProfile,
 } from "../../../store/authSlice";
+import toast from "react-hot-toast";
 
 const ProfilePanel = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
@@ -77,7 +78,6 @@ const ProfilePanel = ({ isOpen, onClose }) => {
 
     fields.forEach((field) => {
       if (formElements[field] && formElements[field].value !== "") {
-    
         data.append(field, formElements[field].value);
       }
     });
@@ -94,7 +94,7 @@ const ProfilePanel = ({ isOpen, onClose }) => {
 
     dispatch(updateDoctorProfile(data)).then((res) => {
       if (!res.error) {
-        alert("Profile updated successfully!");
+        toast.success("Profile updated successfully!");
         onClose();
       }
     });

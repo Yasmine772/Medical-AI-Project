@@ -18,8 +18,8 @@ const DoctorResetPassword = () => {
     e.preventDefault();
 
     if (password !== passwordConfirmation) {
-        toast.error("Passwords do not match!");
-     
+      toast.error("Passwords do not match!");
+
       return;
     }
 
@@ -27,25 +27,29 @@ const DoctorResetPassword = () => {
 
     try {
       await api.post(
-        "/auth/reset-password",
+        "/doctor/reset-password",
         {
           email: email.trim(),
           password: password,
           password_confirmation: passwordConfirmation,
         },
         {
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-        }
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        },
       );
 
-      toast.success("Password has been reset successfully! Please login with your new password.");
-      
-      navigate("/loginDoctor");
+      toast.success(
+        "Password has been reset successfully! Please login with your new password.",
+      );
 
+      navigate("/loginDoctor");
     } catch (error) {
-     toast.error(
+      toast.error(
         "Reset failed: " +
-          (error.response?.data?.message || "Something went wrong")
+          (error.response?.data?.message || "Something went wrong"),
       );
     } finally {
       setLoading(false);
@@ -61,7 +65,7 @@ const DoctorResetPassword = () => {
         <h2 className="text-2xl font-bold text-gray-800 tracking-tight text-center">
           Reset <span className="text-[#72A6BB]">Password</span>
         </h2>
-        
+
         <p className="text-sm text-gray-500 text-center mb-2">
           Create a new secure password for your account.
         </p>
@@ -88,8 +92,8 @@ const DoctorResetPassword = () => {
         </div>
 
         <div className="flex flex-col gap-2.5 mt-2">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={loading}
             className="bg-[#72A6BB] hover:bg-[#58889B] text-white transition-colors"
           >

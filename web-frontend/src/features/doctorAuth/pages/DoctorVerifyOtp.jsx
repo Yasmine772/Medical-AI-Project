@@ -26,12 +26,12 @@ const DoctorVerifyOtp = () => {
     formData.append("otp", otp.trim());
 
     try {
-      const response = await api.post("/doctor/verifyOtp", formData, {
+      const response = await api.post("/doctor/verifyOtpForEmail", formData, {
         headers: { Accept: "application/json" },
       });
 
       const token = response.data.data?.token;
-      const role = response.data.data?.role; 
+      const role = response.data.data?.role;
 
       if (token) {
         dispatch(loginSuccess({ token, email, role }));
@@ -43,14 +43,13 @@ const DoctorVerifyOtp = () => {
     } catch (error) {
       toast.error(
         "Verification failed: " +
-          (error.response?.data?.message || "Something went wrong")
+          (error.response?.data?.message || "Something went wrong"),
       );
     } finally {
       setLoading(false);
     }
   };
 
-  
   const handleResendOtp = async () => {
     if (!email) {
       toast.error("Email is missing. Please try logging in again.");
@@ -67,12 +66,12 @@ const DoctorVerifyOtp = () => {
       });
       toast.success(
         response.data?.message ||
-          "OTP resent successfully. Please check your email."
+          "OTP resent successfully. Please check your email.",
       );
     } catch (error) {
-     toast.error(
+      toast.error(
         "Resend failed: " +
-          (error.response?.data?.message || "Something went wrong")
+          (error.response?.data?.message || "Something went wrong"),
       );
     } finally {
       setResending(false);

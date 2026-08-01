@@ -12,7 +12,8 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   if (
     config.url.includes("/admin/login") ||
-    config.url.includes("/doctor/login")
+    config.url.includes("/doctor/login") ||
+    config.url.endsWith("/login")
   ) {
     return config;
   }
