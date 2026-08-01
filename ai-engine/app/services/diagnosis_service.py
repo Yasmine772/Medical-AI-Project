@@ -10,36 +10,28 @@ from app.services.bayesian import (
     MAX_QUESTIONS,
 )
 from app.services.socrates import (
-    detect_lang,
     format_candidates,
     parse_llm_response,
     build_system_prompt,
     build_diagnosis_naming_prompt,
 )
 from app.services.i18n import (
+    detect_lang,
     to_english,
     from_english,
     translate_list,
-    translate_dict_values,
+)
+from app.services.question_builder import (
+    MIN_PER_SYMPTOM,
+    per_symptom_cap,
+    short_probs,
+    to_question_options,
+    infer_qtype,
 )
 
-MIN_PER_SYMPTOM = 2
-DYNAMIC_EXTRA = 6
-
-
-def _to_qopts(options_raw: list) -> list:
-    if not options_raw:
-        return []
-    return [{"id": str(i + 1), "label": str(o)} for i, o in enumerate(options_raw)]
-
-
-def _infer_qtype(options_raw: list) -> str:
-    if not options_raw:
-        return "single_choice"
-    n = [str(o).strip().lower() for o in options_raw]
-    if n == ["yes", "no"] or n in (["y", "n"], ["نعم", "لا"]):
-        return "yes_no"
-    return "single_choice"
+MIN_QUESTIONS_BEFORE_DIAGNOSIS = 4
+MAX_TOTAL_DISEASES = 15
+MAX_NEW_DISEASES = 3
 
 
 class DiagnosisService:
@@ -201,7 +193,11 @@ Respond ONLY with valid JSON:
                         results.append(
                             {
                                 "name_en": disease_name,
-                                "name_local": from_english(disease_name, lang) if lang != "en" else disease_name,
+                                "name_local": (
+                                    from_english(disease_name, lang)
+                                    if lang != "en"
+                                    else disease_name
+                                ),
                                 "symptoms_en": (it.get("summary") or "").strip()[:500],
                                 "specialist": (
                                     it.get("specialist") or "General"
@@ -230,7 +226,7 @@ Respond ONLY with valid JSON:
         if not candidates.get("probabilities"):
             candidates["probabilities"] = priors
             candidates["diseases"] = results
-            log("BAYES", f"Priors initialized: {_short(priors)}")
+            log("BAYES", f"Priors initialized: {short_probs(priors)}")
         else:
             existing_names = {d.get("name_en") for d in candidates.get("diseases", [])}
             for r in results:
@@ -244,7 +240,7 @@ Respond ONLY with valid JSON:
                 candidates["probabilities"][k] /= total
             log(
                 "BAYES",
-                f"Priors merged (symptom added): {_short(candidates['probabilities'])}",
+                f"Priors merged (symptom added): {short_probs(candidates['probabilities'])}",
             )
 
         self._save_candidates(session_id, candidates)
@@ -260,6 +256,23 @@ Respond ONLY with valid JSON:
         lang = candidates.get("language", "en")
         if candidates.get("phase") != "diagnosis":
             return {"response_type": "unknown", "question": None}
+
+        # If a diagnosis was already produced, return it (last thing in the session).
+        conversation = candidates.get("conversation", [])
+        for m in reversed(conversation):
+            if m.get("role") != "assistant":
+                continue
+            parsed = parse_llm_response(m.get("content", ""))
+            if parsed.get("type") == "diagnosis" or parsed.get("diagnoses"):
+                diags = parsed.get("diagnoses", [])
+                if not any(d.get("disease_name_local") for d in diags):
+                    diags = self._localize_diagnoses(diags, lang)
+                return {
+                    "response_type": "diagnosis",
+                    "diagnosis_summary": {"diagnoses": diags},
+                    "total": MAX_QUESTIONS,
+                }
+
         q = candidates.get("current_question")
         if not q:
             return {"response_type": "unknown", "question": None}
@@ -324,7 +337,7 @@ Respond ONLY with valid JSON:
         if socrates_axis >= 3 and socrates_axis % 3 == 0:
             log("VECTOR", f"Re-search at axis {socrates_axis}")
             probabilities = self._re_search(
-                conversation, diseases, probabilities, lang, model_name=model_name
+                conversation, diseases, probabilities, lang, candidates, model_name=model_name
             )
 
         questions_on_current = candidates.get("questions_on_current", 0) + 1
@@ -336,18 +349,24 @@ Respond ONLY with valid JSON:
 
         remaining = MAX_QUESTIONS - question_count
         top1 = max(probabilities.items(), key=lambda x: x[1])[1] if probabilities else 0
-        per_symptom_cap = _per_symptom_cap(top1, remaining, MIN_PER_SYMPTOM)
+        symptom_cap = per_symptom_cap(top1, remaining, MIN_PER_SYMPTOM)
         log(
             "CAP",
-            f"question_count={question_count} remaining={remaining} top1={top1:.2f} per_symptom_cap={per_symptom_cap} questions_on_current={questions_on_current}",
+            f"question_count={question_count} remaining={remaining} top1={top1:.2f} per_symptom_cap={symptom_cap} questions_on_current={questions_on_current}",
         )
 
         force = (
             question_count >= MAX_QUESTIONS
             or (
-                questions_on_current >= per_symptom_cap and remaining <= MIN_PER_SYMPTOM
+                question_count >= MIN_QUESTIONS_BEFORE_DIAGNOSIS
+                and questions_on_current >= symptom_cap
+                and remaining <= MIN_PER_SYMPTOM
             )
-            or (questions_on_current >= per_symptom_cap and can_stop)
+            or (
+                question_count >= MIN_QUESTIONS_BEFORE_DIAGNOSIS
+                and questions_on_current >= symptom_cap
+                and can_stop
+            )
         )
         if force:
             log(
@@ -457,6 +476,44 @@ Respond ONLY with valid JSON:
 
         # Normal question -> persist and continue
         q_index = question_count + 1
+        if (
+            not isinstance(parsed.get("question"), str)
+            or not parsed.get("question").strip()
+        ):
+            log(
+                "LLM",
+                f"Empty question rejected q{question_count+1}/{MAX_QUESTIONS}, retrying",
+            )
+            retry_messages = [
+                *messages,
+                {"role": "assistant", "content": content},
+                {
+                    "role": "user",
+                    "content": "Your previous answer had an empty question field. "
+                    "Respond ONLY with valid JSON containing a non-empty 'question' string and its options.",
+                },
+            ]
+            content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
+            parsed = parse_llm_response(content)
+        if (
+            not isinstance(parsed.get("question"), str)
+            or not parsed.get("question").strip()
+        ):
+            log("LLM", "Empty question after retry, forcing diagnosis")
+            conversation.append({"role": "assistant", "content": content})
+            candidates["socrates_axis"] = socrates_axis + 1
+            candidates["conversation"] = conversation
+            candidates["current_question"] = None
+            self._save_candidates(session_id, candidates)
+            return self._finalize(
+                session_id,
+                candidates,
+                conversation,
+                probabilities,
+                diseases,
+                lang,
+                forced=True,
+            )
         parsed = self._tag_question(session_id, parsed, q_index)
         conversation.append({"role": "assistant", "content": content})
         candidates["socrates_axis"] = socrates_axis + 1
@@ -551,6 +608,40 @@ Respond ONLY with valid JSON:
 
         # Remaining questions after the first count from socrates_axis
         q_index = candidates.get("question_count", 0) + 1
+        if (
+            not isinstance(parsed.get("question"), str)
+            or not parsed.get("question").strip()
+        ):
+            log("LLM", "Empty first question rejected, retrying")
+            retry_messages = [
+                *messages,
+                {"role": "assistant", "content": content},
+                {
+                    "role": "user",
+                    "content": "Your previous answer had an empty question field. "
+                    "Respond ONLY with valid JSON containing a non-empty 'question' string and its options.",
+                },
+            ]
+            content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
+            parsed = parse_llm_response(content)
+        if (
+            not isinstance(parsed.get("question"), str)
+            or not parsed.get("question").strip()
+        ):
+            log("LLM", "Empty first question after retry, forcing diagnosis")
+            conversation.append({"role": "assistant", "content": content})
+            candidates["conversation"] = conversation
+            candidates["current_question"] = None
+            self._save_candidates(session_id, candidates)
+            return self._finalize(
+                session_id,
+                candidates,
+                conversation,
+                probabilities,
+                diseases,
+                lang,
+                forced=True,
+            )
         parsed = self._tag_question(session_id, parsed, q_index)
         conversation.append({"role": "assistant", "content": content})
         candidates["socrates_axis"] = socrates_axis + 1
@@ -580,33 +671,34 @@ Respond ONLY with valid JSON:
         labels = candidates.get("id_labels", {})
         model_name = candidates.get("model_name")
 
-        # If the LLM already produced named diagnoses during the loop, keep them
+        # The Bayesian posterior is the source of truth for WHICH diseases rank
+        # top-3 and their probabilities. The LLM may only contribute names,
+        # specialists, and advice; its self-reported probabilities are ignored
+        # (they tend to be flat/wrong, e.g. everything at 0.01).
+        backbone = force_top3(probabilities, diseases, labels)
+
+        # Gather LLM-named diagnoses (either from the loop override or the
+        # dedicated naming call) to enrich the backbone with names/advice.
+        named = []
         if parsed_override and (
             parsed_override.get("diagnoses") or parsed_override.get("diagnosis")
         ):
-            parsed = parsed_override
-            if parsed.get("diagnosis") and not parsed.get("diagnoses"):
-                diag = parsed.get("diagnosis")
-                parsed["diagnoses"] = (
+            if parsed_override.get("diagnosis") and not parsed_override.get("diagnoses"):
+                diag = parsed_override.get("diagnosis")
+                named = (
                     diag.get("top_3")
                     if isinstance(diag, dict) and "top_3" in diag
-                    else force_top3(probabilities, diseases, labels)
+                    else []
                 )
-        else:
-            # Derive named diagnoses from the top evidence passages + Bayesian weights
+            else:
+                named = parsed_override.get("diagnoses") or []
+        if not named:
             named = self._name_diagnoses(
                 probabilities, diseases, lang, model_name=model_name
             )
-            fallback = force_top3(probabilities, diseases, labels)
-            if named and len(named) < 3:
-                existing_names = {d.get("disease_name", "").lower() for d in named}
-                for fb in fallback:
-                    if (
-                        fb.get("disease_name", "").lower() not in existing_names
-                        and len(named) < 3
-                    ):
-                        named.append(fb)
-            parsed = {"type": "diagnosis", "diagnoses": named if named else fallback}
+
+        diagnoses = self._merge_diagnoses(backbone, named)
+        parsed = {"type": "diagnosis", "diagnoses": diagnoses}
 
         parsed["type"] = "diagnosis"
         parsed["diagnoses"] = self._localize_diagnoses(parsed["diagnoses"], lang)
@@ -626,6 +718,50 @@ Respond ONLY with valid JSON:
             "total": MAX_QUESTIONS,
         }
 
+    def _merge_diagnoses(self, backbone: list, named: list) -> list:
+        """Overlay LLM-supplied names/specialists/advice onto the Bayesian top-3.
+
+        The Bayesian ``backbone`` (from :func:`force_top3`) decides which
+        diseases appear and at what probability/confidence. The LLM ``named``
+        list is matched by name and its ``specialist``/``advice`` are copied
+        over when available. The returned dicts keep exactly the same shape as
+        before, so the response format is unchanged.
+        """
+        def norm(s: str) -> str:
+            return (s or "").strip().lower()
+
+        named_by_name = {}
+        for d in named or []:
+            key = norm(d.get("disease_name") or d.get("name_en"))
+            if key:
+                named_by_name[key] = d
+
+        merged = []
+        for entry in backbone or []:
+            key = norm(entry.get("disease_name"))
+            named_entry = named_by_name.get(key)
+            merged.append({
+                "disease_name": entry.get("disease_name") or (named_entry or {}).get("disease_name") or "",
+                "probability": entry.get("probability"),
+                "confidence": entry.get("confidence"),
+                "specialist": (named_entry or {}).get("specialist") or entry.get("specialist") or "",
+                "advice": (named_entry or {}).get("advice") or entry.get("advice") or "",
+            })
+
+        # If the posterior was empty (no evidence yet), fall back to the LLM names.
+        if not merged:
+            merged = [
+                {
+                    "disease_name": d.get("disease_name") or d.get("name_en") or "",
+                    "probability": d.get("probability") or 0.0,
+                    "confidence": d.get("confidence") or "Less Likely",
+                    "specialist": d.get("specialist") or "",
+                    "advice": d.get("advice") or "",
+                }
+                for d in (named or [])[:3]
+            ]
+        return merged
+
     def _name_diagnoses(
         self, probabilities, diseases, lang, model_name: str = None
     ) -> list:
@@ -640,9 +776,7 @@ Respond ONLY with valid JSON:
                 text = (
                     d.get("document") or d.get("snippet") or d.get("name_en") or ""
                 )[:800]
-                chunks.append(
-                    f"[PASSAGE id={key} weight={round(prob,2)}]\n{text}"
-                )
+                chunks.append(f"[PASSAGE id={key} weight={round(prob,2)}]\n{text}")
             candidates_text = "\n\n".join(chunks)
             probs_text = "\n".join(f"  {k}: {v*100:.0f}%" for k, v in top)
             prompt = build_diagnosis_naming_prompt(candidates_text, probs_text, lang)
@@ -742,8 +876,8 @@ Respond ONLY with valid JSON:
         return {
             "id": localized.get("question_id") or localized.get("id", ""),
             "text": localized.get("question", ""),
-            "type": _infer_qtype(opts_raw),
-            "options": _to_qopts(opts_raw),
+            "type": infer_qtype(opts_raw),
+            "options": to_question_options(opts_raw),
         }
 
     def _tag_question(self, session_id: str, parsed: dict, q_index: int) -> dict:
@@ -804,6 +938,7 @@ Respond ONLY with valid JSON:
         existing_diseases: list,
         existing_probs: dict,
         lang: str = "en",
+        candidates: dict = None,
         model_name: str = None,
     ) -> dict:
         user_texts = [
@@ -827,8 +962,12 @@ Respond ONLY with valid JSON:
         max_sim = 0.0
         combined_text = ""
 
-        # Try vector results with name_en first
+        # Try vector results with name_en first, but never let the candidate
+        # pool keep inflating past MAX_TOTAL_DISEASES (each new disease at 0.01
+        # dilutes the posterior and flattens all probabilities).
         for r in results:
+            if len(existing_diseases) >= MAX_TOTAL_DISEASES:
+                break
             name = r.get("name_en", "")
             if name and name not in existing_names:
                 existing_diseases.append(r)
@@ -881,6 +1020,8 @@ Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Special
                         parsed.get("diseases", []) if isinstance(parsed, dict) else []
                     )
                     for item in extracted:
+                        if len(existing_diseases) >= MAX_TOTAL_DISEASES:
+                            break
                         if isinstance(item, str):
                             name = item.strip()
                             spec = "General"
@@ -891,7 +1032,11 @@ Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Special
                             existing_diseases.append(
                                 {
                                     "name_en": name,
-                                    "name_local": from_english(name, lang) if lang != "en" else name,
+                                    "name_local": (
+                                        from_english(name, lang)
+                                        if lang != "en"
+                                        else name
+                                    ),
                                     "symptoms_en": combined_text,
                                     "specialist": spec,
                                     "similarity": max_sim if max_sim > 0 else 0.5,
@@ -911,12 +1056,16 @@ Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Special
         # If STILL nothing found, fall back to text-matching the selected symptom names
         if not found_any and candidates.get("selected_symptoms"):
             for sel in candidates["selected_symptoms"]:
+                if len(existing_diseases) >= MAX_TOTAL_DISEASES:
+                    break
                 name = (sel.get("name_en") or "").strip()
                 if name and name not in existing_names:
                     existing_diseases.append(
                         {
                             "name_en": name,
-                            "name_local": from_english(name, lang) if lang != "en" else name,
+                            "name_local": (
+                                from_english(name, lang) if lang != "en" else name
+                            ),
                             "symptoms_en": combined_text,
                             "specialist": "General",
                             "similarity": max_sim if max_sim > 0 else 0.5,
@@ -929,19 +1078,3 @@ Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Special
         for k in existing_probs:
             existing_probs[k] /= total
         return existing_probs
-
-
-def _per_symptom_cap(top1_prior: float, remaining: int, min_per: int) -> int:
-    uncertainty = 1.0 - float(top1_prior)
-    requested = min_per + round(uncertainty * DYNAMIC_EXTRA)
-    budget_room = remaining - min_per
-    cap = min(requested, budget_room) if budget_room > 0 else min_per
-    return max(min_per, cap)
-
-
-def _short(probs: dict) -> dict:
-    return {k: round(v, 2) for k, v in sorted(probs.items(), key=lambda x: -x[1])[:5]}
-
-
-def _round(probs: dict) -> dict:
-    return {k: round(v, 2) for k, v in probs.items()}

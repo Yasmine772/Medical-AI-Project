@@ -1,5 +1,6 @@
+"""PDF report generation, download, and JSON preview endpoints."""
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from app.services.report_service import (
@@ -21,6 +22,7 @@ class GenerateReportResponse(BaseModel):
 
 @router.post("/generate-report/{session_id}")
 async def generate_report(session_id: str, language_code: str = Query(default="en", description="Language code for the report content")):
+    """Generate and store a PDF report for a session in the requested language."""
     try:
         pdf_bytes = await run_in_threadpool(generate_pdf, session_id, language_code)
         pdf_path = save_pdf(session_id, pdf_bytes, language_code)
@@ -38,6 +40,7 @@ async def generate_report(session_id: str, language_code: str = Query(default="e
 
 @router.get("/reports/{session_id}/download")
 async def download_report(session_id: str, language_code: str = Query(default="en", description="Language code for the report content")):
+    """Download the PDF report, generating it on the fly if not cached."""
     pdf_path = get_pdf_path(session_id, language_code)
     if not pdf_path:
         try:
@@ -60,6 +63,7 @@ async def download_report(session_id: str, language_code: str = Query(default="e
 
 @router.get("/reports/{session_id}/preview")
 async def preview_report(session_id: str, language_code: str = Query(default="en", description="Language code for localized content")):
+    """Return the report data as JSON (for in-app preview)."""
     try:
         return build_report_json(session_id, language_code)
     except ValueError as e:

@@ -1,3 +1,9 @@
+"""Bayesian reasoning for the diagnosis engine.
+
+Priors are derived from keyword-based likelihood labels in the source docs
+(or vector similarity as a fallback), then updated with each patient answer
+via naive Bayes. Stopping and top-3 selection are threshold-driven.
+"""
 _PRIOR_KEYWORDS = [
     (["شائع جداً", "شائع جدا", "very common", "very severe"], 0.30),
     (["شائع", "common"], 0.20),
@@ -13,6 +19,17 @@ MAX_QUESTIONS = 25
 
 
 def compute_priors(diseases: list) -> dict:
+    """Compute normalized prior probabilities for a list of candidate diseases.
+
+    Each disease's prior is read from a "likelihood" label found in its
+    document text, or falls back to its vector similarity score.
+
+    Args:
+        diseases (list): Disease dicts (with ``name_en``, ``document``, ``similarity``).
+
+    Returns:
+        dict: ``{name_en: probability}`` summing to 1.0.
+    """
     scores = {}
     used_similarity = False
     for d in diseases:
@@ -45,6 +62,17 @@ def compute_priors(diseases: list) -> dict:
 
 
 def bayes_update(priors: dict, probs_per_option: dict, options: list, answer: str) -> dict:
+    """Apply a Bayes update given the answer a patient chose.
+
+    Args:
+        priors (dict): Current ``{disease: probability}``.
+        probs_per_option (dict): ``{disease: [p(opt0), p(opt1), ...]}`` from the LLM.
+        options (list): Option labels the patient could pick.
+        answer (str): The chosen option label.
+
+    Returns:
+        dict: Updated posterior ``{disease: probability}``.
+    """
     chosen_idx = None
     answer_clean = answer.strip()
     for i, opt in enumerate(options):
@@ -74,6 +102,12 @@ def bayes_update(priors: dict, probs_per_option: dict, options: list, answer: st
 
 
 def check_stopping(probs: dict, socrates_axis: int = 0) -> bool:
+    """Return True when the top candidate is confident enough to stop asking.
+
+    Requires at least 3 SOCRATES axes answered, then checks the top-1
+    probability against ``CONFIDENCE_THRESHOLD`` or the top-3 sum against
+    ``TOP3_THRESHOLD``.
+    """
     if socrates_axis < 3:
         return False
     sorted_probs = sorted(probs.items(), key=lambda x: -x[1])
@@ -83,6 +117,19 @@ def check_stopping(probs: dict, socrates_axis: int = 0) -> bool:
 
 
 def force_top3(probs: dict, diseases: list = None, labels: dict = None) -> list:
+    """Return the top-3 diseases as user-facing diagnosis dicts.
+
+    Used when the LLM path fails or to backfill an incomplete naming result.
+
+    Args:
+        probs (dict): ``{disease: probability}``.
+        diseases (list, optional): Candidate disease dicts for metadata lookup.
+        labels (dict, optional): ``{disease: {name_en, ...}}`` overrides.
+
+    Returns:
+        list: Up to 3 dicts with ``disease_name``, ``confidence``,
+              ``probability``, ``specialist``, ``advice``, ``reasoning``.
+    """
     disease_map = {}
     if diseases:
         for d in diseases:

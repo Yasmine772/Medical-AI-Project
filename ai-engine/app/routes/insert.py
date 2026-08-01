@@ -1,3 +1,8 @@
+"""Ingestion endpoints: JSON disease bulk-import and async PDF chunking.
+
+PDFs are processed in a background thread (one at a time) so the request
+returns immediately with a ``task_id`` for polling progress.
+"""
 import hashlib
 import json
 import uuid
@@ -18,6 +23,7 @@ _pdf_lock = threading.Lock()
 
 
 def _insert_disease(disease: DiseaseItem):
+    """Embed and store a single disease row."""
     store = get_store()
     embedder = get_embedder()
     disease_id = disease.id or str(uuid.uuid4())
@@ -46,6 +52,7 @@ def _insert_disease(disease: DiseaseItem):
 
 @router.post("/insert/json-file")
 async def insert_json_file(file: UploadFile = File(...)):
+    """Bulk-insert diseases from a JSON array or ``{"diseases": [...]}`` file."""
     if not file.filename or not file.filename.endswith(".json"):
         raise HTTPException(400, "Only .json files are accepted")
 
@@ -68,6 +75,7 @@ async def insert_json_file(file: UploadFile = File(...)):
 
 
 def _process_pdf(task_id: str, content: bytes, filename: str):
+    """Background task: extract, chunk, embed, and insert a PDF's text."""
     try:
         store = get_store()
         embedder = get_embedder()
@@ -154,6 +162,7 @@ def _process_pdf(task_id: str, content: bytes, filename: str):
 
 @router.post("/insert/pdf")
 async def insert_pdf(file: UploadFile = File(...)):
+    """Queue a PDF for chunking/embedding; returns a ``task_id`` for polling."""
     if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(400, "Only PDF files are accepted")
 
@@ -173,6 +182,7 @@ async def insert_pdf(file: UploadFile = File(...)):
 
 @router.get("/insert/progress/{task_id}")
 async def insert_progress(task_id: str):
+    """Return the current progress/status of a PDF ingestion task."""
     task = get_insert_progress(task_id)
     if task is None:
         raise HTTPException(404, "Task not found")

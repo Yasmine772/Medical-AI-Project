@@ -1,3 +1,4 @@
+"""Diagnosis history endpoint (completed sessions per user)."""
 import json
 
 from fastapi import APIRouter, Query
