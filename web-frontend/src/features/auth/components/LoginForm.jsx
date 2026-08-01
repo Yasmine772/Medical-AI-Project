@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../../store/authSlice";
-
 import api from "../../../api/axios";
+import toast from "react-hot-toast";
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -25,26 +25,27 @@ const LoginForm = () => {
 
     try {
       const response = await api.post("/admin/login", formData, {
-        headers: {
-          Accept: "application/json",
-        },
+        headers: { Accept: "application/json" },
       });
 
-      console.log("Login Response Data:", response.data);
-
       const token = response.data.data?.access_token;
+      const role = response.data.data?.role;
 
       if (token) {
-        // when we found token go to dashboard
-        dispatch(loginSuccess({ token, email }));
-        navigate("/app/dashboard");
+        dispatch(loginSuccess({ token, email, role }));
+        toast.success("Admin login successfully");
+
+        if (role === "admin") {
+          navigate("/app/dashboard");
+        } else {
+          navigate("/app/dashboard");
+        }
       } else {
-        // go to otp page
-        navigate("/otp-verification", { state: { email } });
+        navigate("/otp-verification", { state: { email, role: "admin" } });
       }
     } catch (error) {
       if (error.response?.status === 403) {
-        navigate("/otp-verification", { state: { email } });
+        navigate("/otp-verification", { state: { email, role: "admin" } });
       } else {
         alert(
           "wrong : " +

@@ -3,13 +3,13 @@ import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { updateProfile } from "../../../store/authSlice";
 import api from "../../../api/axios";
+import toast from "react-hot-toast";
 
 const ProfileDrawer = ({ isOpen, onClose }) => {
   const { userName, userImage, userEmail, birthDate, age, gender } =
     useSelector((state) => state.auth);
 
   const dispatch = useDispatch();
-
 
   const [nameInput, setNameInput] = useState(userName || "");
   const [birthDateInput, setBirthDateInput] = useState(
@@ -18,7 +18,6 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
   const [genderInput, setGenderInput] = useState(gender || "");
   const [ageInput, setAgeInput] = useState(age || "");
   const [avatarFile, setAvatarFile] = useState(null);
-
 
   const [prevUserName, setPrevUserName] = useState(userName);
   if (userName !== prevUserName) {
@@ -29,19 +28,16 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
     setAgeInput(age || "");
   }
 
- 
   const getImageUrl = (avatarPath) => {
     if (!avatarPath) return null;
     if (avatarPath.startsWith("http")) return avatarPath;
     return `http://127.0.0.1:8000/storage/${avatarPath}`;
   };
 
- 
-
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setAvatarFile(file); 
+      setAvatarFile(file);
 
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -84,24 +80,26 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
           birthDate: birthDateInput,
           gender: genderInput,
           age: ageInput,
-          image: finalImage, 
+          image: finalImage,
         }),
       );
 
+      toast.success("Profile updated successfully!");
+
       onClose();
     } catch (error) {
-      console.error("Error updating profile:", error.response?.data);
-      alert(
-        JSON.stringify(
-          error.response?.data?.errors || "Error updating profile",
-        ),
-      );
+      const errorData = error.response?.data?.errors;
+      const errorMessage =
+        typeof errorData === "object"
+          ? Object.values(errorData).flat().join(", ")
+          : error.response?.data?.message || "Error updating profile";
+
+      toast.error(errorMessage);
     }
   };
 
   return (
     <>
-     
       <div
         className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ease-in-out ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -109,7 +107,6 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
         onClick={onClose}
       />
 
-     
       <div
         className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 p-6 flex flex-col transform transition-transform duration-300 ease-in-out overflow-y-auto ${
           isOpen ? "translate-x-0" : "translate-x-full"
@@ -125,7 +122,6 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-      
         <div className="flex flex-col items-center mb-6 flex-shrink-0">
           <label className="relative cursor-pointer group">
             <div className="w-28 h-28 rounded-full border-4 border-[#72A6BB] flex items-center justify-center overflow-hidden bg-gray-50 transition-all duration-300 group-hover:border-[#5a8799]">
@@ -218,11 +214,8 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
               className="w-full p-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#72A6BB] transition outline-none"
             />
           </div>
-
-        
         </div>
 
-       
         <div className="pt-2 flex-shrink-0 bg-white">
           <button
             onClick={handleSave}

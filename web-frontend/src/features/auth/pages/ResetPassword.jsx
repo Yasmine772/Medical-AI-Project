@@ -3,12 +3,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Input from "../../../components/UI/Input";
 import Button from "../../../components/UI/Button";
 import api from "../../../api/axios";
+import toast from "react-hot-toast";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -17,7 +18,6 @@ const ResetPassword = () => {
   const handleResetSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
 
     try {
       await api.post("/api/v1/auth/reset-password", {
@@ -27,11 +27,24 @@ const ResetPassword = () => {
         password_confirmation: passwordConfirmation,
       });
 
-      alert("password reset successfuly , you can go to login page");
-      navigate("/login"); 
-      
+      toast.success("Password reset successfully, you can now log in", {
+        duration: 3000,
+        style: {
+          background: "#72A6BB",
+          color: "#fff",
+          borderRadius: "16px",
+          padding: "12px 20px",
+          fontWeight: "500",
+        },
+      });
+      navigate("/login");
     } catch (error) {
-      alert("wrong :: " + (error.response?.data?.message || "something went wrong"));
+      toast.error(error.response?.data?.message || "Something went wrong", {
+        duration: 3000,
+        style: {
+          borderRadius: "16px",
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -45,9 +58,7 @@ const ResetPassword = () => {
       <h2 className="text-xl font-bold text-gray-800 tracking-tight mt-2">
         Reset <span className="text-medical font-medium">password</span>
       </h2>
-      <p className="text-sm text-gray-500">
-        Enter your new password below.
-      </p>
+      <p className="text-sm text-gray-500">Enter your new password below.</p>
 
       <Input
         label="New Password"

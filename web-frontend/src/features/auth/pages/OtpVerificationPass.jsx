@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Input from "../../../components/UI/Input";
 import Button from "../../../components/UI/Button";
 import api from "../../../api/axios";
+import toast from "react-hot-toast";
 
 const OtpVerificationPass = () => {
   const [otp, setOtp] = useState("");
@@ -24,12 +25,13 @@ const OtpVerificationPass = () => {
         otp: otp,
       });
 
+      toast.success("OTP verified successfully");
+
       // go to reset password page
       navigate("/reset-password", { state: { email, otp } });
     } catch (error) {
-      alert(
-        "خطأ: " +
-          (error.response?.data?.message || "الرمز غير صحيح أو منتهي الصلاحية"),
+     toast.error(
+        error.response?.data?.message || "Invalid or expired OTP code"
       );
     } finally {
       setLoading(false);
@@ -40,9 +42,9 @@ const OtpVerificationPass = () => {
     setResending(true);
     try {
       await api.post("/api/v1/auth/resendOtp", { email });
-      alert("otp resend to your email");
+      toast.success("OTP resent to your email");
     } catch (error) {
-      alert("wrong: " + (error.response?.data?.message || "resend failed"));
+      toast.error(error.response?.data?.message || "Resend failed");
     } finally {
       setResending(false);
     }

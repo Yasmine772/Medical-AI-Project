@@ -5,7 +5,6 @@ import medicalImg from "../../../assets/medical-illustration.png";
 const DoctorLoginPage = () => {
   return (
     <div className="min-h-screen w-full bg-[#BACED6] flex items-center justify-center p-6 antialiased font-sans relative overflow-hidden">
-      {/* Background Decorative Circles */}
       <div
         className="absolute rounded-full pointer-events-none"
         style={{

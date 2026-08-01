@@ -17,7 +17,6 @@ api.interceptors.request.use((config) => {
     return config;
   }
 
-  // const token = localStorage.getItem("token");
   const token =
     localStorage.getItem("doctor_token") || localStorage.getItem("token");
 

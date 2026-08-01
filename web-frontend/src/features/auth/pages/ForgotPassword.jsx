@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Input from "../../../components/UI/Input";
 import Button from "../../../components/UI/Button";
 import api from "../../../api/axios";
+import toast from "react-hot-toast";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -16,12 +17,13 @@ const ForgotPassword = () => {
     try {
       // send email to api
       await api.post("/api/v1/auth/forget-password", { email });
+      toast.success("OTP sent successfully to your email");
 
       navigate("/otp-verification-pass", { state: { email } });
     } catch (error) {
-      alert(
-        "wrong" +
-          (error.response?.data?.message || "something went wrong while sending otp"),
+      toast.error(
+        error.response?.data?.message ||
+          "Something went wrong while sending OTP",
       );
     } finally {
       setLoading(false);

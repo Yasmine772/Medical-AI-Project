@@ -5,36 +5,29 @@ import { useDispatch } from "react-redux";
 import DoctorSidebar from "./DoctorSidebar";
 import LogoutModal from "../../auth/components/LogoutModal";
 import ProfilePanel from "./ProfilePanel";
-import { logoutDoctor, doctorLogout } from "../../doctorAuth/doctorAuthSlice";
+import { logout } from "../../../store/authSlice";
+import api from "../../../api/axios";
 const DoctorLayout = () => {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
   const handleLogoutConfirm = async () => {
     try {
-      // استدعاء الـ API الخاص بتسجيل الخروج من الباك إند
-      const resultAction = await dispatch(logoutDoctor());
+      await api.post("/doctor/logout");
 
-      if (logoutDoctor.fulfilled.match(resultAction)) {
-        // إظهار الرسالة القادمة من الاستجابة (User logout successfully)
-        const message =
-          resultAction.payload?.message || "User logout successfully";
-        toast.success(message, {
-          duration: 3000, // المدة بالميلي ثانية (3 ثواني)
-          style: {
-            background: "#72A6BB",
-            color: "#fff",
-            borderRadius: "12px",
-          },
-        });
-      }
+      toast.success("User logout successfully", {
+        duration: 3000,
+        style: {
+          background: "#72A6BB",
+          color: "#fff",
+          borderRadius: "12px",
+        },
+      });
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // تفريغ بيانات التوكن محلياً والتوجه لصفحة تسجيل دخول الأطباء الصحيحة
-      dispatch(doctorLogout());
+      dispatch(logout());
       setIsLogoutModalOpen(false);
       navigate("/loginDoctor");
     }

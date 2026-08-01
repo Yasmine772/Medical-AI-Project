@@ -1,5 +1,5 @@
 import { useState } from "react";
-// import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logout } from "../../../store/authSlice";
 import api from "../../../api/axios";
@@ -7,9 +7,10 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import LogoutModal from "../../auth/components/LogoutModal";
 import ConfirmationModal from "../../doctors/components/ConfirmationModal";
+import toast from "react-hot-toast";
 const DashboardLayout = () => {
   const dispatch = useDispatch();
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState({
     isOpen: false,
@@ -20,11 +21,17 @@ const DashboardLayout = () => {
   const handleLogout = async () => {
     try {
       await api.post("/admin/logout");
+      toast.success("Logged out successfully");
     } catch (error) {
       console.error("Logout failed", error);
+      toast.error("Logout failed");
     } finally {
-      dispatch(logout()); // remove token and reload the page
-      window.location.href = "/login"; 
+      dispatch(logout());
+
+     
+      setTimeout(() => {
+        navigate("/login"); 
+      }, 500);
     }
   };
 

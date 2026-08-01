@@ -19,9 +19,9 @@ createRoot(document.getElementById("root")).render(
           toastOptions={{
             duration: 3000,
             style: {
-              background: "#72A6BB", // اللون المطلوب
-              color: "#fff", // لون الخط أبيض ليكون واضحاً
-              borderRadius: "16px", // إعطائها حواف دائرية أنيقة تتناسب مع تصميمك
+              background: "#72A6BB", 
+              color: "#fff", 
+              borderRadius: "16px", 
               padding: "12px 20px",
               fontWeight: "500",
             },

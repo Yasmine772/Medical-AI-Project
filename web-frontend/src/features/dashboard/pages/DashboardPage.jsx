@@ -40,13 +40,15 @@ const DashboardPage = () => {
       {/* Header */}
       <div className="flex justify-between items-center shrink-0">
         <h1 className="text-4xl font-bold text-gray-800">HOME PAGE</h1>
-        <NotificationDropdown />
-        <button
-          onClick={() => setIsDrawerOpen(true)}
-          className="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition"
-        >
-          <UserCircle size={32} className="text-[#72A6BB]" />
-        </button>
+        <div className="flex items-center gap-3">
+          <NotificationDropdown />
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition"
+          >
+            <UserCircle size={32} className="text-[#72A6BB]" />
+          </button>
+        </div>
       </div>
 
       <ProfileDrawer
@@ -124,16 +126,15 @@ const DashboardPage = () => {
         </div>
         {/* roznama */}
         <div className="lg:col-span-1 bg-white/40 backdrop-blur-md rounded-[24px] border border-white/50 shadow-sm overflow-hidden flex flex-col">
-          {/* الجزء الأزرق العلوي */}
+      
           <div className="bg-[#72A6BB] p-4 text-center">
             <h3 className="text-white font-bold text-sm uppercase tracking-wider">
               {monthYear}
             </h3>
           </div>
 
-          {/* الجزء الأبيض السفلي */}
           <div className="p-4">
-            {/* صف أسماء أيام الأسبوع */}
+           
             <div className="grid grid-cols-7 gap-1 mb-2">
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
                 <span
@@ -145,7 +146,7 @@ const DashboardPage = () => {
               ))}
             </div>
 
-            {/* شبكة الأيام */}
+           
             <div className="grid grid-cols-7 gap-y-2 gap-x-1 text-center text-xs">
               {[...Array(30).keys()].map((day) => {
                 const d = day + 1;

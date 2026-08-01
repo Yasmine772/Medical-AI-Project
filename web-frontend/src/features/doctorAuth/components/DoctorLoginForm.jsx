@@ -2,42 +2,58 @@ import Input from "../../../components/UI/Input";
 import Button from "../../../components/UI/Button";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { loginDoctor } from "../doctorAuthSlice";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "../../../store/authSlice";
+import api from "../../../api/axios";
+import toast from "react-hot-toast";
 
 const DoctorLoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { loading } = useSelector((state) => state.doctorAuth);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    const resultAction = await dispatch(loginDoctor({ email, password }));
+    const formData = new FormData();
+    formData.append("email", email.trim());
+    formData.append("password", password);
 
-    if (loginDoctor.fulfilled.match(resultAction)) {
-      const token = resultAction.payload.data?.access_token;
+    try {
+      const response = await api.post("/doctor/login", formData, {
+        headers: { Accept: "application/json" },
+      });
+
+      const token = response.data.data?.access_token;
+      const role = response.data.data?.role;
+
       if (token) {
+        dispatch(loginSuccess({ token, email, role }));
+        toast.success("Doctor login successfully");
         navigate("/Layout/dashboard");
       } else {
-        // إذا تطلب الأمر تفعيل OTP ولم يكن التوكن موجوداً مباشرة
-        navigate("/otp-verification", { state: { email, role: "doctor" } });
+        localStorage.setItem("pending_doctor_email", email.trim());
+        toast.success("Please verify your account via OTP");
+        navigate("/otp-verification-doctor", {
+          state: { email, role: "doctor" },
+        });
       }
-    } else if (loginDoctor.rejected.match(resultAction)) {
-      const errorPayload = resultAction.payload;
-      
-      // التعامل مع حالة 403 (التحقق من الإيميل لأول مرة)
-      if (errorPayload?.status === 403) {
-        navigate("/otp-verification", { state: { email, role: "doctor" } });
+    } catch (error) {
+      if (error.response?.status === 403) {
+        localStorage.setItem("pending_doctor_email", email.trim());
+        toast.error("Account verification required");
+        navigate("/otp-verification-doctor", {
+          state: { email, role: "doctor" },
+        });
       } else {
-        alert(
-          "wrong : " +
-            (errorPayload?.data?.message || "something went wrong")
-        );
+        toast.error(error.response?.data?.message || "Something went wrong");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,7 +89,7 @@ const DoctorLoginForm = () => {
       <div className="text-left">
         <button
           type="button"
-          onClick={() => navigate("/forgot-password")}
+          onClick={() => navigate("/forgot-password-doctor")}
           className="text-[#58889B] font-normal text-sm underline underline-offset-4 decoration-1 hover:text-gray-950 transition-colors"
         >
           forgot password
