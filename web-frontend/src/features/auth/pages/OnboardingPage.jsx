@@ -1,14 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import doctorIllustration from "../../../assets/doctor.png"; 
+import doctorIllustration from "../../../assets/doctor.png";
 import adminIllustration from "../../../assets/system-admin.png";
 import logoImg from "../../../assets/medical-logo.png";
 const OnboardingPage = () => {
   const navigate = useNavigate();
 
   return (
-    
     <div className="min-h-screen w-full bg-[#BACED6] flex items-center justify-center p-6 antialiased font-sans relative overflow-hidden">
-      
       <div
         className="absolute rounded-full pointer-events-none"
         style={{
@@ -76,7 +74,6 @@ const OnboardingPage = () => {
         }}
       />
 
-      
       <div className="relative z-10 flex flex-col items-center text-center mb-16">
         <div className="flex items-center gap-4 mb-6">
           <img
@@ -99,7 +96,6 @@ const OnboardingPage = () => {
         </h1>
         <p className="text-gray-500 text-sm mb-12">
           {" "}
-          
           Your AI-Powered Medical Assistant.
         </p>
 
@@ -120,7 +116,7 @@ const OnboardingPage = () => {
               AI Diagnostics & Patient Management
             </p>
             <button
-              onClick={() => navigate("/login?role=doctor")}
+              onClick={() => navigate("/loginDoctor")}
               className="bg-[#58889B] text-white px-10 py-3 rounded-full hover:bg-[#467080] transition-all w-48"
             >
               I am a doctor
@@ -143,7 +139,7 @@ const OnboardingPage = () => {
               Platform Management & Data Control
             </p>
             <button
-              onClick={() => navigate("/login?role=admin")}
+              onClick={() => navigate("/login")}
               className="bg-[#58889B] text-white px-10 py-3 rounded-full hover:bg-[#467080] transition-all w-48"
             >
               I am an admin

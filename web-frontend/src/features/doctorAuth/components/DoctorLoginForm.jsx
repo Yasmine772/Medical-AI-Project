@@ -7,7 +7,7 @@ import { loginSuccess } from "../../../store/authSlice";
 import api from "../../../api/axios";
 import toast from "react-hot-toast";
 
-const LoginForm = () => {
+const DoctorLoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ const LoginForm = () => {
     formData.append("password", password);
 
     try {
-      const response = await api.post("/admin/login", formData, {
+      const response = await api.post("/doctor/login", formData, {
         headers: { Accept: "application/json" },
       });
 
@@ -33,24 +33,24 @@ const LoginForm = () => {
 
       if (token) {
         dispatch(loginSuccess({ token, email, role }));
-        toast.success("Admin login successfully");
-
-        if (role === "admin") {
-          navigate("/app/dashboard");
-        } else {
-          navigate("/app/dashboard");
-        }
+        toast.success("Doctor login successfully");
+        navigate("/Layout/dashboard");
       } else {
-        navigate("/otp-verification", { state: { email, role: "admin" } });
+        localStorage.setItem("pending_doctor_email", email.trim());
+        toast.success("Please verify your account via OTP");
+        navigate("/otp-verification-doctor", {
+          state: { email, role: "doctor" },
+        });
       }
     } catch (error) {
       if (error.response?.status === 403) {
-        navigate("/otp-verification", { state: { email, role: "admin" } });
+        localStorage.setItem("pending_doctor_email", email.trim());
+        toast.error("Account verification required");
+        navigate("/otp-verification-doctor", {
+          state: { email, role: "doctor" },
+        });
       } else {
-        alert(
-          "wrong : " +
-            (error.response?.data?.message || "something went wrong"),
-        );
+        toast.error(error.response?.data?.message || "Something went wrong");
       }
     } finally {
       setLoading(false);
@@ -64,14 +64,14 @@ const LoginForm = () => {
     >
       <h2 className="text-xl font-bold text-gray-800 tracking-tight mt-2">
         Login to your{" "}
-        <span className="text-medical font-medium">diagnostic account</span>
+        <span className="text-[#72A6BB] font-medium">doctor account</span>
       </h2>
 
       <div className="flex flex-col gap-3">
         <Input
           label="Email Address"
           type="email"
-          id="email"
+          id="doctor-email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -79,7 +79,7 @@ const LoginForm = () => {
         <Input
           label="Password"
           type="password"
-          id="password"
+          id="doctor-password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -89,7 +89,7 @@ const LoginForm = () => {
       <div className="text-left">
         <button
           type="button"
-          onClick={() => navigate("/forgot-password")}
+          onClick={() => navigate("/forgot-password-doctor")}
           className="text-[#58889B] font-normal text-sm underline underline-offset-4 decoration-1 hover:text-gray-950 transition-colors"
         >
           forgot password
@@ -105,4 +105,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default DoctorLoginForm;

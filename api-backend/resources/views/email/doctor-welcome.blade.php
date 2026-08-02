@@ -22,7 +22,7 @@
     <p><strong>Specialization:</strong> {{ $doctorRequest->specialization }}</p>
 
     <p>
-        <a href="http://localhost:5173/login"
+        <a href="http://localhost:5173/loginDoctor"
             style="display: inline-block; background: #222; color: #fff; padding: 10px 30px; text-decoration: none;">
             Login to Dashboard
         </a>
