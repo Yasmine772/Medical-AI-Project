@@ -1,5 +1,6 @@
+"""PDF report generation, download, and JSON preview endpoints."""
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from app.services.report_service import (
@@ -25,6 +26,7 @@ async def generate_report(
     request: Request,
     language_code: str = Query(default="en", description="Language code for the report content"),
 ):
+    """Generate and store a PDF report for a session in the requested language."""
     overrides = None
     content_type = request.headers.get("content-type", "")
     if content_type.startswith("application/json"):
@@ -66,6 +68,7 @@ async def download_report(
     language_code: str = Query(default="en", description="Language code for the report content"),
     reviewed: bool = Query(default=False, description="Serve the doctor-reviewed report file"),
 ):
+    """Download the PDF report, generating it on the fly if not cached."""
     pdf_path = get_pdf_path(session_id, language_code, reviewed=reviewed)
     if not pdf_path and not reviewed:
         try:
@@ -90,6 +93,7 @@ async def download_report(
 
 @router.get("/reports/{session_id}/preview")
 async def preview_report(session_id: str, language_code: str = Query(default="en", description="Language code for localized content")):
+    """Return the report data as JSON (for in-app preview)."""
     try:
         return build_report_json(session_id, language_code)
     except ValueError as e:
