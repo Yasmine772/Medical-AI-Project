@@ -39,6 +39,7 @@ class AiService
                 'is_pregnant' => $request['is_pregnant'],
                 'activity_level' => $request['activity_level'],
                 'birth_date' => $request['birth_date'],
+                'blood_type' => $request['blood_type'] ?? null,
             ]);
         }
 
@@ -249,10 +250,20 @@ class AiService
                 $session = DiagnosisSession::where('session_hash', $sessionId)->first();
 
                 if ($session) {
+                    $pdfPath = $result['pdf_path'] ?? $result['pdf_url'] ?? null;
+
                     $session->update([
                         'phase'               => 'completed',
                         'report_generated_at' => now(),
+                        'pdf_file_path'       => $pdfPath ?? $session->pdf_file_path,
+                        'pdf_url'             => $pdfPath
+                            ? $this->fastApiUrl."/reports/{$sessionId}/download?language_code={$languageCode}"
+                            : $session->pdf_url,
                     ]);
+
+                    if (empty($session->ai_result)) {
+                        app(DiagnosisDataService::class)->store($session, $languageCode);
+                    }
 
                     if (!$session->doctor_id) {
                         $preview = Http::timeout($this->timeout)
@@ -293,11 +304,140 @@ class AiService
         }
     }
 
+    // //////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+     * Regenerate the report PDF after the doctor's review, using the reviewed
+     * diagnoses and a doctor-reviewed footer instead of the AI disclaimer.
+     */
+    public function generateDoctorReport(DiagnosisSession $session, string $languageCode = 'en')
+    {
+        $doctor = $session->doctor;
+
+        $payload = [
+            'language_code'    => $languageCode,
+            'diagnoses'        => $this->formatDiagnosesForPdf($session->ai_result ?? []),
+            'patient_info'     => $this->formatPatientInfoForPdf($session),
+            'initial_symptoms' => is_array($session->symptoms)
+                ? implode(', ', array_values($session->symptoms))
+                : '',
+            'doctor_review'    => $doctor ? [
+                'doctor_name'     => $doctor->user?->full_name ?? 'Doctor',
+                'specialization'  => $doctor->specialization,
+                'phone'           => $doctor->phone,
+                'reviewed_at'     => now()->format('Y-m-d H:i'),
+                'notes'           => $session->doctor_notes,
+            ] : null,
+        ];
+
+        try {
+            $response = Http::timeout($this->reportTimeout)
+                ->acceptJson()
+                ->post($this->fastApiUrl."/generate-report/{$session->session_hash}", $payload);
+
+            if ($response->successful()) {
+                $result = $response->json();
+
+                $session->update([
+                    'phase'               => 'completed',
+                    'report_generated_at' => now(),
+                    'pdf_file_path'       => $result['pdf_path'] ?? $session->pdf_file_path,
+                    'pdf_url'             => $result['pdf_path']
+                        ? $this->fastApiUrl."/reports/{$session->session_hash}/download?language_code={$languageCode}&reviewed=1"
+                        : $session->pdf_url,
+                ]);
+
+                return $result;
+            }
+
+            Log::error('FastAPI generate-doctor-report failed', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+
+            return null;
+
+        } catch (ConnectionException $e) {
+            Log::error('FastAPI doctor-report timeout: '.$e->getMessage());
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('FastAPI doctor-report error: '.$e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
+     * Convert Laravel ai_result rows (name_en/name_ar + int probability 0-100)
+     * into the FastAPI template diagnosis shape.
+     */
+    protected function formatDiagnosesForPdf(array $aiResult): array
+    {
+        return collect($aiResult)
+            ->map(function ($d) {
+                $probability = $d['probability'] ?? null;
+                if (is_numeric($probability) && $probability > 1) {
+                    $probability = (float) $probability / 100;
+                }
+
+                $confidence = strtolower((string) ($d['confidence'] ?? ''));
+                $confidence = match ($confidence) {
+                    'high', 'strong'      => 'Strong',
+                    'medium', 'moderate'  => 'Moderate',
+                    'low', 'less likely'  => 'Less Likely',
+                    default               => $d['confidence'] ?? 'Less Likely',
+                };
+
+                return [
+                    'disease_name'    => $d['name_en'] ?? $d['disease_name'] ?? '',
+                    'disease_name_ar' => $d['name_ar'] ?? $d['disease_name_ar'] ?? '',
+                    'probability'     => is_numeric($probability) ? (float) $probability : null,
+                    'confidence'      => $confidence,
+                    'specialist'      => $d['specialist'] ?? '',
+                    'advice'          => $d['advice'] ?? '',
+                    'reasoning'       => $d['reasoning'] ?? '',
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Build patient_info for the PDF from session patient_data + profile extras.
+     */
+    protected function formatPatientInfoForPdf(DiagnosisSession $session): array
+    {
+        $p = $session->patient_data ?? [];
+        $profile = $session->user?->profile;
+
+        return [
+            'patient_name'      => $session->user?->full_name ?? ($p['name'] ?? null),
+            'age'               => $p['age'] ?? null,
+            'gender'            => $p['gender'] ?? null,
+            'is_smoker'         => $p['smoker'] ?? null,
+            'has_diabetes'      => $p['diabetes'] ?? null,
+            'has_hypertension'  => $p['hypertension'] ?? null,
+            'is_pregnant'       => $p['pregnant'] ?? null,
+            'activity_level'    => $p['activity_level'] ?? null,
+            'blood_type'        => $profile?->blood_type ?? $p['blood_type'] ?? null,
+            'occupation'        => $profile?->occupation ?? $p['occupation'] ?? null,
+            'drinks_alcohol'    => $profile?->drinks_alcohol ?? null,
+        ];
+    }
+
     public function downloadReport(string $sessionId, string $languageCode = 'en')
     {
         try {
+            $session = DiagnosisSession::where('session_hash', $sessionId)->first();
+
+            $reviewed = $session && $session->doctor_reviewed_at ? 1 : 0;
+
             $response = Http::timeout($this->reportTimeout)
-                ->get($this->fastApiUrl."/reports/{$sessionId}/download", ['language_code' => $languageCode]);
+                ->get($this->fastApiUrl."/reports/{$sessionId}/download", [
+                    'language_code' => $languageCode,
+                    'reviewed'      => $reviewed,
+                ]);
 
             if ($response->successful()) {
                 $filename = "diagnostic_report_{$sessionId}.pdf";

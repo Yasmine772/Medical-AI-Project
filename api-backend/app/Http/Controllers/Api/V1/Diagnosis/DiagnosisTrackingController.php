@@ -18,9 +18,11 @@ class DiagnosisTrackingController extends Controller
 
     public function getTracking(Request $request, string $sessionHash): JsonResponse
     {
+        $lang = $request->query('language_code', 'en');
         $data = $this->trackingService->getTrackingData(
             $request->user()->id,
-            $sessionHash
+            $sessionHash,
+            $lang
         );
 
         if (!$data) {
@@ -32,8 +34,10 @@ class DiagnosisTrackingController extends Controller
 
     public function getUserSessions(Request $request): JsonResponse
     {
+        $lang = $request->query('language_code', 'en');
         $sessions = $this->trackingService->getUserSessions(
-            $request->user()->id
+            $request->user()->id,
+            $lang
         );
 
         return $this->successResponse($sessions, 'Sessions retrieved', 200);

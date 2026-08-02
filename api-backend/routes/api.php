@@ -73,7 +73,7 @@ Route::prefix('v1/auth')->group(function () {
         Route::get('/tracking/{sessionHash}', [DiagnosisTrackingController::class, 'getTracking'])->middleware('permission:view-tracking-data');
 
     });
-    
+
 });
 
 Route::prefix('admin')->group(function () {

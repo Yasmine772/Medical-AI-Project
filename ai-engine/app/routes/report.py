@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
@@ -20,10 +20,34 @@ class GenerateReportResponse(BaseModel):
 
 
 @router.post("/generate-report/{session_id}")
-async def generate_report(session_id: str, language_code: str = Query(default="en", description="Language code for the report content")):
+async def generate_report(
+    session_id: str,
+    request: Request,
+    language_code: str = Query(default="en", description="Language code for the report content"),
+):
+    overrides = None
+    content_type = request.headers.get("content-type", "")
+    if content_type.startswith("application/json"):
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if body.get("language_code"):
+            language_code = body["language_code"]
+        overrides = {
+            "diagnoses": body.get("diagnoses"),
+            "patient_info": body.get("patient_info"),
+            "initial_symptoms": body.get("initial_symptoms"),
+            "doctor_review": body.get("doctor_review"),
+            "advice": body.get("advice"),
+        }
+        overrides = {k: v for k, v in overrides.items() if v is not None}
+
+    reviewed = bool(overrides and overrides.get("doctor_review"))
+
     try:
-        pdf_bytes = await run_in_threadpool(generate_pdf, session_id, language_code)
-        pdf_path = save_pdf(session_id, pdf_bytes, language_code)
+        pdf_bytes = await run_in_threadpool(generate_pdf, session_id, language_code, overrides)
+        pdf_path = save_pdf(session_id, pdf_bytes, language_code, reviewed=reviewed)
         return GenerateReportResponse(
             session_id=session_id,
             pdf_path=pdf_path,
@@ -37,9 +61,13 @@ async def generate_report(session_id: str, language_code: str = Query(default="e
 
 
 @router.get("/reports/{session_id}/download")
-async def download_report(session_id: str, language_code: str = Query(default="en", description="Language code for the report content")):
-    pdf_path = get_pdf_path(session_id, language_code)
-    if not pdf_path:
+async def download_report(
+    session_id: str,
+    language_code: str = Query(default="en", description="Language code for the report content"),
+    reviewed: bool = Query(default=False, description="Serve the doctor-reviewed report file"),
+):
+    pdf_path = get_pdf_path(session_id, language_code, reviewed=reviewed)
+    if not pdf_path and not reviewed:
         try:
             pdf_bytes = await run_in_threadpool(generate_pdf, session_id, language_code)
             pdf_path = save_pdf(session_id, pdf_bytes, language_code)
@@ -47,13 +75,15 @@ async def download_report(session_id: str, language_code: str = Query(default="e
             raise HTTPException(status_code=404, detail=str(e))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
+    if not pdf_path:
+        raise HTTPException(status_code=404, detail="Reviewed report not found")
 
     return FileResponse(
         pdf_path,
         media_type="application/pdf",
-        filename=f"diagnostic_report_{session_id[:8]}_{language_code}.pdf",
+        filename=f"{'final_' if reviewed else 'diagnostic_'}report_{session_id[:8]}_{language_code}.pdf",
         headers={
-            "Content-Disposition": f"attachment; filename=\"diagnostic_report_{session_id[:8]}_{language_code}.pdf\""
+            "Content-Disposition": f"attachment; filename=\"{'final_' if reviewed else 'diagnostic_'}report_{session_id[:8]}_{language_code}.pdf\""
         },
     )
 

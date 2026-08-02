@@ -37,6 +37,8 @@ return [
         'update-availability',
         'view-doctor-schedules',
         'update-doctor-schedules',
+        'view-doctor-reviews',
+        'submit-doctor-review',
         //patient
         'user-logout',
         'start-diagnose',
@@ -111,6 +113,8 @@ return [
             'view-tracking-data',
             'view-doctor-schedules',
             'update-doctor-schedules',
+            'view-doctor-reviews',
+            'submit-doctor-review',
 
         ],
     ],

@@ -5,7 +5,9 @@ namespace Database\Seeders;
 use App\Models\DiagnosisSession;
 use App\Models\Disease;
 use App\Models\Doctor;
+use App\Models\DoctorSchedule;
 use App\Models\User;
+use App\Notifications\NewDiagnosisAssignedNotification;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -66,39 +68,111 @@ class TestTrackingSeeder extends Seeder
         }
         $this->command->info('Seeded ' . count($doctorData) . ' doctors.');
 
+        // 2b. Seed weekly schedules (Sun-Thu 09:00-17:00, closed Fri-Sat)
+        $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        foreach (Doctor::all() as $doctor) {
+            foreach ($days as $day) {
+                $isClosed = in_array($day, ['Friday', 'Saturday']);
+                DoctorSchedule::updateOrCreate(
+                    ['doctor_id' => $doctor->id, 'day_of_week' => $day],
+                    [
+                        'start_time' => $isClosed ? null : '09:00:00',
+                        'end_time'   => $isClosed ? null : '17:00:00',
+                        'is_closed'  => $isClosed,
+                    ]
+                );
+            }
+        }
+        $this->command->info('Seeded weekly schedules for all doctors.');
+
         // 3. Create or update test user 
         /**
          * Note: The test user is created with a known email and password for testing purposes.
          * you should replace the email and password with your own test credentials in a real application
          */
-        $yassmin = User::firstOrCreate(
-            ['email' => 'TestUser@gmail.com'],
+        $user = User::firstOrCreate(
+            ['email' => 'userTest@gmail.com'],
             [
                 'full_name' => 'Test User',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]
         );
-        $yassmin->assignRole('patient');
+        $user->assignRole('patient');
 
         // 4. Create test diagnosis sessions
         $diseaseIds = Disease::pluck('id', 'name');
+
+        // 4a. AI diagnosis payloads per disease (so data shows in notifications without FastAPI)
+        $aiData = [
+            'Diabetes' => [
+                'patient' => ['age' => 55, 'gender' => 'male', 'smoker' => false, 'diabetes' => true, 'hypertension' => false, 'pregnant' => null, 'activity_level' => 'sedentary'],
+                'symptoms' => ['الشعور بالعطش الشديد', 'كثرة التبول', 'فقدان الوزن المفاجئ'],
+                'ai_result' => [
+                    ['name_ar' => 'السكري من النوع الثاني', 'name_en' => 'Type 2 Diabetes', 'probability' => 87, 'confidence' => 'High', 'specialist' => 'Endocrinologist'],
+                    ['name_ar' => 'مقدمات السكري', 'name_en' => 'Prediabetes', 'probability' => 9, 'confidence' => 'Medium', 'specialist' => 'Endocrinologist'],
+                    ['name_ar' => 'فرط نشاط الغدة الدرقية', 'name_en' => 'Hyperthyroidism', 'probability' => 4, 'confidence' => 'Low', 'specialist' => 'Endocrinologist'],
+                ],
+                'tips' => ['راقب مستوى السكر في الدم بانتظام', 'اتبع نظام غذائي متوازن منخفض السكر', 'مارس الرياضة 30 دقيقة يومياً'],
+            ],
+            'Hypertension' => [
+                'patient' => ['age' => 48, 'gender' => 'female', 'smoker' => false, 'diabetes' => false, 'hypertension' => true, 'pregnant' => null, 'activity_level' => 'light'],
+                'symptoms' => ['صداع في مؤخرة الرأس', 'دوخة', 'ارتفاع ضغط الدم'],
+                'ai_result' => [
+                    ['name_ar' => 'ارتفاع ضغط الدم الأساسي', 'name_en' => 'Essential Hypertension', 'probability' => 91, 'confidence' => 'High', 'specialist' => 'Cardiologist'],
+                    ['name_ar' => 'ارتفاع ضغط الدم الثانوي', 'name_en' => 'Secondary Hypertension', 'probability' => 6, 'confidence' => 'Low', 'specialist' => 'Cardiologist'],
+                    ['name_ar' => 'الصداع النصفي', 'name_en' => 'Migraine', 'probability' => 3, 'confidence' => 'Low', 'specialist' => 'Neurologist'],
+                ],
+                'tips' => ['قلل من تناول الملح', 'تجنب التوتر والقلق', 'قيس ضغطك في نفس الوقت يومياً'],
+            ],
+            'Migraine' => [
+                'patient' => ['age' => 32, 'gender' => 'male', 'smoker' => true, 'diabetes' => false, 'hypertension' => false, 'pregnant' => null, 'activity_level' => 'moderate'],
+                'symptoms' => ['صداع نصفي شديد', 'حساسية من الضوء', 'غثيان'],
+                'ai_result' => [
+                    ['name_ar' => 'الصداع النصفي', 'name_en' => 'Migraine', 'probability' => 84, 'confidence' => 'High', 'specialist' => 'Neurologist'],
+                    ['name_ar' => 'صداع التوتر', 'name_en' => 'Tension Headache', 'probability' => 12, 'confidence' => 'Medium', 'specialist' => 'Neurologist'],
+                    ['name_ar' => 'التهاب الجيوب الأنفية', 'name_en' => 'Sinusitis', 'probability' => 4, 'confidence' => 'Low', 'specialist' => 'General Physician'],
+                ],
+                'tips' => ['الراحة في غرفة مظلمة وهادئة', 'شرب كمية كافية من الماء', 'تجنب مثيرات الصداع لفترات طويلة'],
+            ],
+        ];
+
+        $fillAiData = function (DiagnosisSession $session, string $diseaseName) use ($aiData) {
+            if (!isset($aiData[$diseaseName])) {
+                return;
+            }
+            $data = $aiData[$diseaseName];
+            $session->update([
+                'patient_data' => $data['patient'],
+                'symptoms'     => $data['symptoms'],
+                'ai_result'    => $data['ai_result'],
+                'tips'         => $data['tips'],
+            ]);
+        };
+
+        $doctorEmailByDisease = [
+            'Diabetes'     => 'huda@test.com',
+            'Hypertension' => 'sara@test.com',
+            'Migraine'     => 'omar@test.com',
+        ];
 
         $sessions = [
             [
                 'session_hash' => 'test-dm-' . uniqid(),
                 'status' => 'ACTIVE',
                 'phase' => 'doctor_review',
-                'user_id' => $yassmin->id,
+                'user_id' => $user->id,
                 'disease_id' => $diseaseIds['Diabetes'] ?? null,
+                'doctor_id' => Doctor::whereHas('user', fn ($q) => $q->where('email', $doctorEmailByDisease['Diabetes']))->value('id'),
                 'started_at' => now()->subHours(2),
             ],
             [
                 'session_hash' => 'test-ht-' . uniqid(),
                 'status' => 'ACTIVE',
                 'phase' => 'report_ready',
-                'user_id' => $yassmin->id,
+                'user_id' => $user->id,
                 'disease_id' => $diseaseIds['Hypertension'] ?? null,
+                'doctor_id' => Doctor::whereHas('user', fn ($q) => $q->where('email', $doctorEmailByDisease['Hypertension']))->value('id'),
                 'started_at' => now()->subDay(),
                 'report_generated_at' => now()->subHours(6),
             ],
@@ -106,21 +180,49 @@ class TestTrackingSeeder extends Seeder
                 'session_hash' => 'test-mg-' . uniqid(),
                 'status' => 'COMPLETED',
                 'phase' => 'completed',
-                'user_id' => $yassmin->id,
+                'user_id' => $user->id,
                 'disease_id' => $diseaseIds['Migraine'] ?? null,
+                'doctor_id' => Doctor::whereHas('user', fn ($q) => $q->where('email', $doctorEmailByDisease['Migraine']))->value('id'),
                 'started_at' => now()->subDays(3),
                 'report_generated_at' => now()->subDays(2),
                 'doctor_reviewed_at' => now()->subDays(2)->addHours(3),
             ],
         ];
 
+        $createdSessions = [];
+
         foreach ($sessions as $s) {
             $existing = DiagnosisSession::where('session_hash', $s['session_hash'])->first();
             if (!$existing) {
-                DiagnosisSession::create($s);
+                $session = DiagnosisSession::create($s);
+                $diseaseName = Disease::find($session->disease_id)?->name;
+                $fillAiData($session, $diseaseName ?? '');
+                $createdSessions[] = $session;
             }
         }
         $this->command->info('Seeded ' . count($sessions) . ' test sessions.');
+
+        // 4c. Notify each assigned doctor so the notification is visible right after seeding
+        foreach ($createdSessions as $session) {
+            $doctor = $session->load('doctor.user')->doctor;
+            if ($doctor && $doctor->user) {
+                $doctor->user->notify(new NewDiagnosisAssignedNotification($session));
+            }
+        }
+        $this->command->info('Notified ' . count($createdSessions) . ' doctors about new diagnoses.');
+
+        // 4b. Fill AI data into existing sessions (e.g. test-pay-*) so notifications show data without FastAPI
+        foreach ($aiData as $diseaseName => $data) {
+            $diseaseId = $diseaseIds[$diseaseName] ?? null;
+            if (!$diseaseId) {
+                continue;
+            }
+            DiagnosisSession::where('disease_id', $diseaseId)
+                ->whereNull('ai_result')
+                ->get()
+                ->each(fn ($session) => $fillAiData($session, $diseaseName));
+        }
+        $this->command->info('Filled AI data into sessions by disease.');
 
        // 5. Create or update doctor weekly schedules by specialization (2 doctors per specialization splitting the week)
         $specializations = Doctor::select('specialization')->distinct()->pluck('specialization');

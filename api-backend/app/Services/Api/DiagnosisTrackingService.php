@@ -6,7 +6,7 @@ use App\Models\DiagnosisSession;
 
 class DiagnosisTrackingService
 {
-    public function getTrackingData(int $userId, string $sessionHash): ?array
+    public function getTrackingData(int $userId, string $sessionHash, string $lang = 'en'): ?array
     {
         $session = DiagnosisSession::with(['payment', 'doctor.user'])
             ->where('session_hash', $sessionHash)
@@ -33,17 +33,15 @@ class DiagnosisTrackingService
                 'full_name'      => $doctor->user?->full_name,
                 'specialization' => $doctor->specialization,
                 'phone'          => $doctor->phone,
-                'message'        => $session->phase === 'doctor_review' && !$session->doctor_reviewed_at
-                    ? 'د. '.($doctor->user?->full_name ?? '').' عم يراجع تقريرك خلال مدة أقصاها ساعتين'
-                    : null,
+                'message'        => $this->doctorMessage($session, $doctor->user?->full_name, $lang),
             ] : null,
             'payment' => $session->payment ? [
                 'status' => $session->payment->status,
                 'amount' => $session->payment->amount,
                 'paid_at'=> $session->payment->paid_at,
             ] : null,
-            'workflow_steps' => $session->workflow_steps,
-            'current_step'   => collect($session->workflow_steps)
+            'workflow_steps' => $session->workflowSteps($lang),
+            'current_step'   => collect($session->workflowSteps($lang))
                 ->firstWhere('status', 'active')['key'] ?? null,
             'timestamps' => [
                 'doctor_reviewed_at' => $session->doctor_reviewed_at,
@@ -52,7 +50,23 @@ class DiagnosisTrackingService
         ];
     }
 
-    public function getUserSessions(int $userId): array
+    private function doctorMessage(DiagnosisSession $session, ?string $doctorName, string $lang): ?string
+    {
+        if ($session->phase !== 'doctor_review' || $session->doctor_reviewed_at) {
+            return null;
+        }
+
+        $name = $doctorName ?? '';
+        $title = (preg_match('/^(Dr\.|د\.)/', trim($name))) ? '' : ($lang === 'ar' ? 'د. ' : 'Dr. ');
+
+        if ($lang === 'ar') {
+            return trim($title.$name).' عم يراجع تقريرك خلال مدة أقصاها ساعتين';
+        }
+
+        return trim($title.$name).' is reviewing your report. You will receive it within 2 hours.';
+    }
+
+    public function getUserSessions(int $userId, string $lang = 'en'): array
     {
         return DiagnosisSession::with('doctor.user')
             ->where('user_id', $userId)
@@ -69,7 +83,7 @@ class DiagnosisTrackingService
                     'specialization' => $session->doctor->specialization,
                     'phone'          => $session->doctor->phone,
                 ] : null,
-                'current_step' => collect($session->workflow_steps)
+                'current_step' => collect($session->workflowSteps($lang))
                     ->firstWhere('status', 'active')['key'] ?? null,
             ])
             ->toArray();
