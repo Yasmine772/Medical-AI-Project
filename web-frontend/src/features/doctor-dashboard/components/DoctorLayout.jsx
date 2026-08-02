@@ -1,12 +1,38 @@
+import toast from "react-hot-toast";
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import DoctorSidebar from "./DoctorSidebar";
 import LogoutModal from "../../auth/components/LogoutModal";
 import ProfilePanel from "./ProfilePanel";
-
+import { logout } from "../../../store/authSlice";
+import api from "../../../api/axios";
 const DoctorLayout = () => {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const handleLogoutConfirm = async () => {
+    try {
+      await api.post("/doctor/logout");
+
+      toast.success("User logout successfully", {
+        duration: 3000,
+        style: {
+          background: "#72A6BB",
+          color: "#fff",
+          borderRadius: "12px",
+        },
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      dispatch(logout());
+      setIsLogoutModalOpen(false);
+      navigate("/loginDoctor");
+    }
+  };
+
   return (
     <div
       className="flex h-screen w-screen overflow-hidden p-4 gap-4"
@@ -29,9 +55,7 @@ const DoctorLayout = () => {
       <LogoutModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
-        onConfirm={() => {
-          window.location.href = "/login";
-        }}
+        onConfirm={handleLogoutConfirm}
       />
 
       <ProfilePanel

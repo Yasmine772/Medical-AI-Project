@@ -62,7 +62,7 @@ class AuthController extends Controller
 //*************************************************************************************** */
     public function adminVerifyOtp(VerifyOTPRequest $request)
     {
-        $result = $this->authService->verifyOtp($request->validated(), 'admin');
+        $result = $this->authService->verifyOtp($request->validated(), 'admin', 'email');
 
         return match ($result) {
             'UserNotFound' => $this->errorResponse('User not found!', null, 404),
@@ -74,9 +74,23 @@ class AuthController extends Controller
         };
     }
 //************************************************************************************* */
-    public function doctorVerifyOtp(VerifyOTPRequest $request)
+    public function doctorVerifyOtpForEmail(VerifyOTPRequest $request)
     {
-        $result = $this->authService->verifyOtp($request->validated(), 'doctor');
+        $result = $this->authService->verifyOtp($request->validated(), 'doctor' , 'email');
+
+        return match ($result) {
+            'UserNotFound' => $this->errorResponse('User not found!', null, 404),
+            'NotValidOTP' => $this->errorResponse('Not valid OTP!', null, 422),
+            'OTPHasExpired' => $this->errorResponse('OTP has expired!', null, 400),
+            'OTP used' => $this->errorResponse('You have been used it!', null, 422),
+            'emailVerified' => $this->errorResponse('Your email has been verified!', null, 422),
+            default => $this->successResponse($result, 'OTP verified successfully', 200)
+        };
+    }
+    //*************************************************************************************** */
+    public function doctorVerifyOtpForPassword(VerifyOTPRequest $request)
+    {
+        $result = $this->authService->verifyOtp($request->validated(), 'doctor', 'password');
 
         return match ($result) {
             'UserNotFound' => $this->errorResponse('User not found!', null, 404),

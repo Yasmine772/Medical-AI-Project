@@ -100,4 +100,3 @@ async def preview_report(session_id: str, language_code: str = Query(default="en
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-

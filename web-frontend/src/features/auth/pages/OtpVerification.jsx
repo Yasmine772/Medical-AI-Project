@@ -5,6 +5,7 @@ import Button from "../../../components/UI/Button";
 import Input from "../../../components/UI/Input";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../../store/authSlice";
+import toast from "react-hot-toast";
 const OtpVerification = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,15 +23,24 @@ const OtpVerification = () => {
 
       // token from otp response
       const token = response.data.data?.token;
+      const role = response.data.data?.role;
       if (token) {
         // storage token in local storage
-        dispatch(loginSuccess({ token, email }));
-
-        // go to dashboard
-        navigate("/app/dashboard");
+        dispatch(loginSuccess({ token, email, role }));
+        toast.success("Login verified successfully");
+        if (role === "admin") {
+          navigate("/app/dashboard");
+        } else if (role === "doctor") {
+          navigate("/Layout/dashboard"); 
+        } else {
+          navigate("/"); 
+        }
       }
     } catch (error) {
-      alert("verification failed " + (error.response?.data?.message || " something went wrong"));
+      alert(
+        "verification failed " +
+          (error.response?.data?.message || " something went wrong"),
+      );
     } finally {
       setLoading(false);
     }
@@ -39,10 +49,10 @@ const OtpVerification = () => {
   const handleResend = async () => {
     try {
       await api.post("/admin/resendOtp", { email });
-      alert("otp resended to your email");
+      toast.success("OTP resent to your email");
     } catch (error) {
       console.log(error);
-      alert("resend failed");
+      toast.error("Resend failed");
     }
   };
 

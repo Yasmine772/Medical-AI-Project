@@ -1,3 +1,11 @@
+"""Diagnosis workflow endpoints.
+
+Symptom search (``/symptoms``) returns candidate illnesses extracted by the
+LLM from vector-search hits. ``/diagnosis/start`` opens a session and the
+``/follow-up/*`` and ``/symptom/select`` endpoints drive the SOCRATES +
+Bayesian question loop. Responses use a flat ``{"status", "data" | "detail"}``
+shape for easy consumption from the Laravel side.
+"""
 from fastapi import APIRouter, Form, Query, Header
 from app.state import get_store, get_embedder, get_session_manager, get_llm
 from app.services.logger import log
@@ -12,6 +20,7 @@ async def search_symptoms(
     q: str = Query(default="", description="Search query for symptoms or illnesses"),
     model_name: str = Query(default="@cf/meta/llama-3.2-3b-instruct", description="LLM model to use for extraction"),
 ):
+    """Search symptoms/illnesses: vector-search chunks, then LLM-extract candidates."""
     store = get_store()
     embedder = get_embedder()
     llm = get_llm()
@@ -113,6 +122,7 @@ async def start_diagnosis(
     model_name: str = Form(default=None),
     x_user_id: str = Header(default="anonymous"),
 ):
+    """Create a diagnosis session from the patient baseline form data."""
     try:
         svc = _get_svc()
         baseline = {
@@ -138,6 +148,7 @@ async def select_symptom(
     session_id: str = Form(...),
     name: str = Form(..., description="Name of the chosen symptom/illness"),
 ):
+    """Select a symptom/illness; returns the first SOCRATES follow-up question."""
     try:
         svc = _get_svc()
         parsed = {"name_en": name, "search_query": name}
@@ -152,6 +163,7 @@ async def select_symptom(
 
 @router.get("/follow-up/next")
 async def get_next_question(session_id: str = Query(...)):
+    """Return the next question in the flow (SOCRATES axis, Bayesian, or diagnosis)."""
     try:
         svc = _get_svc()
         result = svc.get_current_question(session_id)
@@ -167,6 +179,7 @@ async def submit_follow_up_answer(
     question_id: str = Form(...),
     answer: str = Form(...),
 ):
+    """Submit an answer for a question; returns the next question or final diagnosis."""
     try:
         svc = _get_svc()
         result = svc.submit_follow_up_answer(session_id, question_id, answer)
@@ -180,6 +193,7 @@ async def submit_follow_up_answer(
 
 @router.get("/report")
 async def get_report(session_id: str = Query(...)):
+    """Return the current diagnosis results/JSON report for a session."""
     try:
         svc = _get_svc()
         result = svc.get_report(session_id)
@@ -190,6 +204,7 @@ async def get_report(session_id: str = Query(...)):
 
 
 def _get_svc():
+    """Build a DiagnosisService wired to the app-wide singletons (store/embedder/session/LLM)."""
     from app.services.diagnosis_service import DiagnosisService
     from app.services.llm_service import LLMService
     store = get_store()

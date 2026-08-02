@@ -1,3 +1,11 @@
+"""Prompt construction and LLM-response parsing for the diagnosis flow.
+
+Responsibilities:
+  - Build the system prompts that drive the SOCRATES questioning loop,
+    symptom extraction, and diagnosis naming.
+  - Parse raw LLM output (possibly malformed or wrapped in markdown) into
+    a dict via :func:`parse_llm_response`.
+"""
 import json
 import re
 
@@ -14,14 +22,8 @@ SOCRATES_AXES = [
 ]
 
 
-def detect_lang(text: str) -> str:
-    for ch in text:
-        if '\u0600' <= ch <= '\u06ff' or '\u0750' <= ch <= '\u077f':
-            return "ar"
-    return "en"
-
-
 def format_candidates(results: list) -> str:
+    """Render a list of disease candidates as a bulleted block for a prompt."""
     lines = []
     for r in results:
         lines.append(
@@ -52,6 +54,18 @@ def _repair_json(text: str) -> str:
 
 
 def parse_llm_response(content) -> dict:
+    """Extract the first JSON object from an LLM reply.
+
+    Handles content wrapped in markdown fences and/or followed by prose.
+    Falls back to :func:`_repair_json` for common malformations, and finally
+    returns ``{"results": []}`` so callers always receive a dict.
+
+    Args:
+        content: The raw LLM output (string or already-parsed dict).
+
+    Returns:
+        dict: The parsed JSON object (or ``{"results": []}`` on failure).
+    """
     if isinstance(content, dict):
         return content
     if not isinstance(content, str):
@@ -81,6 +95,19 @@ def build_system_prompt(
     force: bool = False,
     baseline: dict | None = None,
 ) -> str:
+    """Build the system prompt for the SOCRATES follow-up loop.
+
+    Args:
+        candidates_text: Rendered disease candidates (see :func:`format_candidates`).
+        socrates_axis: Index of the next SOCRATES axis to ask about.
+        probs_text: Current Bayesian probability estimates (pre-formatted).
+        language: ISO code of the patient's language (prompt stays English).
+        force: If True, instruct the model to output a diagnosis immediately.
+        baseline: Patient demographics dict (age, gender, chronic conditions...).
+
+    Returns:
+        str: The system prompt.
+    """
     axis_label = SOCRATES_AXES[socrates_axis] if socrates_axis < len(SOCRATES_AXES) else "Any remaining clarifying questions"
     covered = SOCRATES_AXES[:socrates_axis]
     covered_text = "\n".join(f"- {a}" for a in covered) if covered else "None yet"
@@ -146,46 +173,17 @@ You MUST respond with ONE of these three JSON shapes:
     return prompt
 
 
-def build_symptom_questions_prompt(symptom_name: str, candidates_text: str, language: str) -> str:
-    lang_label = "Arabic" if language == "ar" else "English"
-    return f"""You are a medical assistant. A patient reports the symptom: "{symptom_name}".
-
-Based on the following possible diseases that match this symptom, generate up to 3 short clarifying questions. Each question should help differentiate between these diseases.
-
-Possible diseases:
-{candidates_text}
-
-Respond ONLY with valid JSON, no other text.
-Return a JSON object:
-{{"questions": [
-  {{"id": "q0", "text": "question text", "type": "single_choice" | "yes_no", "options": [{{"id": "opt0", "label": "option1"}}, {{"id": "opt1", "label": "option2"}}]}},
-  {{"id": "q1", "text": "...", "type": "...", "options": [...]}}
-]}}
-
-- Keep questions short and focused on the symptom
-- Use "yes_no" type when the answer is simply yes/no (options: [{{"id": "y", "label": "Yes"}}, {{"id": "n", "label": "No"}}])
-- Use "single_choice" when there are multiple possible answers
-- Questions and labels MUST be in {lang_label}
-- Generate up to 3 questions, but fewer is fine if the symptom is simple"""
-
-
-def build_conclusion_prompt(symptom_name: str, qa_text: str, candidates_text: str, language: str) -> str:
-    lang_label = "Arabic" if language == "ar" else "English"
-    return f"""Based on the patient's symptom and their answers, write a brief medical conclusion.
-
-Symptom: {symptom_name}
-Questions and answers:
-{qa_text}
-
-Possible diseases:
-{candidates_text}
-
-    Respond ONLY with valid JSON, no other text.
-    Return:
-    {{"conclusion": "brief conclusion text in {lang_label}"}}"""
-
-
 def build_extract_prompt(query: str, context_blocks: str, language: str) -> str:
+    """Build the prompt that extracts illnesses/symptoms from PDF passages.
+
+    Args:
+        query: The (English) search query, used only for context.
+        context_blocks: Rendered PDF passages to extract from.
+        language: ISO code of the patient's language (output stays English).
+
+    Returns:
+        str: The extraction prompt.
+    """
     return f"""You are a medical information extractor. Below are excerpted passages from a medical knowledge base (PDF documents).
 
 {context_blocks}
@@ -211,6 +209,16 @@ Rules:
 
 
 def build_diagnosis_naming_prompt(candidates_text: str, probs_text: str, language: str) -> str:
+    """Build the prompt that names the top-3 diagnosed illnesses.
+
+    Args:
+        candidates_text: Rendered evidence passages.
+        probs_text: Current Bayesian probability estimates (pre-formatted).
+        language: ISO code of the patient's language (output stays English).
+
+    Returns:
+        str: The diagnosis-naming prompt.
+    """
     lang_label = "Arabic" if language == "ar" else "English"
     return f"""You are a medical diagnosis assistant. Below are the top retrieved medical-text passages (evidence) and the current Bayesian probability estimates for each passage's associated condition.
 
@@ -234,4 +242,11 @@ Rules:
 - The system translates all user-facing text into the patient's language afterwards — do NOT output any non-English text (no Arabic, no other languages).
 - Give 3 distinct named illnesses when the evidence supports them.
 - probability values should reflect the relative Bayesian weights above (top one highest), and the three should sum to ~1.0.
-- Do not invent illnesses not supported by the passages."""
+- Do not invent illnesses not supported by the passages.
+- CRITICAL for advice: each diagnosis MUST have unique, disease-specific advice. Never copy the same advice text across multiple diagnoses.
+- The advice must:
+  - Name the specific condition (e.g., "Migraine: rest in a quiet dark room, avoid triggers...").
+  - Give concrete next steps, common treatments, and red flags / when to seek urgent care for THAT illness.
+  - Reference the patient's context (age, gender, pregnancy, chronic conditions) where relevant.
+  - Be 2-3 sentences, actionable, and tailored to the illness — NOT generic like "seek medical attention"."""
+

@@ -22,10 +22,18 @@ import usersReducer from "../features/users/usersSlice";
 import auditLogsReducer from "../features/audit-logs/auditLogsSlice";
 import doctorRequestsReducer from "../features/doctors/doctorRequestsSlice";
 import notificationsReducer from "../features/notifications/notificationsSlice";
+import doctorDashboardReducer from "../features/doctor-dashboard/doctorDashboardSlice";
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["doctors", "users","auth","joiningRequests","doctorRequests","notifications"],
+  whitelist: [
+    "doctors",
+    "users",
+    "auth",
+    "joiningRequests",
+    "doctorRequests",
+    "notifications",
+  ],
 };
 
 const persistedReducer = persistReducer(
@@ -33,14 +41,14 @@ const persistedReducer = persistReducer(
   combineReducers({
     doctors: doctorsReducer,
     auth: authReducer,
+
     users: usersReducer,
     auditLogs: auditLogsReducer,
     dashboard: dashboardReducer,
     joiningRequests: joiningRequestsReducer,
     doctorRequests: doctorRequestsReducer,
     notifications: notificationsReducer,
-    
-    
+    doctorDashboard: doctorDashboardReducer,
   }),
 );
 

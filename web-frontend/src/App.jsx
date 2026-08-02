@@ -19,12 +19,18 @@ import ForgotPassword from "./features/auth/pages/ForgotPassword";
 import OtpVerificationPass from "./features/auth/pages/OtpVerificationPass";
 import ResetPassword from "./features/auth/pages/ResetPassword";
 import JoiningRequestsPage from "./features/joiningRequests/pages/JoiningRequestsPage";
+import DoctorLoginPage from "./features/doctorAuth/pages/DoctorLoginPage";
+import DoctorVerifyOtp from "./features/doctorAuth/pages/DoctorVerifyOtp";
+import DoctorForgotPassword from "./features/doctorAuth/pages/DoctorForgotPassword";
+import DoctorVerifyResetOtp from "./features/doctorAuth/pages/DoctorVerifyResetOtp";
+import DoctorResetPassword from "./features/doctorAuth/pages/DoctorResetPassword";
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<OnboardingPage />} />
         <Route path="/login" element={<LoginPage />} />
+
         <Route path="/otp-verification" element={<OtpVerification />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
@@ -42,10 +48,23 @@ function App() {
         </Route>
 
         {/* doctors routes*/}
-        <Route path="/doctor" element={<DoctorLayout />}>
+        <Route path="/Layout" element={<DoctorLayout />}>
           <Route path="dashboard" element={<HomePage />} />
         </Route>
-
+        <Route path="/loginDoctor" element={<DoctorLoginPage />} />
+        <Route path="/otp-verification-doctor" element={<DoctorVerifyOtp />} />
+        <Route
+          path="/forgot-password-doctor"
+          element={<DoctorForgotPassword />}
+        />
+        <Route
+          path="/verify-reset-otp-doctor"
+          element={<DoctorVerifyResetOtp />}
+        />
+        <Route
+          path="/reset-password-doctor"
+          element={<DoctorResetPassword />}
+        />
         {/* joining requests */}
         <Route path="/joining-requests" element={<JoiningRequestsPage />} />
 
