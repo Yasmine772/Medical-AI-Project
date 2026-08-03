@@ -388,6 +388,35 @@ Respond ONLY with valid JSON:
                 forced=True,
             )
 
+        # Exhausted the question cap for this symptom but still not confident:
+        # ask the user to search another symptom instead of re-asking the LLM
+        # about the same one (which produced repetitive questions).
+        if (
+            question_count >= MIN_QUESTIONS_BEFORE_DIAGNOSIS
+            and questions_on_current >= symptom_cap
+        ):
+            log(
+                "FOLLOWUP",
+                f"Asking for more symptoms at q{question_count}/{MAX_QUESTIONS} (cap={symptom_cap})",
+            )
+            candidates["conversation"] = conversation
+            candidates["current_question"] = None
+            self._save_candidates(session_id, candidates)
+            msg = from_english(
+                "To narrow down the diagnosis, please search for an additional symptom you are experiencing.",
+                lang,
+            )
+            return {
+                "response_type": "need_more_symptoms",
+                "question": {
+                    "id": "need_more",
+                    "text": msg,
+                    "type": "info",
+                    "options": [],
+                },
+                "total": MAX_QUESTIONS,
+            }
+
         # Build prompt and ask
         diseases_text = (
             format_candidates(diseases) if diseases else "No matching diseases found."

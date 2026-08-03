@@ -4,7 +4,6 @@ namespace App\Services\Api;
 
 use App\Models\DiagnosisSession;
 use App\Models\PatientProfile;
-use App\Services\Api\DoctorAssignmentService;
 use Carbon\Carbon;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -13,7 +12,9 @@ use Illuminate\Support\Facades\Log;
 class AiService
 {
     protected string $fastApiUrl;
+
     protected int $timeout;
+
     protected int $reportTimeout;
 
     public function __construct()
@@ -22,6 +23,7 @@ class AiService
         $this->timeout = config('services.fastapi.timeout');
         $this->reportTimeout = config('services.fastapi.report_timeout', 60);
     }
+
     // ------------------------------------------------------------------------------
     public function startDiagnosis($request): ?array
     {
@@ -34,8 +36,8 @@ class AiService
                 'is_smoker' => $request['is_smoker'],
                 'has_diabetes' => $request['has_diabetes'],
                 'has_hypertension' => $request['has_hypertension'],
-                'drinks_alcohol'     => $request['is_alcoholic'],
-                'occupation'      => $request['patient_job'],
+                'drinks_alcohol' => $request['is_alcoholic'],
+                'occupation' => $request['patient_job'],
                 'is_pregnant' => $request['is_pregnant'],
                 'activity_level' => $request['activity_level'],
                 'birth_date' => $request['birth_date'],
@@ -57,8 +59,8 @@ class AiService
                     'has_diabetes' => $request['has_diabetes'],
                     'has_hypertension' => $request['has_hypertension'],
                     'is_pregnant' => $request['is_pregnant'],
-                    'is_alcoholic'     => $request['is_alcoholic'],
-                    'patient_job'      => $request['patient_job'],
+                    'is_alcoholic' => $request['is_alcoholic'],
+                    'patient_job' => $request['patient_job'],
                     'activity_level' => $request['activity_level'],
                     'assessment_for' => $request['assessment_for'],
                     'model_name' => $request['model_name'] ?? null,
@@ -73,7 +75,7 @@ class AiService
                 DiagnosisSession::create([
                     'session_hash' => $sessionId,
                     'status' => 'ACTIVE',
-                    'phase'  => 'doctor_review',
+                    'phase' => 'doctor_review',
                     'pdf_file_path' => null,
                     'user_id' => $user->id,
                     'started_at' => now(),
@@ -215,24 +217,26 @@ class AiService
     {
         try {
             $response = Http::timeout($this->timeout)
-                    ->get($this->fastApiUrl . '/diagnosis-history' ,[
-                        'user_id' => $userId,
-                        'language_code' => $languageCode,
-                    ]);
+                ->get($this->fastApiUrl.'/diagnosis-history', [
+                    'user_id' => $userId,
+                    'language_code' => $languageCode,
+                ]);
 
-            if ($response->successful()) 
-            {
+            if ($response->successful()) {
                 return $response->json();
             }
 
-            Log::error('FastAPI get diagnosis history failed', [ 'body' => $response->body()]);
+            Log::error('FastAPI get diagnosis history failed', ['body' => $response->body()]);
+
             return null;
 
         } catch (ConnectionException $e) {
-            Log::error('FastAPI timeout (getDiagnosisHistory): ' . $e->getMessage());
+            Log::error('FastAPI timeout (getDiagnosisHistory): '.$e->getMessage());
+
             return null;
         } catch (\Exception $e) {
-            Log::error('FastAPI error (getDiagnosisHistory): ' . $e->getMessage());
+            Log::error('FastAPI error (getDiagnosisHistory): '.$e->getMessage());
+
             return null;
         }
     }
@@ -253,10 +257,10 @@ class AiService
                     $pdfPath = $result['pdf_path'] ?? $result['pdf_url'] ?? null;
 
                     $session->update([
-                        'phase'               => 'completed',
+                        'phase' => 'completed',
                         'report_generated_at' => now(),
-                        'pdf_file_path'       => $pdfPath ?? $session->pdf_file_path,
-                        'pdf_url'             => $pdfPath
+                        'pdf_file_path' => $pdfPath ?? $session->pdf_file_path,
+                        'pdf_url' => $pdfPath
                             ? $this->fastApiUrl."/reports/{$sessionId}/download?language_code={$languageCode}"
                             : $session->pdf_url,
                     ]);
@@ -265,7 +269,7 @@ class AiService
                         app(DiagnosisDataService::class)->store($session, $languageCode);
                     }
 
-                    if (!$session->doctor_id) {
+                    if (! $session->doctor_id) {
                         $preview = Http::timeout($this->timeout)
                             ->get($this->fastApiUrl."/reports/{$sessionId}/preview", ['language_code' => $languageCode]);
 
@@ -314,18 +318,18 @@ class AiService
         $doctor = $session->doctor;
 
         $payload = [
-            'language_code'    => $languageCode,
-            'diagnoses'        => $this->formatDiagnosesForPdf($session->ai_result ?? []),
-            'patient_info'     => $this->formatPatientInfoForPdf($session),
+            'language_code' => $languageCode,
+            'diagnoses' => $this->formatDiagnosesForPdf($session->ai_result ?? []),
+            'patient_info' => $this->formatPatientInfoForPdf($session),
             'initial_symptoms' => is_array($session->symptoms)
                 ? implode(', ', array_values($session->symptoms))
                 : '',
-            'doctor_review'    => $doctor ? [
-                'doctor_name'     => $doctor->user?->full_name ?? 'Doctor',
-                'specialization'  => $doctor->specialization,
-                'phone'           => $doctor->phone,
-                'reviewed_at'     => now()->format('Y-m-d H:i'),
-                'notes'           => $session->doctor_notes,
+            'doctor_review' => $doctor ? [
+                'doctor_name' => $doctor->user?->full_name ?? 'Doctor',
+                'specialization' => $doctor->specialization,
+                'phone' => $doctor->phone,
+                'reviewed_at' => now()->format('Y-m-d H:i'),
+                'notes' => $session->doctor_notes,
             ] : null,
         ];
 
@@ -338,10 +342,10 @@ class AiService
                 $result = $response->json();
 
                 $session->update([
-                    'phase'               => 'completed',
+                    'phase' => 'completed',
                     'report_generated_at' => now(),
-                    'pdf_file_path'       => $result['pdf_path'] ?? $session->pdf_file_path,
-                    'pdf_url'             => $result['pdf_path']
+                    'pdf_file_path' => $result['pdf_path'] ?? $session->pdf_file_path,
+                    'pdf_url' => $result['pdf_path']
                         ? $this->fastApiUrl."/reports/{$session->session_hash}/download?language_code={$languageCode}&reviewed=1"
                         : $session->pdf_url,
                 ]);
@@ -351,7 +355,7 @@ class AiService
 
             Log::error('FastAPI generate-doctor-report failed', [
                 'status' => $response->status(),
-                'body'   => $response->body(),
+                'body' => $response->body(),
             ]);
 
             return null;
@@ -383,20 +387,20 @@ class AiService
 
                 $confidence = strtolower((string) ($d['confidence'] ?? ''));
                 $confidence = match ($confidence) {
-                    'high', 'strong'      => 'Strong',
-                    'medium', 'moderate'  => 'Moderate',
-                    'low', 'less likely'  => 'Less Likely',
-                    default               => $d['confidence'] ?? 'Less Likely',
+                    'high', 'strong' => 'Strong',
+                    'medium', 'moderate' => 'Moderate',
+                    'low', 'less likely' => 'Less Likely',
+                    default => $d['confidence'] ?? 'Less Likely',
                 };
 
                 return [
-                    'disease_name'    => $d['name_en'] ?? $d['disease_name'] ?? '',
+                    'disease_name' => $d['name_en'] ?? $d['disease_name'] ?? '',
                     'disease_name_ar' => $d['name_ar'] ?? $d['disease_name_ar'] ?? '',
-                    'probability'     => is_numeric($probability) ? (float) $probability : null,
-                    'confidence'      => $confidence,
-                    'specialist'      => $d['specialist'] ?? '',
-                    'advice'          => $d['advice'] ?? '',
-                    'reasoning'       => $d['reasoning'] ?? '',
+                    'probability' => is_numeric($probability) ? (float) $probability : null,
+                    'confidence' => $confidence,
+                    'specialist' => $d['specialist'] ?? '',
+                    'advice' => $d['advice'] ?? '',
+                    'reasoning' => $d['reasoning'] ?? '',
                 ];
             })
             ->values()
@@ -412,17 +416,17 @@ class AiService
         $profile = $session->user?->profile;
 
         return [
-            'patient_name'      => $session->user?->full_name ?? ($p['name'] ?? null),
-            'age'               => $p['age'] ?? null,
-            'gender'            => $p['gender'] ?? null,
-            'is_smoker'         => $p['smoker'] ?? null,
-            'has_diabetes'      => $p['diabetes'] ?? null,
-            'has_hypertension'  => $p['hypertension'] ?? null,
-            'is_pregnant'       => $p['pregnant'] ?? null,
-            'activity_level'    => $p['activity_level'] ?? null,
-            'blood_type'        => $profile?->blood_type ?? $p['blood_type'] ?? null,
-            'occupation'        => $profile?->occupation ?? $p['occupation'] ?? null,
-            'drinks_alcohol'    => $profile?->drinks_alcohol ?? null,
+            'patient_name' => $session->user?->full_name ?? ($p['name'] ?? null),
+            'age' => $p['age'] ?? null,
+            'gender' => $p['gender'] ?? null,
+            'is_smoker' => $p['smoker'] ?? null,
+            'has_diabetes' => $p['diabetes'] ?? null,
+            'has_hypertension' => $p['hypertension'] ?? null,
+            'is_pregnant' => $p['pregnant'] ?? null,
+            'activity_level' => $p['activity_level'] ?? null,
+            'blood_type' => $profile?->blood_type ?? $p['blood_type'] ?? null,
+            'occupation' => $profile?->occupation ?? $p['occupation'] ?? null,
+            'drinks_alcohol' => $profile?->drinks_alcohol ?? null,
         ];
     }
 
@@ -436,7 +440,7 @@ class AiService
             $response = Http::timeout($this->reportTimeout)
                 ->get($this->fastApiUrl."/reports/{$sessionId}/download", [
                     'language_code' => $languageCode,
-                    'reviewed'      => $reviewed,
+                    'reviewed' => $reviewed,
                 ]);
 
             if ($response->successful()) {

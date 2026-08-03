@@ -53,12 +53,44 @@ def _repair_json(text: str) -> str:
     return text
 
 
+def _salvage_json_objects(text: str) -> list:
+    """Extract every complete top-level JSON object embedded in ``text``.
+
+    Used when the LLM output was truncated (e.g. hits ``max_tokens`` mid-JSON
+    after enumerating many array entries). Each fully-formed ``{...}`` block is
+    decoded independently; incomplete trailing objects are skipped.
+
+    Args:
+        text (str): Possibly truncated text containing JSON objects.
+
+    Returns:
+        list: The decoded dicts, in order of appearance.
+    """
+    decoder = json.JSONDecoder()
+    objects = []
+    i = 0
+    while i < len(text):
+        start = text.find("{", i)
+        if start == -1:
+            break
+        try:
+            obj, end = decoder.raw_decode(text, start)
+            if isinstance(obj, dict):
+                objects.append(obj)
+            i = end
+        except (json.JSONDecodeError, TypeError):
+            i = start + 1
+    return objects
+
+
 def parse_llm_response(content) -> dict:
     """Extract the first JSON object from an LLM reply.
 
     Handles content wrapped in markdown fences and/or followed by prose.
     Falls back to :func:`_repair_json` for common malformations, and finally
-    returns ``{"results": []}`` so callers always receive a dict.
+    to :func:`_salvage_json_objects` so truncated-but-otherwise-valid replies
+    (common when the model lists many entries past ``max_tokens``) still yield
+    the completed items. As a last resort returns ``{"results": []}``.
 
     Args:
         content: The raw LLM output (string or already-parsed dict).
@@ -84,7 +116,13 @@ def parse_llm_response(content) -> dict:
         repaired = _repair_json(content)
         return json.loads(repaired)
     except (json.JSONDecodeError, TypeError):
-        return {"results": []}
+        pass
+    # Truncated output: keep every complete object. Wrap them under "results",
+    # which is the key symptom/illness extraction and diagnosis callers read.
+    salvaged = _salvage_json_objects(content)
+    if salvaged:
+        return {"results": salvaged}
+    return {"results": []}
 
 
 def build_system_prompt(
