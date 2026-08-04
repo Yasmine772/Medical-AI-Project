@@ -1,3 +1,4 @@
+"""Health-check endpoints used by monitoring and the Laravel side."""
 from fastapi import APIRouter
 from app.state import get_store
 

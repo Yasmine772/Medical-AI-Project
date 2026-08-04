@@ -1,3 +1,4 @@
+"""Endpoint listing available Cloudflare Workers AI chat models."""
 import os
 import httpx
 from fastapi import APIRouter, HTTPException

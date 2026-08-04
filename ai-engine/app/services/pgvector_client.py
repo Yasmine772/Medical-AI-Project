@@ -1,3 +1,8 @@
+"""Supabase pgvector client for storing and searching document embeddings.
+
+All vector search happens through the ``search_embeddings`` Postgres RPC,
+filtered by the row ``type`` column (``pdf`` chunks vs ``disease`` rows).
+"""
 import os
 import numpy as np
 from typing import Any, Dict, List, Optional
@@ -9,6 +14,12 @@ from app.services.logger import log
 
 
 class PgVectorClient:
+    """Wrapper around a Supabase pgvector table.
+
+    Args:
+        url (str, optional): Supabase URL (defaults to ``SUPABASE_URL`` env var).
+        key (str, optional): Supabase anon/service key (defaults to ``SUPABASE_KEY``).
+    """
 
     def __init__(self):
         self.supabase_url = os.environ.get("SUPABASE_URL")
@@ -18,15 +29,18 @@ class PgVectorClient:
         self._supabase: Optional[Client] = None
 
     def connect(self):
+        """Lazily create and return the Supabase client."""
         if self._supabase is None:
             self._supabase = create_client(self.supabase_url, self.supabase_key)
         return self._supabase
 
     def _to_list(self, embedding: np.ndarray) -> list:
+        """Convert a numpy array to a plain Python list for JSON payloads."""
         return embedding.tolist() if hasattr(embedding, "tolist") else embedding
 
     def _build_payload(self, record_id: str, document: str, embedding: list,
                        type: str, metadata: dict) -> dict:
+        """Build the row dict to insert/upsert for a given record type."""
         payload = {
             "id": record_id,
             "document": document,
@@ -55,12 +69,18 @@ class PgVectorClient:
 
     def insert(self, record_id: str, document: str, embedding: np.ndarray,
                type: str, metadata: dict):
+        """Insert a single embedding row."""
         payload = self._build_payload(record_id, document, self._to_list(embedding),
                                       type, metadata)
         self.connect().table("embeddings").insert(payload).execute()
 
     def insert_batch(self, rows: list, batch_size: int = 500):
-        """rows: list of (record_id, document, embedding_list, type, metadata)"""
+        """Upsert many rows in batches (id-conflict safe).
+
+        Args:
+            rows: Iterable of ``(record_id, document, embedding_list, type, metadata)``.
+            batch_size: Rows per upsert call.
+        """
         payloads = [
             self._build_payload(rid, doc, emb, typ, meta)
             for rid, doc, emb, typ, meta in rows
@@ -74,6 +94,14 @@ class PgVectorClient:
         limit: int = 5,
         filter_type: str | None = None,
     ) -> List[dict]:
+        """Return the top-``limit`` rows closest to ``query_embedding``.
+
+        Args:
+            query_embedding: Vector produced by :meth:`EmbeddingService.encode_query`.
+            limit: Max number of results.
+            filter_type: Restrict to a ``type`` column value (``pdf``, ``disease``),
+                         or ``None`` for all rows.
+        """
         params = {
             "query_embedding": self._to_list(query_embedding),
             "match_count": limit,
@@ -83,6 +111,7 @@ class PgVectorClient:
         return response.data or []
 
     def count(self, filter_type: str | None = None) -> int:
+        """Count rows, optionally restricted to a type."""
         if filter_type is not None:
             response = self.connect().table("embeddings").select("id", count="exact").eq("type", filter_type).execute()
             c = response.count or 0
@@ -92,9 +121,11 @@ class PgVectorClient:
         return c
 
     def delete_all(self):
+        """Delete every row in the embeddings table (dangerous)."""
         self.connect().table("embeddings").delete().neq("id", "").execute()
 
     def close(self):
+        """Release the Supabase client."""
         self._supabase = None
 
     # ── PDF chunks (legacy, uses embeddings table internally) ──
@@ -106,6 +137,7 @@ class PgVectorClient:
         embedding: np.ndarray,
         metadata: dict,
     ):
+        """Insert a single PDF chunk row with type ``pdf``."""
         self.insert(chunk_id, document, embedding, "pdf", metadata)
         log("VECTOR", f"Inserted pdf chunk {metadata.get('source')} p.{metadata.get('page')}")
 
@@ -114,14 +146,17 @@ class PgVectorClient:
         query_embedding: np.ndarray,
         limit: int = 3,
     ) -> List[dict]:
+        """Search only rows of type ``pdf``."""
         return self.search(query_embedding, limit=limit, filter_type="pdf")
 
     def count_pdf(self) -> int:
+        """Count rows of type ``pdf``."""
         return self.count(filter_type="pdf")
 
     # ── internal ──
 
     def _rpc(self, function_name: str, params: Dict[str, Any] | None = None):
+        """Call a Postgres RPC, transparently reconnecting on connection resets."""
         try:
             return self.connect().rpc(function_name, params or {}).execute()
         except Exception as e:

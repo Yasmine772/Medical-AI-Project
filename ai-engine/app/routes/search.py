@@ -1,3 +1,4 @@
+"""Raw vector-search endpoint (no LLM), mostly for debugging/development."""
 from fastapi import APIRouter, Query
 from app.state import get_store, get_embedder
 

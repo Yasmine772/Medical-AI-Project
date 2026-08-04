@@ -96,16 +96,6 @@ def translate_list(items: List[str], target_lang: str) -> List[str]:
     return out
 
 
-def translate_dict_values(payload: dict, target_lang: str, keys: List[str]) -> dict:
-    """Translate selected string values of a dict to the user's language."""
-    if not target_lang or target_lang == "en":
-        return payload
-    for k in keys:
-        if isinstance(payload.get(k), str):
-            payload[k] = from_english(payload[k], target_lang)
-    return payload
-
-
 def translate_batch(items: List[str], target_lang: str) -> List[str]:
     """Translate a list of English strings concurrently (one round-trip of latency).
 

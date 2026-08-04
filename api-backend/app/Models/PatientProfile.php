@@ -20,7 +20,8 @@ class PatientProfile extends Model implements Auditable
         'activity_level',
         'last_checkup_date',
         'user_id',
-        'occupation'
+        'occupation',
+        'blood_type'
     ];                              
 
     public function user()

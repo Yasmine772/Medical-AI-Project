@@ -25,7 +25,12 @@ class DoctorFactory extends Factory
         // 'password' => bcrypt('password'),
         'phone' => $this->faker->phoneNumber(),
         'is_active' => $this->faker->boolean(80), 
-        'specialization' => $this->faker->word(), 
+        'specialization' => $this->faker->randomElement([
+            'Cardiologist', 'Neurologist', 'Dermatologist', 'Gastroenterologist',
+            'Pulmonologist', 'Endocrinologist', 'Infectious Disease Specialist',
+            'General Physician', 'Pediatrician', 'Ophthalmologist',
+            'Orthopedic Surgeon', 'Hepatologist', 'Allergist / Immunologist',
+        ]), 
         'years_of_experience'=> $this->faker->numberBetween(1, 30),
         'photo' => $this->faker->imageUrl(640, 480),
         'clinic_phone' => $this->faker->phoneNumber(),
