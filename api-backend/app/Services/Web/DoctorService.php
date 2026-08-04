@@ -125,4 +125,19 @@ class DoctorService
             throw $e;
         }
     }
+
+    //************************************************************ */
+    public function showApprovedDoctors()
+    {   
+        $approvedDoctors = DoctorRequest::where('status', 'approved')->get();
+        if ($approvedDoctors->isEmpty()) {
+            return null;
+        }
+        return $approvedDoctors;
+    }
+    //************************************************************ */
+    public function getDoctorRequestCount()
+    {
+        return DoctorRequest::where('status', 'pending')->count();
+    }
 }
