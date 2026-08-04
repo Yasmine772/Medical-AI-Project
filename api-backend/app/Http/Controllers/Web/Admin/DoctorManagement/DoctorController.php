@@ -105,6 +105,33 @@ class DoctorController extends Controller
         $this->doctorService->sendJoinRequest($request->validated());
         return $this->successResponse(null, 'Doctor join request sent successfully!', 200);
     }
-
-    
+    //***************************************************************** */
+    /**
+     * Show all approved doctors
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * 
+     * @note Returns all approved doctors
+     */
+    public function showApprovedDoctors()
+    {
+        $approvedDoctors = $this->doctorService->showApprovedDoctors();
+        if ($approvedDoctors === null) {
+            return $this->errorResponse('No approved doctors found!', null, 404);
+        }
+        return $this->successResponse($approvedDoctors, 'Approved doctors retrieved successfully!', 200);
+    }
+    //***************************************************************** */
+    /**
+     * Get count of doctor requests
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * 
+     * @note Returns count of all doctor requests (pending)
+     */
+    public function getDoctorRequestCount()
+    {
+        $count = $this->doctorService->getDoctorRequestCount();
+        return $this->successResponse(['count' => $count], 'Doctor request count retrieved successfully!', 200);
+    }
 }

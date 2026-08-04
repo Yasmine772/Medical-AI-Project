@@ -28,6 +28,8 @@ return [
         'show-doctor-request-details',
         'approve-doctor-request',
         'reject-doctor-request',
+        'show-approved-doctors',
+        'show-doctor-request-count',
         'view-tracking-data',
 
 
@@ -72,6 +74,7 @@ return [
 
             'show-doctor-requests', 'show-doctor-request-details',
             'approve-doctor-request', 'reject-doctor-request',
+            'show-approved-doctors', 'show-doctor-request-count',
 
             'show-all-notifications', 'show-count-unread-notifications',
             'mark-all-as-read-notifications', 'mark-as-read-notifications',

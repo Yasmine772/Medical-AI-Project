@@ -31,6 +31,8 @@ Route::prefix('admin')->group(function () {
     // Route::get('doctor-requests/', [DoctorController::class, 'index']);
     // Route::patch('doctor-requests/approve/{id}', [DoctorController::class, 'approve']);
     // Route::patch('doctor-requests/reject/{id}', [DoctorController::class, 'reject']);
+    // Route::get('doctor-requests/approvedDoctors', [DoctorController::class, 'showApprovedDoctors']);
+    // Route::get('doctor-requests/count', [DoctorController::class, 'getDoctorRequestCount']);
 
     // Route::get('/notifications', [NotificationController::class, 'index']);
     // Route::get('notifications/count-unread', [NotificationController::class, 'countUnreadNotifications']);
@@ -74,6 +76,8 @@ Route::prefix('admin')->group(function () {
             Route::get('/{id}', [DoctorController::class, 'show'])->middleware('permission:show-doctor-request-details');
             Route::patch('approve/{id}', [DoctorController::class, 'approve'])->middleware('permission:approve-doctor-request');
             Route::patch('reject/{id}', [DoctorController::class, 'reject'])->middleware('permission:reject-doctor-request');
+            Route::get('/approvedDoctors', [DoctorController::class, 'showApprovedDoctors'])->middleware('permission:show-approved-doctors');
+            Route::get('/count', [DoctorController::class, 'getDoctorRequestCount'])->middleware('permission:show-doctor-request-count');
         });
         
     });
