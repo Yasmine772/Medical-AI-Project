@@ -1,83 +1,117 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchDoctorReviews,
+  fetchCaseDetails,
+  fetchReviewStats,
+} from "../doctorCasesSlice";
 import CaseCard from "../components/CaseCard";
 import CasesFilter from "../components/CasesFilter";
-import PdfModal from "../components/PdfModal";
 import ReviewModal from "../components/ReviewModal";
-import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
 
 const DoctorCasesPage = () => {
+  const dispatch = useDispatch();
+  const { casesList, loading } = useSelector((state) => state.doctorCases);
+
+  // القيم الافتراضية مطابقة للقيم المدعومة في الـ Backend
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedTimeFilter, setSelectedTimeFilter] = useState("today");
 
-  // States modals
-  const [isPdfOpen, setIsPdfOpen] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [currentSessionHash, setCurrentSessionHash] = useState(null);
 
-  const [currentCase, setCurrentCase] = useState(null);
-  const [pdfFilename, setPdfFilename] = useState("");
+  useEffect(() => {
+    dispatch(fetchReviewStats());
+  }, [dispatch]);
 
-  const handleOpenPdf = (filename) => {
-    setPdfFilename(filename);
-    setIsPdfOpen(true);
-  };
+  const stats = useSelector((state) => state.doctorCases.stats);
+  // جلب البيانات تلقائياً عند أي تغيير في الفلاتر
+  useEffect(() => {
+    dispatch(
+      fetchDoctorReviews({
+        status: selectedFilter,
+        date_filter: selectedTimeFilter,
+        language_code: "en",
+      }),
+    );
+  }, [dispatch, selectedFilter, selectedTimeFilter]);
 
-  const handleOpenReview = (caseId) => {
-    setCurrentCase(caseId);
-    setIsPdfOpen(false);
+  const handleOpenReview = (sessionHash) => {
+    setCurrentSessionHash(sessionHash);
+    dispatch(fetchCaseDetails(sessionHash));
     setIsReviewOpen(true);
   };
 
-  const handleOpenConfirm = () => {
-    setIsReviewOpen(false);
-    setIsConfirmOpen(true);
-  };
-
-  const handleSendReport = () => {
-    setIsConfirmOpen(false);
-    toast.success(`Report successfully sent for patient #${currentCase} ✓`, {
-      style: { background: "#3b6d11", color: "#fff", borderRadius: "12px" },
-    });
-  };
-
-  const handleWhatsApp = (phone) => {
-    toast(`Opening WhatsApp: ${phone}`, { icon: "💬" });
-  };
-
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10">
+    <div className="space-y-6 max-w-6xl mx-auto pb-10" dir="ltr">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white/60 backdrop-blur-md p-6 rounded-[24px] border border-white/20 shadow-sm gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#72A6BB] p-6 rounded-[24px] shadow-sm gap-4">
         <div>
-          <h1 className="text-xl font-bold text-[#2c2c2a]">Incoming Cases</h1>
-          <p className="text-xs text-gray-500 mt-1">Monday, July 14, 2026</p>
+          <h1 className="text-xl font-bold text-white">Incoming Cases</h1>
+          <p className="text-xs font-semibold text-white/90 mt-1">
+            Monday, July 14, 2026
+          </p>
         </div>
-        <div className="flex items-center gap-2 bg-[#eaf3de] border border-[#c0dd97] rounded-full px-4 py-2 w-fit">
-          <div className="w-2 h-2 rounded-full bg-[#3b6d11] animate-pulse"></div>
-          <span className="text-xs text-[#3b6d11] font-semibold">
+        <div className="flex items-center gap-2 bg-white/20 border border-white/30 rounded-full px-4 py-2 w-fit">
+          <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+          <span className="text-xs text-white font-semibold">
             Available for Cases
           </span>
         </div>
       </div>
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Total Cases */}
+        <div className="bg-white/30 backdrop-blur-md p-4 rounded-2xl border border-white shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Total Cases</p>
+            <h3 className="text-3xl font-bold text-[#72A6BB] mt-1">
+              {stats?.total ?? 0}
+            </h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center text-[#72A6BB] font-bold">
+            📊
+          </div>
+        </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white/70 backdrop-blur-md border border-white/20 p-5 rounded-[20px] shadow-sm">
-          <div className="text-2xl font-bold text-[#2c2c2a]">1</div>
-          <div className="text-xs text-gray-500 mt-1">Urgent Now</div>
+        {/* Urgent Cases */}
+        <div className="bg-white/30 backdrop-blur-md p-4 rounded-2xl border border-white shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Urgent Cases</p>
+            <h3 className="text-3xl font-bold text-[#72A6BB] mt-1">
+              {stats?.urgent ?? 0}
+            </h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-500 font-bold">
+            🚨
+          </div>
         </div>
-        <div className="bg-white/70 backdrop-blur-md border border-white/20 p-5 rounded-[20px] shadow-sm">
-          <div className="text-2xl font-bold text-[#2c2c2a]">2</div>
-          <div className="text-xs text-gray-500 mt-1">Pending Review</div>
+
+        {/* Pending Cases */}
+        <div className="bg-white/30 backdrop-blur-md p-4 rounded-2xl border border-white shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Pending Review</p>
+            <h3 className="text-3xl font-bold text-[#72A6BB] mt-1">
+              {stats?.pending ?? 0}
+            </h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-500 font-bold">
+            ⏳
+          </div>
         </div>
-        <div className="bg-white/70 backdrop-blur-md border border-white/20 p-5 rounded-[20px] shadow-sm">
-          <div className="text-2xl font-bold text-[#2c2c2a]">3</div>
-          <div className="text-xs text-gray-500 mt-1">Completed Today</div>
-        </div>
-        <div className="bg-white/70 backdrop-blur-md border border-white/20 p-5 rounded-[20px] shadow-sm">
-          <div className="text-2xl font-bold text-[#2c2c2a]">140k L.S</div>
-          <div className="text-xs text-gray-500 mt-1">Today's Earnings</div>
+
+        {/* Completed Cases */}
+        <div className="bg-white/30 backdrop-blur-md p-4 rounded-2xl border border-white shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Completed</p>
+            <h3 className="text-3xl font-bold text-[#72A6BB] mt-1">
+              {stats?.completed ?? 0}
+            </h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-[#72A6BB] font-bold">
+            ✅
+          </div>
         </div>
       </div>
 
@@ -91,77 +125,68 @@ const DoctorCasesPage = () => {
 
       {/* Cases List */}
       <div className="space-y-4">
-        <CaseCard
-          caseId="227"
-          patientType="Male, 32 years"
-          status="urgent"
-          timeInfo="15 minutes ago"
-          timer="1:45"
-          badges={["Smoker", "High Blood Pressure", "Blood Group A+"]}
-          symptoms={[
-            "Severe Itching",
-            "Skin Rash",
-            "Discolored Patches",
-            "Skin Peeling",
-          ]}
-          diseases={[
-            { name: "Fungal Infection", pct: 89, type: "red", bold: true },
-            { name: "Eczema", pct: 61, type: "amber", bold: false },
-            { name: "Contact Dermatitis", pct: 32, type: "green", bold: false },
-          ]}
-          onReview={() => handleOpenReview("227")}
-          onPdf={() => handleOpenPdf("case_227_ai_report.pdf")}
-          onWhatsapp={() => handleWhatsApp("0912345678")}
-        />
+        {loading ? (
+          <div className="text-center py-10 text-gray-500 font-medium">
+            Loading cases...
+          </div>
+        ) : casesList.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 bg-white rounded-2xl border">
+            No cases found matching this filter.
+          </div>
+        ) : (
+          casesList.map((item) => {
+            // استخراج بيانات المريض والأمراض المزمنة من الـ JSON المرسل من البوستمان
+            const patientData = item.patient || {};
+            const badges = [];
+            if (patientData.smoker) badges.push("Smoker");
+            if (patientData.hypertension) badges.push("High Blood Pressure");
+            if (patientData.diabetes) badges.push("Diabetes");
 
-        <CaseCard
-          caseId="225"
-          patientType="Female, 28 years"
-          status="new"
-          timeInfo="45 minutes ago"
-          badges={["Non-Smoker", "Blood Group B+"]}
-          symptoms={["Dry Skin", "Redness", "Mild Itching"]}
-          diseases={[
-            { name: "Eczema", pct: 78, type: "amber", bold: true },
-            { name: "Psoriasis", pct: 45, type: "amber", bold: false },
-          ]}
-          onReview={() => handleOpenReview("225")}
-          onPdf={() => handleOpenPdf("case_225_ai_report.pdf")}
-          onWhatsapp={() => handleWhatsApp("0987654321")}
-        />
-
-        <CaseCard
-          caseId="223"
-          patientType="Male, 45 years"
-          status="done"
-          timeInfo="3 hours ago"
-          symptoms={["Skin Inflammation", "Localized Redness"]}
-          onPdf={() => handleOpenPdf("case_223_final_report.pdf")}
-          onWhatsapp={() => handleWhatsApp("0911111111")}
-        />
+            return (
+              <CaseCard
+                key={item.id}
+                caseId={item.id}
+                patientType={`${item.patient_name || "Patient"} (${patientData.gender || "N/A"}, ${patientData.age || "?"} yrs)`}
+                status={
+                  item.is_urgent
+                    ? "urgent"
+                    : item.status === "COMPLETED"
+                      ? "done"
+                      : "new"
+                }
+                timeInfo={
+                  item.review_remaining_minutes
+                    ? `${Math.round(item.review_remaining_minutes)} mins left`
+                    : "Recently"
+                }
+                badges={badges}
+                symptoms={item.symptoms || []}
+                diseases={
+                  item.top_diagnosis
+                    ? [
+                        {
+                          name: item.top_diagnosis,
+                          pct: 90,
+                          type: "red",
+                          bold: true,
+                        },
+                      ]
+                    : []
+                }
+                onReview={() => handleOpenReview(item.session_hash || item.id)}
+                onPdf={() => toast("Opening PDF report...", { icon: "📄" })}
+                onWhatsapp={() => toast("Opening WhatsApp...", { icon: "💬" })}
+              />
+            );
+          })
+        )}
       </div>
 
-      {/* Modals */}
-      <PdfModal
-        isOpen={isPdfOpen}
-        onClose={() => setIsPdfOpen(false)}
-        filename={pdfFilename}
-        onProceed={() => handleOpenReview(currentCase || "227")}
-      />
-
+      {/* Review Modal */}
       <ReviewModal
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}
-        caseId={currentCase}
-        onSubmitConfirm={handleOpenConfirm}
-        onPdf={() => handleOpenPdf(`case_${currentCase}_ai_report.pdf`)}
-      />
-
-      <ConfirmModal
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        caseId={currentCase}
-        onConfirm={handleSendReport}
+        sessionHash={currentSessionHash}
       />
     </div>
   );
