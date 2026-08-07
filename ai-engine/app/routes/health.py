@@ -6,12 +6,12 @@ router = APIRouter()
 
 
 @router.get("/")
-async def root():
+def root():
     return {"message": "Medical AI Service is running!"}
 
 
 @router.get("/health")
-async def health_check():
+def health_check():
     store = get_store()
     count = store.count() if store else 0
     return {"status": "healthy", "service": "FastAPI", "records": count}

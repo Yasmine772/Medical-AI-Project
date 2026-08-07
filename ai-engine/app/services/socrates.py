@@ -132,6 +132,7 @@ def build_system_prompt(
     language: str = "ar",
     force: bool = False,
     baseline: dict | None = None,
+    asked_questions: list | None = None,
 ) -> str:
     """Build the system prompt for the SOCRATES follow-up loop.
 
@@ -142,6 +143,7 @@ def build_system_prompt(
         language: ISO code of the patient's language (prompt stays English).
         force: If True, instruct the model to output a diagnosis immediately.
         baseline: Patient demographics dict (age, gender, chronic conditions...).
+        asked_questions: List of questions already asked — the model must NOT re-ask these topics.
 
     Returns:
         str: The system prompt.
@@ -150,25 +152,30 @@ def build_system_prompt(
     covered = SOCRATES_AXES[:socrates_axis]
     covered_text = "\n".join(f"- {a}" for a in covered) if covered else "None yet"
 
-    # Build patient context from baseline
+    # Build patient context from baseline — include ALL values so the LLM
+    # does not re-ask questions already answered by the patient.
     ctx_parts = []
     if baseline:
         if baseline.get("age") is not None:
             ctx_parts.append(f"{baseline['age']} years old")
         if baseline.get("gender"):
-            g = baseline["gender"]
-            ctx_parts.append(g)
-        if baseline.get("is_smoker"):
-            ctx_parts.append("smoker")
-        if baseline.get("has_diabetes"):
-            ctx_parts.append("diabetic")
-        if baseline.get("has_hypertension"):
-            ctx_parts.append("has hypertension")
+            ctx_parts.append(baseline["gender"])
+        ctx_parts.append("smoker" if baseline.get("is_smoker") else "non-smoker")
+        ctx_parts.append("diabetic" if baseline.get("has_diabetes") else "no diabetes")
+        ctx_parts.append("hypertensive" if baseline.get("has_hypertension") else "no hypertension")
         if baseline.get("is_pregnant") is True:
             ctx_parts.append("pregnant")
-        if baseline.get("activity_level") and baseline["activity_level"] != "moderate":
+        elif baseline.get("gender") == "female":
+            ctx_parts.append("not pregnant")
+        if baseline.get("activity_level"):
             ctx_parts.append(f"activity level: {baseline['activity_level']}")
     patient_context = ", ".join(ctx_parts) if ctx_parts else "No patient context provided"
+
+    # Build list of already-asked questions so the LLM avoids repeating topics
+    asked_text = ""
+    if asked_questions:
+        items = "\n".join(f"- {q}" for q in asked_questions)
+        asked_text = f"\n\nQuestions ALREADY asked — DO NOT re-ask these topics:\n{items}\n"
 
     prompt = f"""You are a medical diagnosis assistant. All output MUST be in English only — the system translates for the patient.
 
@@ -185,7 +192,7 @@ SOCRATES framework — axes covered so far:
 
 Current axis to ask about:
 {axis_label}
-
+{asked_text}
 Rules:
 - Respond ONLY with valid JSON, no other text.
 - Ask ONE question about the current axis only
