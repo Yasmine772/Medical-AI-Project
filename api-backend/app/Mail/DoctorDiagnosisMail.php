@@ -33,7 +33,7 @@ class DoctorDiagnosisMail extends Mailable
             view: 'email.doctor-diagnosis',
             with: [
                 'session' => $this->session,
-                'patient' => $this->session->patient_data,
+                'patient' => (new \App\Services\Web\DoctorReviewService())->buildPatientData($this->session),
                 'symptoms'=> $this->session->symptoms,
                 'aiResult'=> $this->session->ai_result,
                 'tips'    => $this->session->tips,

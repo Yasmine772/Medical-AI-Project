@@ -7,13 +7,21 @@ $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 use App\Models\DiagnosisSession;
 
 $s = DiagnosisSession::with(['user.profile', 'doctor.user'])
-    ->where('session_hash', 'rev-urgent-ht')
+    ->where('session_hash', 'test-dm-6a76d283d247e')
     ->first();
 
 $out = [
     'session_hash'  => $s->session_hash,
     'phase'         => $s->phase,
-    'patient_data'  => $s->patient_data,
+    'patient_data'  => $s->user?->profile ? [
+        'age' => $s->user->profile->birth_date ? \Carbon\Carbon::parse($s->user->profile->birth_date)->age : null,
+        'gender' => $s->user->profile->gender,
+        'smoker' => $s->user->profile->is_smoker,
+        'diabetes' => $s->user->profile->has_diabetes,
+        'hypertension' => $s->user->profile->has_hypertension,
+        'pregnant' => $s->user->profile->is_pregnant,
+        'activity_level' => $s->user->profile->activity_level,
+    ] : null,
     'symptoms'      => $s->symptoms,
     'ai_result'     => $s->ai_result,
     'doctor_notes'  => $s->doctor_notes,

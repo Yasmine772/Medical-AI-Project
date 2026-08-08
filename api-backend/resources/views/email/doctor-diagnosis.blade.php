@@ -45,7 +45,7 @@
         <table style="border-collapse: collapse; width: 100%;">
             @foreach($aiResult as $diagnosis)
                 <tr>
-                    <td style="padding: 6px 0; border-bottom: 1px solid #f0f0f0;">{{ $diagnosis['name_ar'] ?? '' }}</td>
+                    <td style="padding: 6px 0; border-bottom: 1px solid #f0f0f0;">{{ $diagnosis['disease_name_local'] ?? '' }}</td>
                     <td style="padding: 6px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
                         {{ isset($diagnosis['probability']) ? $diagnosis['probability'] . '%' : '—' }}
                     </td>

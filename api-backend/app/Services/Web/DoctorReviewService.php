@@ -12,6 +12,30 @@ class DoctorReviewService
     {
         return Doctor::where('user_id', auth()->id())->first();
     }
+    /**
+ * Build patient data array from the user's profile.
+ */
+    public function buildPatientData(DiagnosisSession $session): array
+    {
+        $user = $session->user;
+        $profile = $user?->profile;
+        $age = null;
+        if ($profile?->birth_date) {
+            $age = \Carbon\Carbon::parse($profile->birth_date)->age;
+        }
+        return [
+            'age' => $age,
+            'gender' => $profile?->gender ?? null,
+            'smoker' => $profile?->is_smoker ?? null,
+            'diabetes' => $profile?->has_diabetes ?? null,
+            'hypertension' => $profile?->has_hypertension ?? null,
+            'pregnant' => $profile?->is_pregnant ?? null,
+            'activity_level' => $profile?->activity_level ?? null,
+            'blood_type' => $profile?->blood_type ?? null,
+            'occupation' => $profile?->occupation ?? null,
+            'drinks_alcohol' => $profile?->drinks_alcohol ?? null,
+        ];
+    }
 
     public function reviews(?string $lang = 'en', ?string $status = null, ?string $dateFilter = null): ?array
     {
@@ -59,10 +83,10 @@ class DoctorReviewService
                 'status'       => $session->status,
                 'phase'        => $session->phase,
                 'patient_name' => $session->user?->full_name,
-                'patient'      => $session->patient_data,
+                'patient'      => $this->buildPatientData($session),
                 'symptoms'     => $session->symptoms,
-                'top_diagnosis' => $session->ai_result[0]['name_ar']
-                    ?? $session->ai_result[0]['name_en']
+                'top_diagnosis' => $session->ai_result[0]['disease_name_local']
+                    ?? $session->ai_result[0]['disease_name']
                     ?? null,
                 'is_urgent'              => $session->isUrgent(),
                 'review_deadline'        => $session->reviewDeadline()?->toDateTimeString(),
@@ -138,13 +162,6 @@ class DoctorReviewService
             return null;
         }
 
-        $patient = $session->patient_data ?? [];
-        $profile = $session->user?->profile;
-
-        $patient['blood_type'] = $profile?->blood_type ?? $patient['blood_type'] ?? null;
-        $patient['occupation'] = $profile?->occupation ?? $patient['occupation'] ?? null;
-        $patient['drinks_alcohol'] = $profile?->drinks_alcohol ?? null;
-
         return [
             'session' => [
                 'id'           => $session->id,
@@ -158,7 +175,7 @@ class DoctorReviewService
                 'doctor_notes'        => $session->doctor_notes,
             ],
             'patient_name' => $session->user?->full_name,
-            'patient'  => $patient,
+            'patient'  => $this->buildPatientData($session),
             'symptoms' => $session->symptoms,
             'ai_result'=> $session->ai_result,
             'tips'     => $session->tips,
@@ -214,7 +231,7 @@ class DoctorReviewService
     }
 
     /**
-     * Normalize doctor-edited diagnoses (name_en/name_ar + probability 0-100).
+     * Normalize doctor-edited diagnoses (disease_name/disease_name_local + probability 0-100).
      */
     protected function normalizeEditedDiagnoses(array $list): array
     {
@@ -230,8 +247,8 @@ class DoctorReviewService
                 }
 
                 return [
-                    'name_ar'     => $d['name_ar'] ?? $d['disease_name_ar'] ?? $d['name_en'] ?? $d['disease_name'] ?? '',
-                    'name_en'     => $d['name_en'] ?? $d['disease_name'] ?? $d['name_ar'] ?? $d['disease_name_ar'] ?? '',
+                    'disease_name_local'     => $d['disease_name_local'] ?? $d['disease_name_local'] ?? $d['disease_name'] ?? $d['disease_name'] ?? '',
+                    'disease_name'     => $d['disease_name'] ?? $d['disease_name'] ?? $d['disease_name_local'] ?? $d['disease_name_local'] ?? '',
                     'probability' => $probability,
                     'confidence'  => $d['confidence'] ?? ($probability !== null
                         ? ($probability >= 80 ? 'High' : ($probability >= 50 ? 'Medium' : 'Low'))
@@ -254,12 +271,12 @@ class DoctorReviewService
         }
         $probability = is_numeric($probability) ? (int) round((float) $probability) : 100;
 
-        $nameEn = $data['disease_name'] ?? $data['disease_name_en'] ?? '';
-        $nameAr = $data['disease_name_ar'] ?? $nameEn;
+        $nameEn = $data['disease_name'] ?? $data['disease_name'] ?? '';
+        $nameAr = $data['disease_name_local'] ?? $nameEn;
 
         return [[
-            'name_ar'     => $nameAr,
-            'name_en'     => $nameEn,
+            'disease_name_local'     => $nameAr,
+            'disease_name'     => $nameEn,
             'probability' => $probability,
             'confidence'  => $data['disease_confidence'] ?? 'High',
             'specialist'  => $data['disease_specialist'] ?? $this->currentDoctor()?->specialization ?? '',

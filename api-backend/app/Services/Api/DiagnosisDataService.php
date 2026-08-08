@@ -9,12 +9,13 @@ use Illuminate\Support\Facades\Log;
 class DiagnosisDataService
 {
     protected string $fastApiUrl;
+
     protected int $timeout;
 
     public function __construct()
     {
         $this->fastApiUrl = config('services.fastapi.url');
-        $this->timeout = config('services.fastapi.timeout', 10);
+        $this->timeout = config('services.fastapi.timeout', 60);
     }
 
     public function fetchFromFastApi(string $sessionHash, string $languageCode = 'ar'): ?array
@@ -43,13 +44,13 @@ class DiagnosisDataService
 
     public function format(?array $preview): array
     {
-        if (!$preview) {
+        if (! $preview) {
             return [
-                'patient'  => null,
+                'patient' => null,
                 'symptoms' => [],
-                'ai_result'=> [],
-                'tips'     => [],
-                'pdf_url'  => null,
+                'ai_result' => [],
+                'tips' => [],
+                'pdf_url' => null,
             ];
         }
 
@@ -57,12 +58,12 @@ class DiagnosisDataService
         $diagnoses = $preview['diagnoses'] ?? [];
 
         $patient = [
-            'age'    => $patientInfo['age'] ?? null,
+            'age' => $patientInfo['age'] ?? null,
             'gender' => $patientInfo['gender'] ?? null,
             'smoker' => $patientInfo['is_smoker'] ?? null,
-            'diabetes'    => $patientInfo['has_diabetes'] ?? null,
-            'hypertension'=> $patientInfo['has_hypertension'] ?? null,
-            'pregnant'    => $patientInfo['is_pregnant'] ?? null,
+            'diabetes' => $patientInfo['has_diabetes'] ?? null,
+            'hypertension' => $patientInfo['has_hypertension'] ?? null,
+            'pregnant' => $patientInfo['is_pregnant'] ?? null,
             'activity_level' => $patientInfo['activity_level'] ?? null,
         ];
 
@@ -70,33 +71,33 @@ class DiagnosisDataService
 
         $aiResult = array_map(function ($d) {
             return [
-                'name_ar'     => $d['disease_name_ar'] ?? $d['disease_name_local'] ?? $d['disease_name'] ?? '',
-                'name_en'     => $d['disease_name'] ?? $d['disease_name_local'] ?? '',
+                'disease_name_local' => $d['disease_name_local'] ?? $d['disease_name_local'] ?? $d['disease_name'] ?? '',
+                'disease_name' => $d['disease_name'] ?? $d['disease_name_local'] ?? '',
                 'probability' => isset($d['probability'])
                     ? (int) round($d['probability'] * 100)
                     : null,
-                'confidence'  => $d['confidence'] ?? null,
-                'specialist'  => $d['specialist'] ?? null,
+                'confidence' => $d['confidence'] ?? null,
+                'specialist' => $d['specialist'] ?? null,
             ];
         }, array_slice($diagnoses, 0, 3));
 
         $tips = collect();
-        if (!empty($preview['advice'])) {
+        if (! empty($preview['advice'])) {
             $tips->push($preview['advice']);
         }
         foreach ($diagnoses as $d) {
-            if (!empty($d['advice'])) {
+            if (! empty($d['advice'])) {
                 $tips->push($d['advice']);
             }
         }
         $tips = $tips->unique()->values()->take(5)->toArray();
 
         return [
-            'patient'  => $patient,
+            'patient' => $patient,
             'symptoms' => $symptoms,
-            'ai_result'=> $aiResult,
-            'tips'     => $tips,
-            'pdf_url'  => null,
+            'ai_result' => $aiResult,
+            'tips' => $tips,
+            'pdf_url' => null,
         ];
     }
 
@@ -104,17 +105,21 @@ class DiagnosisDataService
     {
         $preview = $this->fetchFromFastApi($session->session_hash, $languageCode);
 
-        if (!$preview) {
+        if (! $preview) {
             return false;
         }
 
         $data = $this->format($preview);
 
+        // Merge patient-entered symptoms with extracted ones, no duplicates
+        $existing = $session->symptoms ?? [];
+        $extracted = $data['symptoms'] ?? [];
+        $merged = array_values(array_unique(array_merge($existing, $extracted)));
+
         $session->update([
-            'patient_data' => $data['patient'],
-            'symptoms'     => $data['symptoms'],
-            'ai_result'    => $data['ai_result'],
-            'tips'         => $data['tips'],
+            'symptoms' => $merged,
+            'ai_result' => $data['ai_result'],
+            'tips' => $data['tips'],
         ]);
 
         return true;
@@ -133,7 +138,7 @@ class DiagnosisDataService
                     $parts = preg_split('/[,،;]+|\band\b|\bمع\b/i', $text);
                     $symptoms = array_values(array_filter(array_map('trim', $parts)));
 
-                    if (!empty($symptoms)) {
+                    if (! empty($symptoms)) {
                         return $symptoms;
                     }
                 }
