@@ -9,6 +9,8 @@ use App\Http\Controllers\Web\Doctor\Dashboard\DashboardController as DoctorDashb
 use App\Http\Controllers\web\Admin\UserManagement\UserController;
 use App\Http\Controllers\Web\Auth\AuthController as WebAuthController;
 use App\Http\Controllers\Web\Admin\DoctorManagement\DoctorController;
+use App\Http\Controllers\Web\Doctor\DoctorReviewController;
+use App\Http\Controllers\Web\Doctor\DoctorScheduleController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -108,5 +110,17 @@ Route::prefix('doctor')->group(function () {
 
         Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
         Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
+
+        //Weekly Schedule routes
+        Route::get('/schedules', [DoctorScheduleController::class, 'index'])->middleware('permission:view-doctor-schedules');
+        Route::patch('/schedules/{id}', [DoctorScheduleController::class, 'update'])->middleware('permission:update-doctor-schedules');
+
+        // Diagnosis review routes (AI data assigned to this doctor)
+        Route::get('/reviews', [DoctorReviewController::class, 'index'])->middleware('permission:view-doctor-reviews');
+        Route::get('/reviews/stats', [DoctorReviewController::class, 'stats'])->middleware('permission:view-doctor-reviews');
+        //this route is for getting the details of a specific diagnosis session assigned to the doctor for review
+        Route::get('/reviews/{sessionHash}', [DoctorReviewController::class, 'show'])->middleware('permission:view-doctor-reviews');
+        Route::get('/reviews/{sessionHash}/pdf', [DoctorReviewController::class, 'getPdf'])->middleware('permission:view-doctor-reviews');
+        Route::post('/reviews/{sessionHash}/submit', [DoctorReviewController::class, 'submit'])->middleware('permission:submit-doctor-review');
     });
 });

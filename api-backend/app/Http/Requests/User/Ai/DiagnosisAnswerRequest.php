@@ -28,6 +28,7 @@ class DiagnosisAnswerRequest extends FormRequest
             'session_id'  => 'required|string',
             'question_id' => 'required|string',
             'answer'      => 'required|string',
+            'force_diagnosis' => 'sometimes|boolean',
         ];
     }
 

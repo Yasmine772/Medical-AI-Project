@@ -3,12 +3,6 @@
 namespace App\Http\Controllers\Web\Admin\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\DiagnosisSession;
-use App\Models\User;
-use App\Models\Doctor;
-use App\Models\Disease;
-use App\Models\Symptom;
-use App\Models\Advice;
 use Illuminate\Support\Facades\DB;
 use App\Services\Web\DashboardService;
 use App\Traits\ApiResponseTrait;
