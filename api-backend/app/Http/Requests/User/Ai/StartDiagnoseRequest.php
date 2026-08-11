@@ -36,6 +36,7 @@ class StartDiagnoseRequest extends FormRequest
             'assessment_for'   => 'required|string|in:myself,other',
             'birth_date'       => 'required|date',
             'model_name'       => 'nullable|string',
+            'blood_type'       => 'nullable|string|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
         ];
     }
 

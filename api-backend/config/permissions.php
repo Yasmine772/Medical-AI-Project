@@ -37,7 +37,10 @@ return [
         'doctor-logout',
         'get-doctor-summary',
         'update-availability',
-
+        'view-doctor-schedules',
+        'update-doctor-schedules',
+        'view-doctor-reviews',
+        'submit-doctor-review',
         //patient
         'user-logout',
         'start-diagnose',
@@ -53,6 +56,7 @@ return [
         'mark-as-unread-notifications',
         'destroy-all-notifications',
         'destroy-notification', 
+        
 
     ],
 
@@ -78,7 +82,7 @@ return [
 
             'show-all-notifications', 'show-count-unread-notifications',
             'mark-all-as-read-notifications', 'mark-as-read-notifications',
-            'view-tracking-data'
+            'view-tracking-data',
         ],
 
         'patient' => [
@@ -99,6 +103,8 @@ return [
             'mark-as-read-notifications', 'mark-as-unread-notifications',
             'mark-all-as-read-notifications', 
 
+            'view-tracking-data',
+
         ],
 
         'doctor' => [
@@ -107,6 +113,11 @@ return [
             'edit-profile',
             'get-doctor-summary',
             'update-availability',
+            'view-tracking-data',
+            'view-doctor-schedules',
+            'update-doctor-schedules',
+            'view-doctor-reviews',
+            'submit-doctor-review',
 
         ],
     ],

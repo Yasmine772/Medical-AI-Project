@@ -164,31 +164,6 @@
       border-right: 4px solid #a0c4d4;
     }
 
-    .conversation-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10pt;
-    }
-
-    .conversation-table td {
-      padding: 6px 10px;
-      vertical-align: top;
-      border-bottom: 1px solid #eee;
-    }
-
-    .conversation-table .q {
-      background-color: #f0f7fb;
-      font-weight: bold;
-      width: 60px;
-      color: #1a5c7a;
-    }
-
-    .conversation-table .a {
-      background-color: #fafafa;
-      width: 60px;
-      color: #2d7a2d;
-    }
-
     .advice-box {
       background-color: #e8f5e9;
       border: 1px solid #c8e6c9;
@@ -196,6 +171,34 @@
       padding: 10px 14px;
       font-size: 10pt;
       color: #2e7d32;
+    }
+
+    .tips-list {
+      margin: 0;
+      padding-right: 20px;
+      font-size: 10pt;
+    }
+
+    .tips-list li {
+      margin-bottom: 4px;
+    }
+
+    .doctor-review-box {
+      background-color: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 10pt;
+      color: #4e342e;
+    }
+
+    .doctor-review-box p {
+      margin: 4px 0;
+    }
+
+    .doctor-review-box .label {
+      font-weight: bold;
+      color: #1a5c7a;
     }
 
     .disclaimer {
@@ -300,10 +303,10 @@
         <td>{{ patient_info.has_hypertension_label }}</td>
       </tr>
       {% endif %}
-      {% if patient_info.is_pregnant is defined and patient_info.is_pregnant != '' %}
+      {% if patient_info.gender and patient_info.gender != 'male' %}
       <tr>
         <td>حامل | Pregnant</td>
-        <td>{{ patient_info.is_pregnant_label }}</td>
+        <td>{{ patient_info.is_pregnant_label or 'لا | No' }}</td>
       </tr>
       {% endif %}
       {% if patient_info.activity_level %}
@@ -311,23 +314,43 @@
         <td>النشاط | Activity</td>
         <td>{{ patient_info.activity_level }}</td>
       </tr>
-    {% endif %}
-    <tr>
-      <td>تاريخ البدء | Start Date</td>
+      {% endif %}
+      {% if patient_info.blood_type %}
+      <tr>
+        <td>زمرة الدم | Blood Type</td>
+        <td>{{ patient_info.blood_type }}</td>
+      </tr>
+      {% endif %}
+      {% if patient_info.occupation %}
+      <tr>
+        <td>المهنة | Occupation</td>
+        <td>{{ patient_info.occupation }}</td>
+      </tr>
+      {% endif %}
+      {% if patient_info.drinks_alcohol %}
+      <tr>
+        <td>يشرب الكحول | Alcohol</td>
+        <td>{{ patient_info.drinks_alcohol }}</td>
+      </tr>
+      {% endif %}
+      {% if started_at and started_at != '—' %}
+      <tr>
+        <td>تاريخ البدء | Start Date</td>
         <td>{{ started_at }}</td>
       </tr>
+      {% endif %}
+      {% if completed_at and completed_at != '—' %}
       <tr>
         <td>تاريخ الإكمال | Completion Date</td>
         <td>{{ completed_at }}</td>
       </tr>
+      {% endif %}
+      {% if initial_symptoms and initial_symptoms != '—' %}
       <tr>
         <td>الأعراض الأولية | Initial Symptoms</td>
         <td>{{ initial_symptoms }}</td>
       </tr>
-      <tr>
-        <td>حالة الجلسة | Session Status</td>
-        <td>{{ session_status }}</td>
-      </tr>
+      {% endif %}
     </table>
   </div>
 
@@ -339,8 +362,8 @@
       <div>
         <span class="rank">{{ loop.index }}</span>
         <span class="disease-name">{{ diag.disease_name_local or diag.disease_name }}</span>
-        {% if diag.disease_name_ar and language_code == 'en' %}
-        <span class="disease-name-ar">({{ diag.disease_name_ar }})</span>
+        {% if diag.disease_name_local and language_code == 'en' %}
+        <span class="disease-name-ar">({{ diag.disease_name_local }})</span>
         {% endif %}
       </div>
       <div class="meta">
@@ -371,36 +394,30 @@
   </div>
   {% endif %}
 
-  {% if conversation %}
+  {% if doctor_review %}
   <div class="section">
-    <div class="section-title">تفاصيل الجلسة التشخيصية | Diagnosis Session Details</div>
-    <table class="conversation-table">
-      <tr>
-        <td style="width:100%; padding:0;">
-          <table style="width:100%; border-collapse:collapse;">
-            {% for msg in conversation %}
-            {% if msg.role == 'user' %}
-            <tr>
-              <td class="q" style="width:50px;">المستخدم<br><small>User</small></td>
-              <td style="padding:6px 10px;">{{ msg.content }}</td>
-            </tr>
-            {% elif msg.role == 'assistant' %}
-            <tr>
-              <td class="a" style="width:50px;">النظام<br><small>Assistant</small></td>
-              <td style="padding:6px 10px;">{{ msg.content }}</td>
-            </tr>
-            {% endif %}
-            {% endfor %}
-          </table>
-        </td>
-      </tr>
-    </table>
+    <div class="section-title">مراجعة الطبيب المختص | Specialist Review</div>
+    <div class="doctor-review-box">
+      <p><strong>تمت مراجعة هذا التشخيص واعتماده من قبل طبيب مختص.</strong></p>
+      <p><span class="label">اسم الطبيب | Doctor:</span> {{ doctor_review.doctor_name }}</p>
+      <p><span class="label">التخصص | Specialization:</span> {{ doctor_review.specialization }}</p>
+      <p><span class="label">رقم الهاتف | Phone:</span> {{ doctor_review.phone }}</p>
+      {% if doctor_review.notes %}
+      <p><span class="label">ملاحظات الطبيب | Doctor's Notes:</span> {{ doctor_review.notes }}</p>
+      {% endif %}
+      <p><span class="label">تاريخ المراجعة | Review Date:</span> {{ doctor_review.reviewed_at }}</p>
+    </div>
   </div>
   {% endif %}
 
   <div class="disclaimer">
+    {% if doctor_review %}
+    تمت مراجعة هذا التقرير واعتماده من قبل الطبيب المختص: {{ doctor_review.doctor_name }} ({{ doctor_review.specialization }}) — هاتف: {{ doctor_review.phone }}.<br>
+    This report has been reviewed and approved by a specialist physician: {{ doctor_review.doctor_name }} ({{ doctor_review.specialization }}) — Phone: {{ doctor_review.phone }}.<br>
+    {% else %}
     هذا التقرير هو تقرير تشخيصي أولي تم إنشاؤه بواسطة نظام الذكاء الاصطناعي ولا يغني عن استشارة الطبيب المختص.<br>
     This is a preliminary AI-generated diagnostic report and does not substitute professional medical consultation.<br>
+    {% endif %}
     <strong>فيتاليا | Vitalia</strong>
   </div>
 

@@ -66,7 +66,7 @@ def _extract_diagnoses(data: dict) -> list:
             sorted_d = sorted(probs.items(), key=lambda x: -x[1])
             disease_map = {}
             for d in diseases:
-                name = d.get("name_en") or ""
+                name = d.get("disease_name") or ""
                 if name:
                     disease_map[name] = d
             diagnoses = []
@@ -93,6 +93,44 @@ def _extract_advice(diagnoses: list) -> str:
         if advice:
             return advice
     return diagnoses[0].get("advice", "") if diagnoses else ""
+
+
+def _normalize_override_diagnoses(diagnoses: list | None) -> list:
+    """Normalize Laravel ai_result items into the template diagnosis shape.
+
+    Laravel stores probabilities as integers 0-100 (and disease_name_local/disease_name keys);
+    the template expects a 0-1 fraction plus disease_name fields.
+    """
+    if not diagnoses:
+        return []
+
+    normalized = []
+    for d in diagnoses:
+        prob = d.get("probability")
+        if isinstance(prob, (int, float)) and prob > 1:
+            prob = prob / 100.0
+
+        confidence = str(d.get("confidence", "")).lower()
+        confidence = {
+            "high": "Strong",
+            "strong": "Strong",
+            "medium": "Moderate",
+            "moderate": "Moderate",
+            "low": "Less Likely",
+            "less likely": "Less Likely",
+        }.get(confidence, d.get("confidence") or "Less Likely")
+
+        normalized.append({
+            "disease_name": d.get("disease_name") or d.get("disease_name") or "",
+            "disease_name_local": d.get("disease_name_local") or d.get("disease_name_local") or "",
+            "confidence": confidence,
+            "probability": prob if isinstance(prob, (int, float)) else None,
+            "specialist": d.get("specialist") or "",
+            "advice": d.get("advice") or "",
+            "reasoning": d.get("reasoning") or "",
+        })
+
+    return normalized
 
 
 def _format_timestamp(ts: str | None) -> str:
@@ -149,28 +187,6 @@ def build_report_json(session_id: str, language_code: str = "en") -> dict:
             d["specialist_local"] = d.get("specialist_local") or d.get("specialist_ar") or d.get("specialist", "")
             d["advice_local"] = d.get("advice_local") or d.get("advice", "")
 
-    conversation = data.get("conversation") or []
-    if isinstance(conversation, str):
-        try:
-            conversation = json.loads(conversation)
-        except (json.JSONDecodeError, TypeError):
-            conversation = []
-
-    transcript = []
-    for m in conversation:
-        role = m.get("role")
-        content = m.get("content", "")
-        if role == "assistant":
-            try:
-                parsed = json.loads(content)
-                if parsed.get("type") == "question":
-                    content = parsed.get("question", "")
-                elif parsed.get("type") == "diagnosis":
-                    content = "Final diagnosis provided."
-            except (json.JSONDecodeError, TypeError):
-                pass
-        transcript.append({"role": role, "text": content})
-
     patient_info = _extract_patient_info(data)
     return {
         "session_id": session_id,
@@ -190,19 +206,22 @@ def build_report_json(session_id: str, language_code: str = "en") -> dict:
         "status": data.get("status", "COMPLETED"),
         "diagnoses": diagnoses,
         "advice": advice,
-        "conversation": transcript,
     }
 
 
-def generate_report_html(session_id: str, language_code: str = "en") -> str:
+def generate_report_html(session_id: str, language_code: str = "en", overrides: dict | None = None) -> str:
     sm = get_session_manager()
-    data = sm.get_session(session_id)
-    if not data:
+    data = sm.get_session(session_id) if session_id else None
+    if not data and not overrides:
         raise ValueError(f"Session {session_id} not found")
 
-    data = _parse_json_fields(data)
-    diagnoses = _extract_diagnoses(data)
-    advice = _extract_advice(diagnoses)
+    data = _parse_json_fields(data) if data else {}
+    diagnoses = overrides.get("diagnoses")
+    if diagnoses is not None:
+        diagnoses = _normalize_override_diagnoses(diagnoses)
+    else:
+        diagnoses = _extract_diagnoses(data)
+    advice = overrides.get("advice") or _extract_advice(diagnoses)
 
     candidates = data.get("candidates") or {}
     if isinstance(candidates, str):
@@ -211,32 +230,51 @@ def generate_report_html(session_id: str, language_code: str = "en") -> str:
         except (json.JSONDecodeError, TypeError):
             candidates = {}
 
-    # Translate diagnoses if requested
+    # Translate diagnoses if requested.
+    # Preserve any existing localized values (e.g. doctor-provided Arabic);
+    # only fall back to translating the English base when empty.
     if language_code != "en":
         for d in diagnoses:
-            d["disease_name_local"] = from_english(d.get("disease_name", ""), language_code) or d.get("disease_name", "")
-            d["specialist_local"] = from_english(d.get("specialist", ""), language_code) or d.get("specialist", "")
-            d["advice_local"] = from_english(d.get("advice", ""), language_code) or d.get("advice", "")
-            d["reasoning_local"] = from_english(d.get("reasoning", ""), language_code) or d.get("reasoning", "")
+            if not d.get("disease_name_local"):
+                d["disease_name_local"] = from_english(d.get("disease_name", ""), language_code) or d.get("disease_name", "")
+            if not d.get("specialist_local"):
+                d["specialist_local"] = from_english(d.get("specialist", ""), language_code) or d.get("specialist", "")
+            if not d.get("advice_local"):
+                d["advice_local"] = from_english(d.get("advice", ""), language_code) or d.get("advice", "")
+            if not d.get("reasoning_local"):
+                d["reasoning_local"] = from_english(d.get("reasoning", ""), language_code) or d.get("reasoning", "")
+            if d.get("confidence"):
+                d["confidence_local"] = from_english(d["confidence"], language_code) or d["confidence"]
 
-    # Resolve real initial symptom from selected_symptoms
+    # Resolve real initial symptom from selected_symptoms or overrides
     selected = candidates.get("selected_symptoms") or []
-    initial_symptom = "—"
-    if selected:
+    initial_symptom = overrides.get("initial_symptoms") or "—"
+    if not overrides.get("initial_symptoms") and selected:
         first = selected[0]
-        initial_symptom = (first.get("name_local") or first.get("name_en") or "—")
+        initial_symptom = (first.get("disease_name_local") or first.get("disease_name") or "—")
 
     # Localize advice string if requested
     advice_local = from_english(advice, language_code) if language_code != "en" and advice else advice
 
-    conversation = data.get("conversation") or []
-    if isinstance(conversation, str):
-        try:
-            conversation = json.loads(conversation)
-        except (json.JSONDecodeError, TypeError):
-            conversation = []
-
     patient_info = _extract_patient_info(data)
+
+    # Apply overrides (doctor-edited data) on top of the stored baseline
+    opi = overrides.get("patient_info") or {}
+    for key in ("age", "gender", "is_smoker", "has_diabetes", "has_hypertension",
+                "is_pregnant", "activity_level"):
+        if opi.get(key) is not None:
+            patient_info[key] = opi[key]
+    if opi.get("patient_name"):
+        patient_info["display_name"] = opi["patient_name"]
+    patient_info["blood_type"] = opi.get("blood_type")
+    patient_info["occupation"] = opi.get("occupation")
+    patient_info["drinks_alcohol"] = opi.get("drinks_alcohol")
+
+    doctor_review = overrides.get("doctor_review") or None
+
+    # Translate doctor review notes if requested
+    if language_code != "en" and doctor_review and doctor_review.get("notes"):
+        doctor_review["notes"] = from_english(doctor_review["notes"], language_code) or doctor_review["notes"]
 
     # Translate patient-facing fields if requested
     if language_code != "en":
@@ -244,17 +282,21 @@ def generate_report_html(session_id: str, language_code: str = "en") -> str:
             patient_info["gender"] = from_english(patient_info["gender"], language_code) or patient_info["gender"]
         if patient_info["activity_level"]:
             patient_info["activity_level"] = from_english(patient_info["activity_level"], language_code) or patient_info["activity_level"]
+        if patient_info.get("occupation"):
+            patient_info["occupation"] = from_english(patient_info["occupation"], language_code) or patient_info["occupation"]
         patient_info["is_smoker_label"] = from_english("Yes" if patient_info["is_smoker"] else "No", language_code)
         patient_info["has_diabetes_label"] = from_english("Yes" if patient_info["has_diabetes"] else "No", language_code)
         patient_info["has_hypertension_label"] = from_english("Yes" if patient_info["has_hypertension"] else "No", language_code)
-        if patient_info["is_pregnant"] is not None:
-            patient_info["is_pregnant_label"] = from_english("Yes" if patient_info["is_pregnant"] else "No", language_code)
+        patient_info["is_pregnant_label"] = (
+            from_english("Yes" if patient_info["is_pregnant"] else "No", language_code)
+        )
     else:
         patient_info["is_smoker_label"] = "Yes" if patient_info["is_smoker"] else "No"
         patient_info["has_diabetes_label"] = "Yes" if patient_info["has_diabetes"] else "No"
         patient_info["has_hypertension_label"] = "Yes" if patient_info["has_hypertension"] else "No"
-        if patient_info["is_pregnant"] is not None:
-            patient_info["is_pregnant_label"] = "Yes" if patient_info["is_pregnant"] else "No"
+        patient_info["is_pregnant_label"] = (
+            "Yes" if patient_info["is_pregnant"] else "No"
+        )
 
     template = env.get_template("report.html")
     html = template.render(
@@ -270,32 +312,54 @@ def generate_report_html(session_id: str, language_code: str = "en") -> str:
         top_diagnoses=diagnoses,
         advice=advice,
         advice_local=advice_local,
-        conversation=conversation,
+        doctor_review=doctor_review,
     )
     return html
 
 
-def generate_pdf(session_id: str, language_code: str = "en") -> bytes:
-    html = generate_report_html(session_id, language_code)
+def _launch_browser():
     from playwright.sync_api import sync_playwright
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
+    p = sync_playwright().start()
+    attempts = [
+        {"channel": "chrome"},
+        {"channel": "msedge"},
+        {},
+    ]
+    last_err = None
+    for kwargs in attempts:
+        try:
+            browser = p.chromium.launch(headless=True, **kwargs)
+            return p, browser
+        except Exception as e:
+            last_err = e
+    p.stop()
+    raise last_err
+
+
+def generate_pdf(session_id: str, language_code: str = "en", overrides: dict | None = None) -> bytes:
+    html = generate_report_html(session_id, language_code, overrides)
+    p, browser = _launch_browser()
+    try:
         page = browser.new_page()
         page.set_content(html, wait_until="networkidle")
         pdf_bytes = page.pdf(format="A4", print_background=True)
+    finally:
         browser.close()
+        p.stop()
     return pdf_bytes
 
 
-def save_pdf(session_id: str, pdf_bytes: bytes, language_code: str = "en") -> str:
+def save_pdf(session_id: str, pdf_bytes: bytes, language_code: str = "en", reviewed: bool = False) -> str:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    filepath = REPORTS_DIR / f"{session_id}_{language_code}.pdf"
+    filename = f"{session_id}_reviewed_{language_code}.pdf" if reviewed else f"{session_id}_{language_code}.pdf"
+    filepath = REPORTS_DIR / filename
     filepath.write_bytes(pdf_bytes)
     return str(filepath)
 
 
-def get_pdf_path(session_id: str, language_code: str = "en") -> str | None:
-    filepath = REPORTS_DIR / f"{session_id}_{language_code}.pdf"
+def get_pdf_path(session_id: str, language_code: str = "en", reviewed: bool = False) -> str | None:
+    filename = f"{session_id}_reviewed_{language_code}.pdf" if reviewed else f"{session_id}_{language_code}.pdf"
+    filepath = REPORTS_DIR / filename
     if filepath.exists():
         return str(filepath)
     return None

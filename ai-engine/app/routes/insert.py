@@ -51,12 +51,12 @@ def _insert_disease(disease: DiseaseItem):
 
 
 @router.post("/insert/json-file")
-async def insert_json_file(file: UploadFile = File(...)):
+def insert_json_file(file: UploadFile = File(...)):
     """Bulk-insert diseases from a JSON array or ``{"diseases": [...]}`` file."""
     if not file.filename or not file.filename.endswith(".json"):
         raise HTTPException(400, "Only .json files are accepted")
 
-    content = await file.read()
+    content = file.file.read()
     data = json.loads(content)
 
     if isinstance(data, list):
@@ -161,12 +161,12 @@ def _process_pdf(task_id: str, content: bytes, filename: str):
 
 
 @router.post("/insert/pdf")
-async def insert_pdf(file: UploadFile = File(...)):
+def insert_pdf(file: UploadFile = File(...)):
     """Queue a PDF for chunking/embedding; returns a ``task_id`` for polling."""
     if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(400, "Only PDF files are accepted")
 
-    content = await file.read()
+    content = file.file.read()
     task_id = str(uuid.uuid4())
     set_insert_progress(task_id, "starting", 0, 0)
 
@@ -181,7 +181,7 @@ async def insert_pdf(file: UploadFile = File(...)):
 
 
 @router.get("/insert/progress/{task_id}")
-async def insert_progress(task_id: str):
+def insert_progress(task_id: str):
     """Return the current progress/status of a PDF ingestion task."""
     task = get_insert_progress(task_id)
     if task is None:

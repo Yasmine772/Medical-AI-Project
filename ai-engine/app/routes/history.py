@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.get("/diagnosis-history")
-async def diagnosis_history(
+def diagnosis_history(
     user_id: str = Query(default="anonymous"),
     limit: int = Query(default=50, ge=1, le=200),
     language_code: str = Query(default="en", description="Language code for localizing names (e.g. 'ar', 'en')"),
