@@ -97,7 +97,8 @@ class AuthService
             'is_pregnant',
             'activity_level',
             'drinks_alcohol',
-            'occupation'
+            'occupation',
+            'blood_type',
         ]));
 
         $user->profile()->updateOrCreate(
