@@ -219,6 +219,38 @@ class TestTrackingSeeder extends Seeder
         }
         $this->command->info('Seeded ' . count($sessions) . ' test sessions.');
 
+        // 4a-extra. Incomplete sessions (AI never finished -> no ai_result, no doctor, disease_id null)
+        // so patient history / doctor lists filtering can be tested (db:seed only).
+        $incompleteSessions = [
+            [
+                'session_hash' => 'test-incomplete-' . uniqid(),
+                'status' => 'ACTIVE',
+                'phase' => 'doctor_review',
+                'user_id' => $user->id,
+                'disease_id' => null,
+                'doctor_id' => null,
+                'started_at' => now()->subMinutes(10),
+            ],
+            [
+                'session_hash' => 'test-incomplete-mid-' . uniqid(),
+                'status' => 'ACTIVE',
+                'phase' => 'doctor_review',
+                'user_id' => $user->id,
+                'disease_id' => null,
+                'doctor_id' => null,
+                'started_at' => now()->subDays(2),
+                'symptoms' => ['صداع نصفي', 'غثيان'],
+            ],
+        ];
+
+        foreach ($incompleteSessions as $s) {
+            DiagnosisSession::firstOrCreate(
+                ['session_hash' => $s['session_hash']],
+                $s
+            );
+        }
+        $this->command->info('Seeded ' . count($incompleteSessions) . ' incomplete test sessions.');
+
         // 4c. Notify each assigned doctor so the notification is visible right after seeding
         foreach ($createdSessions as $session) {
             $doctor = $session->load('doctor.user')->doctor;

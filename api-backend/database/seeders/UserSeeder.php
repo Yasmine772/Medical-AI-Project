@@ -14,26 +14,23 @@ class UserSeeder extends Seeder
 
     public function run(): void
     {
-        $admin = User::where('email', 'admin@mediscan.com')->first();
-        if (! $admin) {
-            $admin = User::create([
+        $admin = User::firstOrCreate(
+            ['email' => 'razangung@gmail.com'],
+            [
                 'full_name' => 'Admin',
-                // 'email' => 'admin@mediscan.com',
-                'email' => 'razangung@gmail.com',
                 'password' => Hash::make('password'),
-            ]);
-        }
+            ]
+        );
         $admin->assignRole('admin');
 
-        $patient = User::where('email', 'patient@mediscan.com')->first();
-        if (! $patient) {
-            $patient = User::create([
+        $patient = User::firstOrCreate(
+            ['email' => 'patient@mediscan.com'],
+            [
                 'full_name' => 'Patient',
-                'email' => 'patient@mediscan.com',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
-            ]);
-        }
+            ]
+        );
         $patient->assignRole('patient');
 
         $user_1 = User::create([
@@ -44,23 +41,27 @@ class UserSeeder extends Seeder
                 ]);
         $user_1->assignRole('doctor');
 
-        Doctor::create([
-            'user_id' => $user_1->id,
-            'phone' => '0983409535',
-            'specialization' => 'Cardiology',
-            'years_of_experience' => 5,
-            'clinic_phone' => '0111234567',
-            'clinic_address' => 'Damascus, Syria',
-            'license_number' => 'LIC-12345',
-            'biography' => 'Experienced cardiologist with 5 years of practice.',
-            'photo' => null,
-            'cv_file' => null,
-            'license_file' => null,
-            'is_active' => true,
-        ]);
+        Doctor::updateOrCreate(
+            ['user_id' => $user_1->id],
+            [
+                'phone' => '0983409535',
+                'specialization' => 'Cardiology',
+                'years_of_experience' => 5,
+                'clinic_phone' => '0111234567',
+                'clinic_address' => 'Damascus, Syria',
+                'license_number' => 'LIC-12345',
+                'biography' => 'Experienced cardiologist with 5 years of practice.',
+                'photo' => null,
+                'cv_file' => null,
+                'license_file' => null,
+                'is_active' => true,
+            ]
+        );
 
-        User::factory(50)->create()->each(function ($user) {
-            $user->assignRole('patient');
-        });
+        if (User::count() < 60) {
+            User::factory(50)->create()->each(function ($user) {
+                $user->assignRole('patient');
+            });
+        }
     }
 }
