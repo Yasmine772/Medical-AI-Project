@@ -35,7 +35,7 @@ class NewDiagnosisAssignedNotification extends Notification
             'title' => 'New Diagnosis Assigned',
             'message' => 'A new AI diagnosis has been assigned to you for review.',
             'session_hash' => $this->session->session_hash,
-            'patient' => $this->session->patient_data,
+            'patient' => (new \App\Services\Web\DoctorReviewService())->buildPatientData($this->session),
             'symptoms' => $this->session->symptoms,
             'ai_result' => $this->session->ai_result,
             'tips' => $this->session->tips,

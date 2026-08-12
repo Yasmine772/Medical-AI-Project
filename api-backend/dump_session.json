@@ -1,48 +1,48 @@
 {
-    "session_hash": "rev-urgent-ht",
+    "session_hash": "test-dm-6a76d283d247e",
     "phase": "doctor_review",
     "patient_data": {
-        "age": 48,
-        "gender": "female",
+        "age": 36,
+        "gender": "male",
         "smoker": false,
         "diabetes": false,
-        "hypertension": true,
-        "pregnant": null,
-        "activity_level": "light"
+        "hypertension": false,
+        "pregnant": false,
+        "activity_level": "moderate"
     },
     "symptoms": [
-        "صداع في مؤخرة الرأس",
-        "دوخة",
-        "ارتفاع ضغط الدم"
+        "الشعور بالعطش الشديد",
+        "كثرة التبول",
+        "فقدان الوزن المفاجئ"
     ],
     "ai_result": [
         {
-            "name_ar": "ارتفاع ضغط الدم الأساسي",
-            "name_en": "Essential Hypertension",
-            "probability": 91,
+            "disease_name_local": "السكري من النوع الثاني",
+            "disease_name": "Type 2 Diabetes",
+            "probability": 87,
             "confidence": "High",
-            "specialist": "Cardiologist"
+            "specialist": "Endocrinologist"
         },
         {
-            "name_ar": "ارتفاع ضغط الدم الثانوي",
-            "name_en": "Secondary Hypertension",
-            "probability": 6,
-            "confidence": "Low",
-            "specialist": "Cardiologist"
+            "disease_name_local": "مقدمات السكري",
+            "disease_name": "Prediabetes",
+            "probability": 9,
+            "confidence": "Medium",
+            "specialist": "Endocrinologist"
         },
         {
-            "name_ar": "الصداع النصفي",
-            "name_en": "Migraine",
-            "probability": 3,
+            "disease_name_local": "فرط نشاط الغدة الدرقية",
+            "disease_name": "Hyperthyroidism",
+            "probability": 4,
             "confidence": "Low",
-            "specialist": "Neurologist"
+            "specialist": "Endocrinologist"
         }
     ],
-    "doctor_notes": "تمت مراجعة التشخيص واعتماده من قبل الطبيب.",
+    "doctor_notes": null,
     "doctor": {
-        "full_name": "Dr. Sara Ali",
-        "specialization": "Cardiologist",
-        "phone": "0599271293"
+        "full_name": "Dr. Huda Mahmoud",
+        "specialization": "Endocrinologist",
+        "phone": "0599920497"
     },
     "profile": {
         "blood_type": "O+",

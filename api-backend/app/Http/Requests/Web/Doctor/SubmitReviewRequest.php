@@ -22,19 +22,19 @@ class SubmitReviewRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'decision'                => ['required', 'string', 'in:approve,edit,new'],
-            'doctor_notes'            => ['required', 'string'],
-            'ai_result'               => ['required_if:decision,edit', 'array'],
-            'ai_result.*.name_en'     => ['nullable', 'string'],
-            'ai_result.*.name_ar'     => ['nullable', 'string'],
+            'decision' => ['required', 'string', 'in:approve,edit,new'],
+            'doctor_notes' => ['required', 'string'],
+            'ai_result' => ['required_if:decision,edit', 'array'],
+            'ai_result.*.disease_name' => ['nullable', 'string'],
+            'ai_result.*.disease_name_local' => ['nullable', 'string'],
             'ai_result.*.probability' => ['nullable', 'numeric'],
-            'ai_result.*.confidence'  => ['nullable', 'string'],
-            'ai_result.*.specialist'  => ['nullable', 'string'],
-            'disease_name'            => ['required_if:decision,new', 'string'],
-            'disease_name_ar'         => ['nullable', 'string'],
-            'disease_probability'     => ['nullable', 'numeric'],
-            'disease_specialist'      => ['nullable', 'string'],
-            'disease_confidence'      => ['nullable', 'string'],
+            'ai_result.*.confidence' => ['nullable', 'string'],
+            'ai_result.*.specialist' => ['nullable', 'string'],
+            'disease_name' => ['required_if:decision,new', 'string'],
+            'disease_name_local' => ['nullable', 'string'],
+            'disease_probability' => ['nullable', 'numeric'],
+            'disease_specialist' => ['nullable', 'string'],
+            'disease_confidence' => ['nullable', 'string'],
         ];
     }
 

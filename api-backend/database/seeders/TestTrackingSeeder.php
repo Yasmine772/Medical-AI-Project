@@ -7,6 +7,7 @@ use App\Models\Disease;
 use App\Models\Doctor;
 use App\Models\DoctorSchedule;
 use App\Models\User;
+use App\Models\PatientProfile;
 use App\Notifications\NewDiagnosisAssignedNotification;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -100,38 +101,55 @@ class TestTrackingSeeder extends Seeder
         );
         $user->assignRole('patient');
 
+        // Create patient profile for the test user
+        PatientProfile::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'birth_date' => '1990-05-15',
+                'gender' => 'male',
+                'is_smoker' => false,
+                'has_diabetes' => false,
+                'has_hypertension' => false,
+                'is_pregnant' => false,
+                'drinks_alcohol' => false,
+                'activity_level' => 'moderate',
+                'blood_type' => 'O+',
+                'occupation' => 'engineer',
+            ]
+        );
+
         // 4. Create test diagnosis sessions
         $diseaseIds = Disease::pluck('id', 'name');
 
         // 4a. AI diagnosis payloads per disease (so data shows in notifications without FastAPI)
         $aiData = [
             'Diabetes' => [
-                'patient' => ['age' => 55, 'gender' => 'male', 'smoker' => false, 'diabetes' => true, 'hypertension' => false, 'pregnant' => null, 'activity_level' => 'sedentary'],
+                // 'patient' => ['age' => 55, 'gender' => 'male', 'smoker' => false, 'diabetes' => true, 'hypertension' => false, 'pregnant' => null, 'activity_level' => 'sedentary'],
                 'symptoms' => ['الشعور بالعطش الشديد', 'كثرة التبول', 'فقدان الوزن المفاجئ'],
                 'ai_result' => [
-                    ['name_ar' => 'السكري من النوع الثاني', 'name_en' => 'Type 2 Diabetes', 'probability' => 87, 'confidence' => 'High', 'specialist' => 'Endocrinologist'],
-                    ['name_ar' => 'مقدمات السكري', 'name_en' => 'Prediabetes', 'probability' => 9, 'confidence' => 'Medium', 'specialist' => 'Endocrinologist'],
-                    ['name_ar' => 'فرط نشاط الغدة الدرقية', 'name_en' => 'Hyperthyroidism', 'probability' => 4, 'confidence' => 'Low', 'specialist' => 'Endocrinologist'],
+                    ['disease_name_local' => 'السكري من النوع الثاني', 'disease_name' => 'Type 2 Diabetes', 'probability' => 87, 'confidence' => 'High', 'specialist' => 'Endocrinologist'],
+                    ['disease_name_local' => 'مقدمات السكري', 'disease_name' => 'Prediabetes', 'probability' => 9, 'confidence' => 'Medium', 'specialist' => 'Endocrinologist'],
+                    ['disease_name_local' => 'فرط نشاط الغدة الدرقية', 'disease_name' => 'Hyperthyroidism', 'probability' => 4, 'confidence' => 'Low', 'specialist' => 'Endocrinologist'],
                 ],
                 'tips' => ['راقب مستوى السكر في الدم بانتظام', 'اتبع نظام غذائي متوازن منخفض السكر', 'مارس الرياضة 30 دقيقة يومياً'],
             ],
             'Hypertension' => [
-                'patient' => ['age' => 48, 'gender' => 'female', 'smoker' => false, 'diabetes' => false, 'hypertension' => true, 'pregnant' => null, 'activity_level' => 'light'],
+                // 'patient' => ['age' => 48, 'gender' => 'female', 'smoker' => false, 'diabetes' => false, 'hypertension' => true, 'pregnant' => null, 'activity_level' => 'light'],
                 'symptoms' => ['صداع في مؤخرة الرأس', 'دوخة', 'ارتفاع ضغط الدم'],
                 'ai_result' => [
-                    ['name_ar' => 'ارتفاع ضغط الدم الأساسي', 'name_en' => 'Essential Hypertension', 'probability' => 91, 'confidence' => 'High', 'specialist' => 'Cardiologist'],
-                    ['name_ar' => 'ارتفاع ضغط الدم الثانوي', 'name_en' => 'Secondary Hypertension', 'probability' => 6, 'confidence' => 'Low', 'specialist' => 'Cardiologist'],
-                    ['name_ar' => 'الصداع النصفي', 'name_en' => 'Migraine', 'probability' => 3, 'confidence' => 'Low', 'specialist' => 'Neurologist'],
+                    ['disease_name_local' => 'ارتفاع ضغط الدم الأساسي', 'disease_name' => 'Essential Hypertension', 'probability' => 91, 'confidence' => 'High', 'specialist' => 'Cardiologist'],
+                    ['disease_name_local' => 'ارتفاع ضغط الدم الثانوي', 'disease_name' => 'Secondary Hypertension', 'probability' => 6, 'confidence' => 'Low', 'specialist' => 'Cardiologist'],
+                    ['disease_name_local' => 'الصداع النصفي', 'disease_name' => 'Migraine', 'probability' => 3, 'confidence' => 'Low', 'specialist' => 'Neurologist'],
                 ],
                 'tips' => ['قلل من تناول الملح', 'تجنب التوتر والقلق', 'قيس ضغطك في نفس الوقت يومياً'],
             ],
             'Migraine' => [
-                'patient' => ['age' => 32, 'gender' => 'male', 'smoker' => true, 'diabetes' => false, 'hypertension' => false, 'pregnant' => null, 'activity_level' => 'moderate'],
+                // 'patient' => ['age' => 32, 'gender' => 'male', 'smoker' => true, 'diabetes' => false, 'hypertension' => false, 'pregnant' => null, 'activity_level' => 'moderate'],
                 'symptoms' => ['صداع نصفي شديد', 'حساسية من الضوء', 'غثيان'],
                 'ai_result' => [
-                    ['name_ar' => 'الصداع النصفي', 'name_en' => 'Migraine', 'probability' => 84, 'confidence' => 'High', 'specialist' => 'Neurologist'],
-                    ['name_ar' => 'صداع التوتر', 'name_en' => 'Tension Headache', 'probability' => 12, 'confidence' => 'Medium', 'specialist' => 'Neurologist'],
-                    ['name_ar' => 'التهاب الجيوب الأنفية', 'name_en' => 'Sinusitis', 'probability' => 4, 'confidence' => 'Low', 'specialist' => 'General Physician'],
+                    ['disease_name_local' => 'الصداع النصفي', 'disease_name' => 'Migraine', 'probability' => 84, 'confidence' => 'High', 'specialist' => 'Neurologist'],
+                    ['disease_name_local' => 'صداع التوتر', 'disease_name' => 'Tension Headache', 'probability' => 12, 'confidence' => 'Medium', 'specialist' => 'Neurologist'],
+                    ['disease_name_local' => 'التهاب الجيوب الأنفية', 'disease_name' => 'Sinusitis', 'probability' => 4, 'confidence' => 'Low', 'specialist' => 'General Physician'],
                 ],
                 'tips' => ['الراحة في غرفة مظلمة وهادئة', 'شرب كمية كافية من الماء', 'تجنب مثيرات الصداع لفترات طويلة'],
             ],
@@ -143,7 +161,6 @@ class TestTrackingSeeder extends Seeder
             }
             $data = $aiData[$diseaseName];
             $session->update([
-                'patient_data' => $data['patient'],
                 'symptoms'     => $data['symptoms'],
                 'ai_result'    => $data['ai_result'],
                 'tips'         => $data['tips'],

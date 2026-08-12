@@ -164,31 +164,6 @@
       border-right: 4px solid #a0c4d4;
     }
 
-    .conversation-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10pt;
-    }
-
-    .conversation-table td {
-      padding: 6px 10px;
-      vertical-align: top;
-      border-bottom: 1px solid #eee;
-    }
-
-    .conversation-table .q {
-      background-color: #f0f7fb;
-      font-weight: bold;
-      width: 60px;
-      color: #1a5c7a;
-    }
-
-    .conversation-table .a {
-      background-color: #fafafa;
-      width: 60px;
-      color: #2d7a2d;
-    }
-
     .advice-box {
       background-color: #e8f5e9;
       border: 1px solid #c8e6c9;
@@ -387,8 +362,8 @@
       <div>
         <span class="rank">{{ loop.index }}</span>
         <span class="disease-name">{{ diag.disease_name_local or diag.disease_name }}</span>
-        {% if diag.disease_name_ar and language_code == 'en' %}
-        <span class="disease-name-ar">({{ diag.disease_name_ar }})</span>
+        {% if diag.disease_name_local and language_code == 'en' %}
+        <span class="disease-name-ar">({{ diag.disease_name_local }})</span>
         {% endif %}
       </div>
       <div class="meta">
@@ -416,33 +391,6 @@
   <div class="section">
     <div class="section-title">التوصيات الطبية | Medical Advice</div>
     <div class="advice-box">{{ advice_local or advice }}</div>
-  </div>
-  {% endif %}
-
-  {% if conversation %}
-  <div class="section">
-    <div class="section-title">تفاصيل الجلسة التشخيصية | Diagnosis Session Details</div>
-    <table class="conversation-table">
-      <tr>
-        <td style="width:100%; padding:0;">
-          <table style="width:100%; border-collapse:collapse;">
-            {% for msg in conversation %}
-            {% if msg.role == 'user' %}
-            <tr>
-              <td class="q" style="width:50px;">المستخدم<br><small>User</small></td>
-              <td style="padding:6px 10px;">{{ msg.content }}</td>
-            </tr>
-            {% elif msg.role == 'assistant' %}
-            <tr>
-              <td class="a" style="width:50px;">النظام<br><small>Assistant</small></td>
-              <td style="padding:6px 10px;">{{ msg.content }}</td>
-            </tr>
-            {% endif %}
-            {% endfor %}
-          </table>
-        </td>
-      </tr>
-    </table>
   </div>
   {% endif %}
 
