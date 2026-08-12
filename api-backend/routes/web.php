@@ -74,12 +74,12 @@ Route::prefix('admin')->group(function () {
 
         //Doctor management 
         Route::prefix('doctor-requests')->group(function () {
+            Route::get('/approvedDoctors', [DoctorController::class, 'showApprovedDoctors'])->middleware('permission:show-approved-doctors');
+             Route::get('/count', [DoctorController::class, 'getDoctorRequestCount'])->middleware('permission:show-doctor-request-count');
             Route::get('/', [DoctorController::class, 'index'])->middleware('permission:show-doctor-requests');
             Route::get('/{id}', [DoctorController::class, 'show'])->middleware('permission:show-doctor-request-details');
             Route::patch('approve/{id}', [DoctorController::class, 'approve'])->middleware('permission:approve-doctor-request');
             Route::patch('reject/{id}', [DoctorController::class, 'reject'])->middleware('permission:reject-doctor-request');
-            Route::get('/approvedDoctors', [DoctorController::class, 'showApprovedDoctors'])->middleware('permission:show-approved-doctors');
-            Route::get('/count', [DoctorController::class, 'getDoctorRequestCount'])->middleware('permission:show-doctor-request-count');
         });
         
     });

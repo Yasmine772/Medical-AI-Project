@@ -24,6 +24,7 @@ import doctorRequestsReducer from "../features/doctors/doctorRequestsSlice";
 import notificationsReducer from "../features/notifications/notificationsSlice";
 import doctorDashboardReducer from "../features/doctor-dashboard/doctorDashboardSlice";
 import doctorCasesReducer from "../features/doctorCases/doctorCasesSlice";
+import aiInsertionReducer from "../features/diseases/aiInsertionSlice";
 const persistConfig = {
   key: "root",
   storage,
@@ -35,6 +36,7 @@ const persistConfig = {
     "doctorRequests",
     "notifications",
     "doctorCases",
+    "aiInsertion",
   ],
 };
 
@@ -52,6 +54,7 @@ const persistedReducer = persistReducer(
     notifications: notificationsReducer,
     doctorDashboard: doctorDashboardReducer,
     doctorCases: doctorCasesReducer,
+    aiInsertion: aiInsertionReducer,
   }),
 );
 
