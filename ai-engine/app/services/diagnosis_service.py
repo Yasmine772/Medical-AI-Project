@@ -116,6 +116,7 @@ class DiagnosisService:
                 )
             candidates["conversation"] = conversation
             candidates["current_question"] = None
+            candidates["no_more_symptoms"] = True
             self._save_candidates(session_id, candidates)
             return self._ask_next(session_id, candidates)
         name_local = from_english(name_en, lang) if lang != "en" else name_en
@@ -416,10 +417,13 @@ Respond ONLY with valid JSON:
         # Exhausted the question cap for this symptom: ask the user to search
         # another symptom instead of diagnosing or re-asking the LLM about the
         # same one (which produced repetitive questions). This check deliberately
-        # wins over the LLM returning a diagnosis early.
+        # wins over the LLM returning a diagnosis early — UNLESS the patient
+        # already said "no more symptoms", in which case we let the LLM continue
+        # questioning until it is confident enough to diagnose.
         if (
             question_count >= MIN_QUESTIONS_BEFORE_DIAGNOSIS
             and questions_on_current >= symptom_cap
+            and not candidates.get("no_more_symptoms")
         ):
             log(
                 "FOLLOWUP",

@@ -50,7 +50,7 @@ class DiagnosisTrackingService
         ];
     }
 
-    private function doctorMessage(DiagnosisSession $session, ?string $doctorName, string $lang): ?string
+    public function doctorMessage(DiagnosisSession $session, ?string $doctorName, string $lang): ?string
     {
         if ($session->phase !== 'doctor_review' || $session->doctor_reviewed_at) {
             return null;

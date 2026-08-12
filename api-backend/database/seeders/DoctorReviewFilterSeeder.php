@@ -6,7 +6,9 @@ use App\Models\DiagnosisSession;
 use App\Models\Disease;
 use App\Models\Doctor;
 use App\Models\User;
+use App\Models\PatientProfile;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DoctorReviewFilterSeeder extends Seeder
 {
@@ -41,22 +43,22 @@ class DoctorReviewFilterSeeder extends Seeder
         // AI payloads so the review detail page shows real-looking data
         $aiData = [
             'Hypertension' => [
-                'patient' => ['age' => 48, 'gender' => 'female', 'smoker' => false, 'diabetes' => false, 'hypertension' => true, 'pregnant' => null, 'activity_level' => 'light'],
+                // 'patient' => ['age' => 48, 'gender' => 'female', 'smoker' => false, 'diabetes' => false, 'hypertension' => true, 'pregnant' => null, 'activity_level' => 'light'],
                 'symptoms' => ['صداع في مؤخرة الرأس', 'دوخة', 'ارتفاع ضغط الدم'],
                 'ai_result' => [
-                    ['name_ar' => 'ارتفاع ضغط الدم الأساسي', 'name_en' => 'Essential Hypertension', 'probability' => 91, 'confidence' => 'High', 'specialist' => 'Cardiologist'],
-                    ['name_ar' => 'ارتفاع ضغط الدم الثانوي', 'name_en' => 'Secondary Hypertension', 'probability' => 6, 'confidence' => 'Low', 'specialist' => 'Cardiologist'],
-                    ['name_ar' => 'الصداع النصفي', 'name_en' => 'Migraine', 'probability' => 3, 'confidence' => 'Low', 'specialist' => 'Neurologist'],
+                    ['disease_name_local' => 'ارتفاع ضغط الدم الأساسي', 'disease_name' => 'Essential Hypertension', 'probability' => 91, 'confidence' => 'High', 'specialist' => 'Cardiologist'],
+                    ['disease_name_local' => 'ارتفاع ضغط الدم الثانوي', 'disease_name' => 'Secondary Hypertension', 'probability' => 6, 'confidence' => 'Low', 'specialist' => 'Cardiologist'],
+                    ['disease_name_local' => 'الصداع النصفي', 'disease_name' => 'Migraine', 'probability' => 3, 'confidence' => 'Low', 'specialist' => 'Neurologist'],
                 ],
                 'tips' => ['قلل من تناول الملح', 'تجنب التوتر والقلق', 'قيس ضغطك في نفس الوقت يومياً'],
             ],
             'Migraine' => [
-                'patient' => ['age' => 32, 'gender' => 'male', 'smoker' => true, 'diabetes' => false, 'hypertension' => false, 'pregnant' => null, 'activity_level' => 'moderate'],
+                // 'patient' => ['age' => 32, 'gender' => 'male', 'smoker' => true, 'diabetes' => false, 'hypertension' => false, 'pregnant' => null, 'activity_level' => 'moderate'],
                 'symptoms' => ['صداع نصفي شديد', 'حساسية من الضوء', 'غثيان'],
-                'ai_result' => [
-                    ['name_ar' => 'الصداع النصفي', 'name_en' => 'Migraine', 'probability' => 84, 'confidence' => 'High', 'specialist' => 'Neurologist'],
-                    ['name_ar' => 'صداع التوتر', 'name_en' => 'Tension Headache', 'probability' => 12, 'confidence' => 'Medium', 'specialist' => 'Neurologist'],
-                    ['name_ar' => 'التهاب الجيوب الأنفية', 'name_en' => 'Sinusitis', 'probability' => 4, 'confidence' => 'Low', 'specialist' => 'General Physician'],
+            'ai_result' => [
+                    ['disease_name_local' => 'الصداع النصفي', 'disease_name' => 'Migraine', 'probability' => 84, 'confidence' => 'High', 'specialist' => 'Neurologist'],
+                    ['disease_name_local' => 'صداع التوتر', 'disease_name' => 'Tension Headache', 'probability' => 12, 'confidence' => 'Medium', 'specialist' => 'Neurologist'],
+                    ['disease_name_local' => 'التهاب الجيوب الأنفية', 'disease_name' => 'Sinusitis', 'probability' => 4, 'confidence' => 'Low', 'specialist' => 'General Physician'],
                 ],
                 'tips' => ['الراحة في غرفة مظلمة وهادئة', 'شرب كمية كافية من الماء', 'تجنب مثيرات الصداع لفترات طويلة'],
             ],
@@ -102,6 +104,8 @@ class DoctorReviewFilterSeeder extends Seeder
             ],
         ];
 
+        
+
         foreach ($cases as $key => $c) {
             $data = $aiData[$c['disease']];
             DiagnosisSession::updateOrCreate(
@@ -115,7 +119,6 @@ class DoctorReviewFilterSeeder extends Seeder
                     'started_at'           => $c['started_at'],
                     'report_generated_at'  => $c['report_generated_at'],
                     'doctor_reviewed_at'   => $c['doctor_reviewed_at'],
-                    'patient_data'         => $data['patient'],
                     'symptoms'             => $data['symptoms'],
                     'ai_result'            => $data['ai_result'],
                     'tips'                 => $data['tips'],
