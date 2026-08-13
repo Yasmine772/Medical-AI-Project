@@ -178,11 +178,17 @@ async def submit_follow_up_answer(
     session_id: str = Form(...),
     question_id: str = Form(...),
     answer: str = Form(...),
+    force_diagnosis: bool = Form(False, description="When true, force the engine to produce a diagnosis now"),
 ):
     """Submit an answer for a question; returns the next question or final diagnosis."""
     try:
         svc = _get_svc()
-        result = svc.submit_follow_up_answer(session_id, question_id, answer)
+        result = svc.submit_follow_up_answer(
+            session_id,
+            question_id,
+            answer,
+            force_diagnosis=force_diagnosis,
+        )
         if "error" in result:
             return {"status": "error", "detail": result["error"]}
         return {"status": "success", "data": result}

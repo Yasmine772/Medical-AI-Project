@@ -38,7 +38,7 @@ class UpdateProfileRequest extends FormRequest
             'activity_level'   => 'sometimes|in:sedentary,moderate,active',
             'last_checkup_date'=> 'sometimes|date',
             'occupation'       => 'sometimes|string|max:255',
-            'blood_type'       => 'sometimes|string|max:3',
+            'blood_type'       => 'sometimes|nullable|string|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
         ];
     }
 

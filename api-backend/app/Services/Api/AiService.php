@@ -560,8 +560,8 @@ class AiService
                 'amount' => $session->payment->amount,
                 'paid_at' => $session->payment->paid_at,
             ] : null,
-            'workflow_steps' => $session->workflowSteps($lang),
-            'current_step' => collect($session->workflowSteps($lang))
+            'workflow_steps' => $session->workflowSteps($languageCode),
+            'current_step' => collect($session->workflowSteps($languageCode))
                 ->firstWhere('status', 'active')['key'] ?? null,
             'timestamps' => [
                 'doctor_reviewed_at' => $session->doctor_reviewed_at,
