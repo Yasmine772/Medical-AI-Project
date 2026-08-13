@@ -35,6 +35,24 @@ MAX_TOTAL_DISEASES = 15
 MAX_NEW_DISEASES = 3
 
 
+# ── State-machine overview ──────────────────────────────────
+# A diagnosis session lives in `candidates` (JSON column held in the
+# diagnosis_sessions table) and walks these phases / counters:
+#   phase == "diagnosis"          -> SOCRATES question loop active
+#   phase == "completed"          -> final diagnosis emitted & report ready
+#
+#   socrates_axis                 -> index into the 8 SOCRATES axes
+#                                    (Site, Onset, Character, Radiation,
+#                                     Associated symptoms, Timing, Factors,
+#                                     Severity)  — see socrates.py
+#   selected_symptoms             -> list of chosen symptoms driving the priors
+#   probabilities                 -> {disease: 0..1} Bayesian posterior
+#   question_count                -> total assistant Qs asked this session
+#
+# `submit_follow_up_answer` advances exactly one axis per call and decides, via
+# `check_stopping` + the question budget, whether to diagnose now or ask next.
+
+
 class DiagnosisService:
 
     def __init__(self, store, embedder, session_mgr, llm):
@@ -1079,6 +1097,10 @@ Respond ONLY with valid JSON:
         return symptoms
 
     def _get_session(self, session_id: str) -> dict:
+        # Load a session by FastAPI UUID (stored in Supabase → diagnosis_sessions.id).
+        # The `candidates` and `conversation` columns are stored as JSON strings
+        # in Postgres, so they are decoded back to Python objects here and cached
+        # on the session dict so the rest of the engine can mutate them in place.
         session = self.session_mgr.get_session(session_id)
         if not session:
             raise ValueError(f"Session {session_id} not found")
