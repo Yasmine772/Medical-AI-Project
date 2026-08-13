@@ -175,6 +175,7 @@ class DiagnosisService:
         candidates.setdefault("selected_symptoms", []).append(selected_entry)
         candidates["current_symptom_index"] = len(candidates["selected_symptoms"]) - 1
         candidates["questions_on_current"] = 0
+        candidates["need_more_count"] = 0
 
         # Extract disease names from PDF chunks via LLM
         results = []
@@ -438,15 +439,36 @@ Respond ONLY with valid JSON:
         # wins over the LLM returning a diagnosis early — UNLESS the patient
         # already said "no more symptoms", in which case we let the LLM continue
         # questioning until it is confident enough to diagnose.
-        if (
+        gated = (
             question_count >= MIN_QUESTIONS_BEFORE_DIAGNOSIS
             and questions_on_current >= symptom_cap
             and not candidates.get("no_more_symptoms")
-        ):
+        )
+        # Stateless guard: only show the "add another symptom" prompt ONCE. We count
+        # how many times we've already emitted it by scanning the conversation, so
+        # the check is deterministic regardless of persisted session state. If the
+        # patient keeps answering instead of adding a symptom, the gate stops
+        # nagging and we fall through to the normal LLM questioning below.
+        prior_need_more = sum(
+            1
+            for m in conversation
+            if m.get("role") == "assistant"
+            and "need_more_symptoms" in (m.get("content") or "")
+        )
+        if gated and prior_need_more < 1:
             log(
                 "FOLLOWUP",
                 f"Asking for more symptoms at q{question_count}/{MAX_QUESTIONS} (cap={symptom_cap})",
             )
+            # Persist the need_more prompt in the conversation so the stateless
+            # guard above detects it on the next turn (prevents an endless loop).
+            conversation.append({
+                "role": "assistant",
+                "content": json.dumps({
+                    "type": "need_more_symptoms",
+                    "message": "To narrow down the diagnosis, please search for an additional symptom you are experiencing.",
+                }),
+            })
             candidates["conversation"] = conversation
             msg = from_english(
                 "To narrow down the diagnosis, please search for an additional symptom you are experiencing.",
@@ -516,29 +538,34 @@ Respond ONLY with valid JSON:
 
         # LLM wants more symptoms
         if llm_type == "need_more_symptoms":
-            conversation.append({"role": "assistant", "content": content})
-            candidates["socrates_axis"] = socrates_axis + 1
-            candidates["conversation"] = conversation
-            msg = from_english(
-                parsed.get("message", "Please search for another symptom."), lang
-            )
-            candidates["current_question"] = {
-                "type": "need_more",
-                "question": msg,
-                "options": [],
-                "question_id": "need_more",
-            }
-            self._save_candidates(session_id, candidates)
-            return {
-                "response_type": "need_more_symptoms",
-                "question": {
-                    "id": "need_more",
-                    "text": msg,
-                    "type": "info",
+            # Guard against the LLM asking for "more symptoms" on repeat: if we've
+            # already asked once, ignore it and keep the SOCRATES loop going so the
+            # session never stalls on an endless "add a symptom" loop.
+            if prior_need_more < 1:
+                conversation.append({"role": "assistant", "content": content})
+                candidates["socrates_axis"] = socrates_axis + 1
+                candidates["conversation"] = conversation
+                msg = from_english(
+                    parsed.get("message", "Please search for another symptom."), lang
+                )
+                candidates["current_question"] = {
+                    "type": "need_more",
+                    "question": msg,
                     "options": [],
-                },
-                "total": MAX_QUESTIONS,
-            }
+                    "question_id": "need_more",
+                }
+                self._save_candidates(session_id, candidates)
+                return {
+                    "response_type": "need_more_symptoms",
+                    "question": {
+                        "id": "need_more",
+                        "text": msg,
+                        "type": "info",
+                        "options": [],
+                    },
+                    "total": MAX_QUESTIONS,
+                }
+            # Otherwise fall through and treat the response as a normal question.
 
         # LLM decided diagnosis
         if (
@@ -925,16 +952,29 @@ Respond ONLY with valid JSON:
 
         # If the posterior was empty (no evidence yet), fall back to the LLM names.
         if not merged:
-            merged = [
-                {
+            raw = []
+            for d in (named or [])[:3]:
+                p = d.get("probability")
+                # LLMs routinely emit percent-scale values (e.g. 80 meaning 80%)
+                # instead of 0-1 fractions. Convert anything > 1 to a fraction so
+                # the downstream template (which multiplies by 100) shows 80%,
+                # not 8000%.
+                if isinstance(p, (int, float)):
+                    p = p / 100.0 if p > 1 else float(p)
+                else:
+                    p = 0.0
+                raw.append({
                     "disease_name": d.get("disease_name") or d.get("name_en") or "",
-                    "probability": d.get("probability") or 0.0,
+                    "probability": p,
                     "confidence": d.get("confidence") or "Less Likely",
                     "specialist": d.get("specialist") or "",
                     "advice": d.get("advice") or "",
-                }
-                for d in (named or [])[:3]
-            ]
+                })
+            # Renormalize so the displayed percentages sum to ~100%.
+            total = sum(d["probability"] for d in raw) or 1.0
+            for d in raw:
+                d["probability"] = round(d["probability"] / total, 2)
+            merged = raw
         return merged
 
     def _name_diagnoses(
@@ -966,6 +1006,13 @@ Respond ONLY with valid JSON:
             if diags:
                 for d in diags:
                     d.setdefault("confidence", "Moderate")
+                    # Normalize probabilities to a 0-1 fraction (LLMs often emit
+                    # percent-scale numbers like 80 instead of 0.8).
+                    p = d.get("probability")
+                    if isinstance(p, (int, float)):
+                        d["probability"] = p / 100.0 if p > 1 else float(p)
+                    else:
+                        d["probability"] = 0.0
                     # Translate user-facing English fields into the session language
                     # via the deterministic translator (don't trust the LLM's
                     # non-English output, which tends to transliterate).

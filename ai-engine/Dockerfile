@@ -23,6 +23,9 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Download Playwright Chromium browser binary
+RUN python -m playwright install chromium
+
 # Copy project files
 COPY . .
 
