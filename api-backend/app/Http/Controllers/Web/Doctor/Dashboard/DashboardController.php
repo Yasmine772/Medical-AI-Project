@@ -33,4 +33,13 @@ class DashboardController extends Controller
         }
         return $this->successResponse($doctor->is_active, 'Doctor status updated successfully', 200);
     }
+
+    public function getDoctorProfits()
+    {
+        $profits = $this->doctorDashboardService->getDoctorProfits();
+        if ($profits == 'DoctorNotFound') {
+            return $this->errorResponse('Doctor not found!', null, 404);
+        }
+        return $this->successResponse($profits, 'Doctor profits retrieved successfully', 200);
+    }
 }

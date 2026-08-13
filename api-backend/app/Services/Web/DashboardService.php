@@ -7,6 +7,7 @@ use App\Models\Doctor;
 use App\Models\Disease;
 use App\Models\Symptom;
 use App\Models\Advice;
+use App\Models\PaymentSplit;
 use Illuminate\Support\Facades\DB;
 
 class DashboardService
@@ -64,6 +65,17 @@ class DashboardService
             'active' => DiagnosisSession::where('status', 'ACTIVE')->count(),
             'completed' => DiagnosisSession::where('status', 'COMPLETED')->count(),
             'pending' => DiagnosisSession::where('status', 'PENDING')->count(),
+        ];
+    }
+
+    public function getPlatformProfits()
+    {
+        $totalCents = (int) PaymentSplit::sum('platform_amount');
+
+        return [
+            'total_amount' => $totalCents,
+            'total_display' => '$' . number_format($totalCents / 100, 2),
+            'currency' => 'usd',
         ];
     }
 }
