@@ -24,6 +24,7 @@ return [
         'new-content-items-count',
         'top-specialties-by-diagnoses',
         'diagnosis-sessions-status-count',
+        'show-platform-profits',
         'show-doctor-requests',
         'show-doctor-request-details',
         'approve-doctor-request',
@@ -75,6 +76,7 @@ return [
             'user-active-count', 'doctor-active-count',
             'daily-diagnoses-count', 'new-content-items-count',
             'top-specialties-by-diagnoses', 'diagnosis-sessions-status-count',
+            'show-platform-profits',
 
             'show-doctor-requests', 'show-doctor-request-details',
             'approve-doctor-request', 'reject-doctor-request',

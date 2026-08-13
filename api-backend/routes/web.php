@@ -70,6 +70,7 @@ Route::prefix('admin')->group(function () {
             Route::get('/new-content-items-count', [DashboardController::class, 'newContentItemsCount'])->middleware('permission:new-content-items-count');
             Route::get('/top-specialties-by-diagnoses', [DashboardController::class, 'getTopDiseasesByDiagnoses'])->middleware('permission:top-specialties-by-diagnoses');
             Route::get('/diagnosis-sessions-status-count', [DashboardController::class, 'diagnosisSessionsStatusCount'])->middleware('permission:diagnosis-sessions-status-count');
+            Route::get('/platform-profits', [DashboardController::class, 'platformProfits'])->middleware('permission:show-platform-profits');
         });
 
         //Doctor management 
@@ -110,6 +111,7 @@ Route::prefix('doctor')->group(function () {
 
         Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
         Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
+        Route::get('/profits', [DoctorDashboardController::class, 'getDoctorProfits'])->middleware('permission:get-doctor-summary');
 
         //Weekly Schedule routes
         Route::get('/schedules', [DoctorScheduleController::class, 'index'])->middleware('permission:view-doctor-schedules');
