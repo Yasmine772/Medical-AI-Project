@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\Payment\CreatePaymentIntentRequest;
 use App\Services\Api\PaymentService;
 use App\Traits\ApiResponseTrait;
+use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
@@ -27,6 +28,20 @@ class PaymentController extends Controller
         }
 
         return $this->successResponse($result, 'Payment intent created successfully', 201);
+    }
+
+    public function cost(Request $request)
+    {
+        $user = $request->user();
+        $sessionHash = $request->input('session_hash');
+
+        $result = $this->paymentService->getCost($user, $sessionHash);
+
+        if ($result === null) {
+            return $this->errorResponse('Diagnosis session not found.', null, 404);
+        }
+
+        return $this->successResponse($result, 'Diagnosis cost retrieved successfully', 200);
     }
 
     public function handleWebhook()

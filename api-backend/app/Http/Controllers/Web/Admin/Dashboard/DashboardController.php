@@ -139,5 +139,21 @@ class DashboardController extends Controller
         return response()->json(['error' => 'Failed to retrieve diagnosis sessions status count'], 500);
        }
      }
+
+     /**
+      * Display the total platform profits from paid diagnoses.
+      * @return \Illuminate\Http\JsonResponse
+      */
+     public function platformProfits()
+     {
+       try{
+          $profits = $this->dashboardService->getPlatformProfits();
+          return $this->successResponse($profits , 'Platform profits retrieved successfully');
+       }
+       catch(Exception $e)
+       {
+        return response()->json(['error' => 'Failed to retrieve platform profits'], 500);
+       }
+     }
      
 }

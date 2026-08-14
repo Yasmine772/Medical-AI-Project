@@ -36,6 +36,7 @@ class PatientProfile extends Model implements Auditable
         'has_hypertension' => 'boolean',
         'is_pregnant' => 'boolean',
         'drinks_alcohol' => 'boolean',
+        'blood_type' => 'string'
     ];
 
 }

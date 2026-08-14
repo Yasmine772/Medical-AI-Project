@@ -216,6 +216,7 @@ def generate_report_html(session_id: str, language_code: str = "en", overrides: 
         raise ValueError(f"Session {session_id} not found")
 
     data = _parse_json_fields(data) if data else {}
+    overrides = overrides or {}
     diagnoses = overrides.get("diagnoses")
     if diagnoses is not None:
         diagnoses = _normalize_override_diagnoses(diagnoses)

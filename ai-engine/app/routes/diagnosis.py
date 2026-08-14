@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("/symptoms")
-def search_symptoms(
+async def search_symptoms(
     q: str = Query(default="", description="Search query for symptoms or illnesses"),
     model_name: str = Query(default="@cf/meta/llama-3.2-3b-instruct", description="LLM model to use for extraction"),
 ):
@@ -73,16 +73,17 @@ def search_symptoms(
     if not items:
         return {"status": "success", "data": {"query": q, "results": []}}
 
-    # Dynamically dedupe near-identical items (by embedding similarity) and rank
-    # by relevance to the query. No hardcoded names/patterns — "Acute exacerbation
-    # of X" style variants collapse automatically because their embeddings are
-    # nearly identical.
-    ranked = _dedupe_and_rank(items, query_vector, embedder, top_n=15)
-    if not ranked:
-        return {"status": "success", "data": {"query": q, "results": []}}
-
-    name_en_list = [r["name_en"] for r in ranked]
-    summary_en_list = [r["summary"] for r in ranked]
+    name_en_list = []
+    summary_en_list = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        name_en = (it.get("name_en") or "").strip()
+        if not name_en:
+            continue
+        summary = (it.get("summary") or "").strip()[:200]
+        name_en_list.append(name_en)
+        summary_en_list.append(summary)
 
     if lang != "en":
         names_local = translate_batch(name_en_list, lang)
@@ -91,77 +92,23 @@ def search_symptoms(
         names_local = name_en_list
         summaries_local = summary_en_list
 
-    for idx, r in enumerate(ranked):
-        r["id"] = idx
-        r["name_local"] = names_local[idx]
-        r["summary"] = summaries_local[idx]
-
-    return {"status": "success", "data": {"query": q, "results": ranked}}
-
-
-def _dedupe_and_rank(items: list, query_vector, embedder, top_n: int = 15, dup_threshold: float = 0.90) -> list:
-    """Keep the most relevant, non-duplicate extracted items.
-
-    Each item is embedded (name + summary) and scored against the query. Items
-    whose embeddings are nearly identical (cosine >= ``dup_threshold``) are
-    treated as duplicates and only the most query-relevant one is kept. The
-    result is sorted by relevance and capped at ``top_n``.
-
-    Args:
-        items: Raw LLM-extracted items (dicts with ``name_en``, ``summary``, ...).
-        query_vector: Query embedding used for relevance scoring.
-        embedder: :class:`~app.services.embedding_service.EmbeddingService`.
-        top_n: Max number of results to return.
-        dup_threshold: Cosine similarity above which two items are duplicates.
-
-    Returns:
-        list: Ranked, deduped items (original dicts plus ``similarity``).
-    """
-    texts = []
-    valid = []
-    for it in items:
-        if not isinstance(it, dict):
-            continue
-        name_en = (it.get("name_en") or "").strip()
-        if not name_en:
-            continue
-        summary = (it.get("summary") or "").strip()
-        texts.append(f"{name_en}. {summary}" if summary else name_en)
-        valid.append(it)
-    if not texts:
-        return []
-
-    vecs = embedder.encode_batch(texts)
-    sims = [embedder.calculate_similarity(query_vector, v) for v in vecs]
-
-    order = sorted(range(len(valid)), key=lambda i: -sims[i])
-    kept_idx = []
-    for i in order:
-        dup = False
-        for j in kept_idx:
-            if embedder.calculate_similarity(vecs[i], vecs[j]) >= dup_threshold:
-                dup = True
-                break
-        if not dup:
-            kept_idx.append(i)
-
-    ranked = []
-    for i in kept_idx[:top_n]:
-        it = valid[i]
-        ranked.append({
-            "id": len(ranked),
-            "name_en": (it.get("name_en") or "").strip(),
-            "name_local": "",
-            "type": it.get("type") or "illness",
-            "summary": (it.get("summary") or "").strip()[:200],
-            "source_id": str(it.get("source_chunk") or ""),
-            "similarity": round(sims[i], 4),
+    cleaned = []
+    for idx, ne in enumerate(name_en_list):
+        cleaned.append({
+            "id": idx,
+            "name_en": ne,
+            "name_local": names_local[idx],
+            "type": "illness",
+            "summary": summaries_local[idx],
+            "source_id": "",
+            "similarity": 1.0,
         })
-    return ranked
+
+    return {"status": "success", "data": {"query": q, "results": cleaned}}
 
 
 @router.post("/diagnosis/start")
-def start_diagnosis(
+async def start_diagnosis(
     user_id: str = Form(...),
     patient_name: str = Form(default=None, description="Optional display name for the patient"),
     gender: str = Form(default=""),
@@ -197,7 +144,7 @@ def start_diagnosis(
 
 
 @router.post("/symptom/select")
-def select_symptom(
+async def select_symptom(
     session_id: str = Form(...),
     name: str = Form(..., description="Name of the chosen symptom/illness"),
 ):
@@ -215,7 +162,7 @@ def select_symptom(
 
 
 @router.get("/follow-up/next")
-def get_next_question(session_id: str = Query(...)):
+async def get_next_question(session_id: str = Query(...)):
     """Return the next question in the flow (SOCRATES axis, Bayesian, or diagnosis)."""
     try:
         svc = _get_svc()
@@ -227,16 +174,21 @@ def get_next_question(session_id: str = Query(...)):
 
 
 @router.post("/follow-up/answer")
-def submit_follow_up_answer(
+async def submit_follow_up_answer(
     session_id: str = Form(...),
     question_id: str = Form(...),
     answer: str = Form(...),
-    force_diagnosis: bool = Form(default=False),
+    force_diagnosis: bool = Form(False, description="When true, force the engine to produce a diagnosis now"),
 ):
     """Submit an answer for a question; returns the next question or final diagnosis."""
     try:
         svc = _get_svc()
-        result = svc.submit_follow_up_answer(session_id, question_id, answer, force_diagnosis=force_diagnosis)
+        result = svc.submit_follow_up_answer(
+            session_id,
+            question_id,
+            answer,
+            force_diagnosis=force_diagnosis,
+        )
         if "error" in result:
             return {"status": "error", "detail": result["error"]}
         return {"status": "success", "data": result}
@@ -246,7 +198,7 @@ def submit_follow_up_answer(
 
 
 @router.get("/report")
-def get_report(session_id: str = Query(...)):
+async def get_report(session_id: str = Query(...)):
     """Return the current diagnosis results/JSON report for a session."""
     try:
         svc = _get_svc()

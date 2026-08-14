@@ -50,6 +50,7 @@ Route::prefix('v1/auth')->group(function () {
         Route::get('/reports/{sessionId}/preview', [ReportController::class, 'preview'])->middleware('permission:preview-report');
 
         // Payment routes
+        Route::get('/payments/cost', [PaymentController::class, 'cost'])->middleware('permission:create-intent');
         Route::post('/payments/create-intent', [PaymentController::class, 'createIntent'])->middleware('permission:create-intent');
         Route::get('/payments/{paymentIntentId}/status', [PaymentController::class, 'status'])->middleware('permission:status-payment-intent');
 

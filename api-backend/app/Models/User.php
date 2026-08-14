@@ -102,14 +102,16 @@ class User extends Authenticatable implements Auditable
     return $this->fcm_token;
     }
 
+    /**
+     * Get the FCM tokens for Firebase notifications (Web Push)
+     */
+    public function routeNotificationForFirebase()
+    {
+        return $this->fcm_token;
+    }
+
     public function doctor()
     {
         return $this->hasOne(Doctor::class);
     }
-
-    // public function notifictions()
-    // {
-    //     return $this->hasMany(Notification::class, 'user_id');
-    // }
-
 }

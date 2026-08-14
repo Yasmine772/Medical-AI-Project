@@ -49,7 +49,10 @@ Route::prefix('admin')->group(function () {
         Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
         Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
 
-       // User Management 
+        Route::post('/push-fcm-token', [DoctorController::class, 'pushToken']);
+
+
+        // User Management 
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:view-users');
         Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->middleware('permission:toggle-user');
 
@@ -70,12 +73,13 @@ Route::prefix('admin')->group(function () {
             Route::get('/new-content-items-count', [DashboardController::class, 'newContentItemsCount'])->middleware('permission:new-content-items-count');
             Route::get('/top-specialties-by-diagnoses', [DashboardController::class, 'getTopDiseasesByDiagnoses'])->middleware('permission:top-specialties-by-diagnoses');
             Route::get('/diagnosis-sessions-status-count', [DashboardController::class, 'diagnosisSessionsStatusCount'])->middleware('permission:diagnosis-sessions-status-count');
+            Route::get('/platform-profits', [DashboardController::class, 'platformProfits'])->middleware('permission:show-platform-profits');
         });
 
         //Doctor management 
         Route::prefix('doctor-requests')->group(function () {
             Route::get('/approvedDoctors', [DoctorController::class, 'showApprovedDoctors'])->middleware('permission:show-approved-doctors');
-             Route::get('/count', [DoctorController::class, 'getDoctorRequestCount'])->middleware('permission:show-doctor-request-count');
+            Route::get('/count', [DoctorController::class, 'getDoctorRequestCount'])->middleware('permission:show-doctor-request-count');
             Route::get('/', [DoctorController::class, 'index'])->middleware('permission:show-doctor-requests');
             Route::get('/{id}', [DoctorController::class, 'show'])->middleware('permission:show-doctor-request-details');
             Route::patch('approve/{id}', [DoctorController::class, 'approve'])->middleware('permission:approve-doctor-request');
@@ -110,6 +114,7 @@ Route::prefix('doctor')->group(function () {
 
         Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
         Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
+        Route::get('/profits', [DoctorDashboardController::class, 'getDoctorProfits'])->middleware('permission:get-doctor-summary');
 
         //Weekly Schedule routes
         Route::get('/schedules', [DoctorScheduleController::class, 'index'])->middleware('permission:view-doctor-schedules');

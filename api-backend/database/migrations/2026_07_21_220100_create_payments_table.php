@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('diagnosis_session_id')->constrained('diagnosis_sessions')->cascadeOnDelete();
-            $table->string('stripe_payment_intent_id')->unique();
+            $table->string('stripe_payment_intent_id')->nullable()->unique();
             $table->integer('amount');
             $table->string('currency', 3)->default('usd');
             $table->enum('status', ['pending', 'succeeded', 'failed'])->default('pending');

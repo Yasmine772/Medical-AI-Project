@@ -97,8 +97,13 @@ class AuthService
             'is_pregnant',
             'activity_level',
             'drinks_alcohol',
-            'occupation'
+            'occupation',
+            'blood_type',
         ]));
+
+        if (isset($medicalData['blood_type']) && $medicalData['blood_type'] !== null) {
+            $medicalData['blood_type'] = strtoupper(trim($medicalData['blood_type']));
+        }
 
         $user->profile()->updateOrCreate(
             ['user_id' => $user->id],

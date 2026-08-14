@@ -5,6 +5,7 @@ namespace App\Services\Api;
 use App\Mail\DoctorDiagnosisMail;
 use App\Models\DiagnosisSession;
 use App\Models\Payment;
+use App\Models\PaymentSplit;
 use App\Models\User;
 use App\Notifications\NewDiagnosisAssignedNotification;
 use App\Services\Api\DoctorAssignmentService;
@@ -14,6 +15,39 @@ use Illuminate\Support\Facades\Log;
 class PaymentService
 {
     private const DIAGNOSIS_AMOUNT = 500;
+
+    public function getCost(User $user, string $sessionHash): ?array
+    {
+        $session = DiagnosisSession::where('session_hash', $sessionHash)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$session) {
+            return null;
+        }
+
+        $payment = Payment::where('diagnosis_session_id', $session->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$payment) {
+            $payment = Payment::create([
+                'user_id' => $user->id,
+                'diagnosis_session_id' => $session->id,
+                'stripe_payment_intent_id' => null,
+                'amount' => self::DIAGNOSIS_AMOUNT,
+                'currency' => 'usd',
+                'status' => 'pending',
+            ]);
+        }
+
+        return [
+            'payment_id' => $payment->id,
+            'amount' => $payment->amount,
+            'amount_display' => '$' . number_format($payment->amount / 100, 2),
+            'currency' => $payment->currency,
+        ];
+    }
 
     public function createPaymentIntent(User $user, string $sessionHash): ?array
     {
@@ -37,15 +71,19 @@ class PaymentService
                 ],
             ]);
 
-            $record = Payment::create([
-                'user_id' => $user->id,
-                'diagnosis_session_id' => $session->id,
-                'stripe_payment_intent_id' => $payment->id,
-                'amount' => self::DIAGNOSIS_AMOUNT,
-                'currency' => 'usd',
-                'status' => 'pending',
-                'paid_at'=> now(),
-            ]);
+            $record = Payment::updateOrCreate(
+                [
+                    'diagnosis_session_id' => $session->id,
+                    'status' => 'pending',
+                ],
+                [
+                    'user_id' => $user->id,
+                    'stripe_payment_intent_id' => $payment->id,
+                    'amount' => self::DIAGNOSIS_AMOUNT,
+                    'currency' => 'usd',
+                    'paid_at' => now(),
+                ]
+            );
 
             return [
                 'client_secret' => $payment->client_secret,
@@ -82,6 +120,28 @@ class PaymentService
             ->increment('diagnose_num');
 
         $this->assignDoctorAfterPayment($payment);
+        $this->createSplit($payment);
+    }
+
+    private function createSplit(Payment $payment): void
+    {
+        try {
+            $session = DiagnosisSession::find($payment->diagnosis_session_id);
+
+            PaymentSplit::updateOrCreate(
+                ['payment_id' => $payment->id],
+                [
+                    'doctor_id' => $session?->doctor_id,
+                    'platform_amount' => intdiv($payment->amount, 2),
+                    'doctor_amount' => $payment->amount - intdiv($payment->amount, 2),
+                ]
+            );
+        } catch (\Exception $e) {
+            Log::error('Payment split creation failed', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function assignDoctorAfterPayment(Payment $payment): void
