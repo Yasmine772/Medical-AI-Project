@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\DoctorRequest;
+use App\Notifications\Channels\FirebaseChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -23,7 +24,7 @@ class NewDoctorRequestNotification extends Notification implements ShouldQueue
      */
     public function via($notifiable): array
     {
-        return ['database']; 
+        return ['database', FirebaseChannel::class]; 
     }
 
     /**
@@ -40,6 +41,15 @@ class NewDoctorRequestNotification extends Notification implements ShouldQueue
             'email' => $this->doctorRequest->email,
             'specialization' => $this->doctorRequest->specialization,
             'url' => "/admin/doctor-requests/{$this->doctorRequest->id}",
+        ];
+    }
+
+    public function toFirebase($notifiable)
+    {
+        return [
+            'title' => 'New Doctor Request',
+            'body' => "New doctor request from {$this->doctorRequest->full_name}",
+            'click_action' => url("/admin/doctor-requests/{$this->doctorRequest->id}"),
         ];
     }
 }
