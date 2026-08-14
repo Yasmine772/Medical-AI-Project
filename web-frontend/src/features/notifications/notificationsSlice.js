@@ -67,14 +67,7 @@ export const fetchNotifications = createAsyncThunk(
       );
     }
   },
-  // {
-  //   condition: (_, { getState }) => {
-  //     const { loading } = getState().notifications;
-  //     if (loading) {
-  //       return false;
-  //     }
-  //   },
-  // },
+ 
 );
 
 const notificationsSlice = createSlice({

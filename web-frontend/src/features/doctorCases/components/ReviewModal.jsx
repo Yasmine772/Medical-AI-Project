@@ -29,7 +29,7 @@ const ReviewModal = ({
   const [percentages, setPercentages] = useState({});
   const [initializedHash, setInitializedHash] = useState(null);
 
-  // جلب تفاصيل الحالة عند فتح المودال باستخدام الـ sessionHash
+ 
   useEffect(() => {
     if (isOpen && sessionHash) {
       dispatch(fetchCaseDetails(sessionHash));
@@ -44,7 +44,7 @@ const ReviewModal = ({
   ) {
     const initialPercs = {};
     aiResults.forEach((item) => {
-      initialPercs[item.name_en] = item.probability;
+      initialPercs[item.disease_name] = item.probability;
     });
     setPercentages(initialPercs);
     setInitializedHash(currentCaseDetails.data.session.session_hash);
@@ -65,11 +65,11 @@ const ReviewModal = ({
         doctor_notes: medicalNote || null,
       };
     } else if (verdict === "modify") {
-      // بناء مصفوفة الـ ai_result مع النسب المعدلة والبيانات الأصلية
+     
       const updatedAiResults = aiResults.map((item) => ({
-        name_en: item.name_en,
-        name_ar: item.name_ar,
-        probability: percentages[item.name_en] ?? item.probability,
+        name_en: item.disease_name,
+        name_ar: item.disease_name_local,
+        probability: percentages[item.disease_name] ?? item.probability,
         confidence: item.confidence,
         specialist: item.specialist,
       }));
@@ -84,19 +84,19 @@ const ReviewModal = ({
         decision: "new",
         doctor_notes: medicalNote || null,
         disease_name: customDisease,
-        disease_name_ar: "تشخيص مخصص", // أو يمكنك جعله حقل مدخل إذا أردتِ
+        disease_name_ar: "تشخيص مخصص", 
         disease_probability: 95,
         disease_specialist: "General Practitioner",
         disease_confidence: "High",
       };
     }
 
-    // إرسال الطلب عبر الـ Redux Dispatch
+    
     dispatch(submitReview({ sessionHash, payload })).then((res) => {
       if (!res.error) {
         toast.success("Review submitted successfully!", {
           style: {
-            background: "#10B981", // أخضر
+            background: "#10B981",
             color: "#fff",
             borderRadius: "16px",
             padding: "12px 20px",
@@ -107,14 +107,14 @@ const ReviewModal = ({
             secondary: "#10B981",
           },
         });
-        onClose(); // إغلاق المودال عند النجاح
+        onClose(); 
       } else {
-        // توست الفشل (أحمر مع علامة خطأ)
+       
         toast.error(
           res.payload?.message || "Failed to submit review. Please try again.",
           {
             style: {
-              background: "#EF4444", // أحمر
+              background: "#EF4444", 
               color: "#fff",
               borderRadius: "16px",
               padding: "12px 20px",
@@ -235,10 +235,10 @@ const ReviewModal = ({
                     >
                       <div>
                         <span className="font-bold text-[#2c2c2a]">
-                          {item.name_en}
+                          {item.disease_name}
                         </span>
                         <span className="text-gray-400 mx-2">
-                          ({item.name_ar})
+                          ({item.disease_name_local})
                         </span>
                       </div>
                       <span className="font-bold text-blue-600">
@@ -353,21 +353,24 @@ const ReviewModal = ({
                       <div key={index}>
                         <div className="flex justify-between mb-1">
                           <span className="font-bold text-[#2c2c2a]">
-                            {item.name_en}
+                            {item.disease_name}
                           </span>
                           <span className="text-blue-600 font-bold">
-                            {percentages[item.name_en] ?? item.probability}%
+                            {percentages[item.disease_name] ?? item.probability}
+                            %
                           </span>
                         </div>
                         <input
                           type="range"
                           min="0"
                           max="100"
-                          value={percentages[item.name_en] ?? item.probability}
+                          value={
+                            percentages[item.disease_name] ?? item.probability
+                          }
                           onChange={(e) =>
                             setPercentages({
                               ...percentages,
-                              [item.name_en]: Number(e.target.value),
+                              [item.disease_name]: Number(e.target.value),
                             })
                           }
                           className="w-full accent-[#72A6BB]"

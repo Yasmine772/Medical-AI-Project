@@ -16,7 +16,7 @@ import { Bell, Loader2, CheckCircle2, Check, CheckCheck } from "lucide-react";
 import toast from "react-hot-toast";
 
 const NotificationDropdown = () => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState("all");
 
@@ -41,7 +41,6 @@ const NotificationDropdown = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    // جلب البيانات الأساسية عند الفتح
     dispatch(fetchUnreadCount());
     dispatch(fetchNotifications());
 
@@ -52,13 +51,12 @@ const NotificationDropdown = () => {
 
     if (enablePolling) {
       interval = setInterval(() => {
-        console.log("Polling for new notifications..."); // للتأكد في الـ Console
+        console.log("Polling for new notifications...");
         dispatch(fetchUnreadCount());
         dispatch(fetchNotifications());
       }, 15000); // كل 15 ثانية
     }
 
-    // تنظيف الـ Interval عند إغلاق المكون أو تغيير الحالة
     return () => {
       if (interval) clearInterval(interval);
     };

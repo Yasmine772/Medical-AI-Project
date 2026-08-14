@@ -5,8 +5,7 @@ const aiApi = axios.create({
 //   withCredentials: true,
   headers: {
     Accept: "application/json",
-    // ملاحظة: لا تضعي "Content-Type": "application/json" هنا، 
-    // لأن إرسال الملفات (FormData) يتطلب أن يحدد المتصفح الـ boundary تلقائياً
+   
   },
 });
 

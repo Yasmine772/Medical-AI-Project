@@ -145,7 +145,12 @@ const CaseCard = ({
         {!isDone && (
           <button
             onClick={onReview}
-            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-[#72A6BB] text-white hover:bg-[#5f92a6] transition-all"
+            disabled={isDone}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl transition-all ${
+              isDone
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
+                : "bg-[#72A6BB] text-white hover:bg-[#5f92a6]"
+            }`}
           >
             <Stethoscope size={14} /> Review & Send Report
           </button>

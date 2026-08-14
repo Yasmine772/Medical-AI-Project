@@ -80,7 +80,7 @@ const doctorDashboardSlice = createSlice({
         state.schedules = action.payload;
       })
       .addCase(updateDoctorScheduleItem.fulfilled, (state, action) => {
-        // تحديث العنصر المعدل داخل المصفوفة بناءً على الـ id
+     
         const index = state.schedules.findIndex(
           (s) => s.id === action.payload.id,
         );

@@ -1,12 +1,36 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios";
-// 3. جلب إحصائيات الحالات للـ Stats Cards
+import toast from "react-hot-toast";
+
+
+export const fetchPdfReport = createAsyncThunk(
+  "doctorCases/fetchPdfReport",
+  async (sessionHash, thunkAPI) => {
+    toast("Opening PDF report...", { icon: "📄" });
+
+    try {
+      const response = await api.get(`/doctor/reviews/${sessionHash}/pdf`, {
+        responseType: "blob",
+      });
+
+      
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(blob);
+      window.open(pdfUrl, "_blank");
+
+      return pdfUrl;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
 export const fetchReviewStats = createAsyncThunk(
   "doctorCases/fetchReviewStats",
   async (_, thunkAPI) => {
     try {
       const response = await api.get("/doctor/reviews/stats");
-      return response.data.data; // يعيد كائن الـ data الذي يحتوي على total, urgent, pending, completed
+      return response.data.data; 
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
@@ -27,20 +51,20 @@ export const submitReview = createAsyncThunk(
     }
   },
 );
-// 1. جلب قائمة الحالات مع الفلاتر المتاحة
+
 export const fetchDoctorReviews = createAsyncThunk(
   "doctorCases/fetchDoctorReviews",
   async ({ status, date_filter, language_code = "en" } = {}, thunkAPI) => {
     try {
       const params = {};
-      // الفلاتر حسب الجدول تماماً: all | urgent | pending | completed
+      
       if (status && status !== "all") params.status = status;
-      // الفلاتر حسب الجدول تماماً: today | last_7_days | last_30_days
+    
       if (date_filter) params.date_filter = date_filter;
       params.language_code = language_code;
 
       const response = await api.get("/doctor/reviews", { params });
-      // الـ Backend يرجع الكائن الذي يحتوي على مفتاح data بداخله المصفوفة
+   
       return response.data.data || [];
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data || error.message);
@@ -48,7 +72,7 @@ export const fetchDoctorReviews = createAsyncThunk(
   },
 );
 
-// 2. جلب تفاصيل حالة محددة عند المراجعة
+
 export const fetchCaseDetails = createAsyncThunk(
   "doctorCases/fetchCaseDetails",
   async (sessionHash, thunkAPI) => {
@@ -69,6 +93,7 @@ const doctorCasesSlice = createSlice({
     stats: null,
     loading: false,
     detailsLoading: false,
+    pdfLoading: false,
     error: null,
   },
   reducers: {},
@@ -98,11 +123,11 @@ const doctorCasesSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(submitReview.pending, (state) => {
-        state.loading = true; // أو يمكنك تعريف حقل خاص مثل submittinLoading
+        state.loading = true; 
       })
       .addCase(submitReview.fulfilled, (state) => {
         state.loading = false;
-        // يمكننا هنا تحديث القائمة أو إعادة تعيين الحالة الحالية إذا لزم الأمر
+       
       })
       .addCase(submitReview.rejected, (state, action) => {
         state.loading = false;
@@ -111,6 +136,17 @@ const doctorCasesSlice = createSlice({
       .addCase(fetchReviewStats.fulfilled, (state, action) => {
         state.stats = action.payload;
       })
+      .addCase(fetchPdfReport.pending, (state) => {
+        state.pdfLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchPdfReport.fulfilled, (state) => {
+        state.pdfLoading = false;
+      })
+      .addCase(fetchPdfReport.rejected, (state, action) => {
+        state.pdfLoading = false;
+        state.error = action.payload;
+      });
   },
 });
 

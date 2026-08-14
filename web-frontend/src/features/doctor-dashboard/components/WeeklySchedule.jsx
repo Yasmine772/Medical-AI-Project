@@ -30,12 +30,12 @@ const WeeklySchedule = () => {
       );
 
       return {
-        id: found ? found.id : null, // الاحتفاظ بالـ ID الخاص بالجدول إن وجد
+        id: found ? found.id : null, 
         day: bDay.short,
         fullDay: bDay.full,
         start: found && found.start_time ? found.start_time.slice(0, 5) : "",
         end: found && found.end_time ? found.end_time.slice(0, 5) : "",
-        open: found ? !found.is_closed : false, // التعامل مع is_closed كـ boolean
+        open: found ? !found.is_closed : false, 
       };
     });
   };

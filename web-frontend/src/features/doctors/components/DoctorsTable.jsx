@@ -6,7 +6,7 @@ const DoctorsTable = () => {
   const dispatch = useDispatch();
   const { approved, loading } = useSelector((state) => state.doctors);
 
-  // جلب الأطباء عند فتح الصفحة مع إرسال التوكن تلقائياً عبر الـ Interceptor
+  
   useEffect(() => {
     dispatch(fetchApprovedDoctors());
   }, [dispatch]);
@@ -14,10 +14,9 @@ const DoctorsTable = () => {
   const getDoctorPhotoUrl = (photoPath) => {
     if (!photoPath) return "https://via.placeholder.com/40";
     if (photoPath.startsWith("http")) return photoPath;
-    // إذا لم تكن تحتوي على storage/ في البداية، قد تحتاج لإضافتها حسب إعدادات الباك إند لديك
+   
     return `${api.defaults.baseURL}/storage/${photoPath}`;
-    // أو إذا كان الـ API يخزنها مباشرة بدون storage/ ارجعي للرابط السابق:
-    // return `${api.defaults.baseURL}/${photoPath}`;
+   
   };
 
   return (

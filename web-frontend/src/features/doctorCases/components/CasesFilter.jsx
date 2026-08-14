@@ -1,7 +1,7 @@
 const CasesFilter = ({ selectedFilter, setSelectedFilter, selectedTimeFilter, setSelectedTimeFilter }) => {
   return (
     <div className="flex gap-3">
-      {/* فلتر الحالة مطابق للـ API: all | urgent | pending | completed */}
+      
       <select 
         value={selectedFilter}
         onChange={(e) => setSelectedFilter(e.target.value)}
@@ -13,7 +13,7 @@ const CasesFilter = ({ selectedFilter, setSelectedFilter, selectedTimeFilter, se
         <option value="completed">Completed</option>
       </select>
 
-      {/* فلتر التاريخ مطابق للـ API: today | last_7_days | last_30_days */}
+      
       <select 
         value={selectedTimeFilter}
         onChange={(e) => setSelectedTimeFilter(e.target.value)}

@@ -18,20 +18,18 @@ export const fetchDoctorRequestsCount = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get("/admin/doctor-requests/count");
-      return response.data.data.count; // استخراج القيمة مباشرة (count: 1)
+      return response.data.data.count; 
     } catch (error) {
       return rejectWithValue(error.response.data);
     }
   },
 );
 
-// (Async Thunk)
-// في ملف auditLogsSlice.js
 export const fetchAuditLogs = createAsyncThunk(
   "auditLogs/fetchAuditLogs",
   async (filters = {}, { rejectWithValue }) => {
     try {
-      // إرسال الفلاتر كـ params مع الطلب
+      
       const response = await api.get("/admin/audit-logs", { params: filters });
       return response.data;
     } catch (error) {
@@ -69,7 +67,7 @@ const auditLogsSlice = createSlice({
         state.stats = action.payload;
       })
       .addCase(fetchDoctorRequestsCount.fulfilled, (state, action) => {
-        state.doctorRequestsCount = action.payload; // استقبال القيمة
+        state.doctorRequestsCount = action.payload; 
       });
   },
 });

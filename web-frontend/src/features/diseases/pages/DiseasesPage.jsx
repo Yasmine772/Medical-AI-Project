@@ -11,10 +11,10 @@ const DiseasesPage = () => {
     (state) => state.aiInsertion,
   );
 
-  const [activeTab, setActiveTab] = useState("json"); // للتبديل بين JSON و PDF
+  const [activeTab, setActiveTab] = useState("json"); 
   const [selectedFile, setSelectedFile] = useState(null);
 
-  // التعامل مع اختيار الملف
+ 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -31,11 +31,8 @@ const DiseasesPage = () => {
       dispatch(insertPdfFile(selectedFile));
     }
   };
-  // const handleSubmit = (e) => {
-  //   e.preventDefault();
-  //   // أزلنا شرط التحقق من وجود ملف للتجربة السريعة
-  //   dispatch(insertJsonFile());
-  // };
+ 
+
 
   return (
     <div className="p-8 max-w-6xl mx-auto " dir="ltr">
@@ -43,7 +40,7 @@ const DiseasesPage = () => {
         INSERT DATA TO AI MODEL
       </h1>
 
-      {/* أزرار التبديل بين نوع الملفات */}
+     
       <div className="flex border-b border-gray-200 mb-6">
         <button
           className={`py-2 px-4 font-semibold focus:outline-none transition-colors duration-200 ${
@@ -75,7 +72,7 @@ const DiseasesPage = () => {
         </button>
       </div>
 
-      {/* صندوق الإدخال والرفع */}
+      
       <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -99,7 +96,7 @@ const DiseasesPage = () => {
             </p>
           )}
 
-          {/* رسائل النجاح أو الخطأ */}
+         
           {successMessage && (
             <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
               {successMessage}
@@ -122,16 +119,7 @@ const DiseasesPage = () => {
           >
             {loading ? "Uploading & Processing..." : "Send to AI Model"}
           </button>
-          {/* <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 px-4 rounded-md text-white font-medium transition-colors duration-200 cursor-pointer shadow-sm"
-            style={{
-              backgroundColor: loading ? "#b0d0dc" : "#72A6BB",
-            }}
-          >
-            {loading ? "Testing Connection..." : "Test Server Connection"}
-          </button> */}
+        
         </form>
       </div>
     </div>

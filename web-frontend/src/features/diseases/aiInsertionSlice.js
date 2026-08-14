@@ -6,7 +6,7 @@ export const insertJsonFile = createAsyncThunk(
   async (fileData, { rejectWithValue }) => {
     try {
       const formData = new FormData();
-      formData.append("file", fileData); // المفتاح هو file بناءً على بوستمان
+      formData.append("file", fileData); 
 
       const response = await aiApi.post("/insert/json-file", formData, {
         headers: {
@@ -19,27 +19,13 @@ export const insertJsonFile = createAsyncThunk(
     }
   },
 );
-// export const insertJsonFile = createAsyncThunk(
-//   "aiInsertion/insertJsonFile",
-//   async (_, { rejectWithValue }) => { // أزلنا استقبال الـ file مؤقتاً
-//     try {
-//       const response = await aiApi.post("/insert/json-file", {
-//         test: "ping_server" // نرسل بيانات جيسون عادية للتجربة
-//       });
-//       return response.data;
-//     } catch (error) {
-//       return rejectWithValue(error.response?.data || error.message);
-//     }
-//   }
-// );
 
-// Thunk لرفع ملف الـ PDF
 export const insertPdfFile = createAsyncThunk(
   "aiInsertion/insertPdfFile",
   async (fileData, { rejectWithValue }) => {
     try {
       const formData = new FormData();
-      formData.append("file", fileData); // المفتاح هو file بناءً على بوستمان
+      formData.append("file", fileData);
 
       const response = await aiApi.post("/insert/pdf", formData, {
         headers: {
@@ -77,11 +63,11 @@ const aiInsertionSlice = createSlice({
       })
       .addCase(insertJsonFile.fulfilled, (state) => {
         state.loading = false;
-        state.successMessage = "تم رفع ملف الـ JSON بنجاح!";
+        state.successMessage = "json file sent successfuly";
       })
       .addCase(insertJsonFile.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || "حدث خطأ أثناء رفع ملف الـ JSON";
+        state.error = action.payload || "something went wrong";
       })
       // PDF File Cases
       .addCase(insertPdfFile.pending, (state) => {
@@ -91,11 +77,11 @@ const aiInsertionSlice = createSlice({
       })
       .addCase(insertPdfFile.fulfilled, (state) => {
         state.loading = false;
-        state.successMessage = "تم رفع ملف الـ PDF بنجاح!";
+        state.successMessage = "PDF file sent successfuly";
       })
       .addCase(insertPdfFile.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || "حدث خطأ أثناء رفع ملف الـ PDF";
+        state.error = action.payload || "something went wrong";
       });
   },
 });

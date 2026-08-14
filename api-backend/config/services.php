@@ -42,7 +42,7 @@ return [
     ],
 
     'fastapi' => [
-        'url' => env('FASTAPI_URL', 'http://localhost:5000'),
+        'url' => env('FASTAPI_URL', 'http://localhost:8000'),
         'timeout' => env('FASTAPI_TIMEOUT', 100),
         'report_timeout' => env('FASTAPI_REPORT_TIMEOUT', 60),
     ],

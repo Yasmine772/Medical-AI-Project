@@ -21,7 +21,6 @@ const AuditLogsPage = () => {
     loading,
   } = useSelector((state) => state.auditLogs);
   const handleFilterChange = (filters) => {
-    // تنظيف الفلاتر من القيم الفارغة قبل الإرسال
     const cleanFilters = Object.fromEntries(
       Object.entries(filters).filter(
         (entry) => entry[1] !== "" && entry[1] !== null,
@@ -38,6 +37,7 @@ const AuditLogsPage = () => {
   const [selectedLog, setSelectedLog] = useState(null);
   const statsDisplay = [
     { title: "Total Logs", value: stats?.count || "0" },
+    { title: "Active Admins", value: "1 Admin" },
 
     { title: "Doctor Requests", value: doctorRequestsCount ?? "0" },
   ];
@@ -53,7 +53,7 @@ const AuditLogsPage = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-5xl font-bold text-black">Audit Logs</h1>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3  gap-6">
         {statsDisplay.map((stat, index) => (
           <StatCard
             key={index}

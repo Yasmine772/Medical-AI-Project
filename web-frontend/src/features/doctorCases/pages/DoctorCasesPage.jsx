@@ -4,6 +4,7 @@ import {
   fetchDoctorReviews,
   fetchCaseDetails,
   fetchReviewStats,
+  fetchPdfReport,
 } from "../doctorCasesSlice";
 import CaseCard from "../components/CaseCard";
 import CasesFilter from "../components/CasesFilter";
@@ -13,8 +14,7 @@ import toast from "react-hot-toast";
 const DoctorCasesPage = () => {
   const dispatch = useDispatch();
   const { casesList, loading } = useSelector((state) => state.doctorCases);
-
-  // القيم الافتراضية مطابقة للقيم المدعومة في الـ Backend
+  const { pdfLoading } = useSelector((state) => state.doctorCases);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedTimeFilter, setSelectedTimeFilter] = useState("today");
 
@@ -26,7 +26,7 @@ const DoctorCasesPage = () => {
   }, [dispatch]);
 
   const stats = useSelector((state) => state.doctorCases.stats);
-  // جلب البيانات تلقائياً عند أي تغيير في الفلاتر
+ 
   useEffect(() => {
     dispatch(
       fetchDoctorReviews({
@@ -135,7 +135,7 @@ const DoctorCasesPage = () => {
           </div>
         ) : (
           casesList.map((item) => {
-            // استخراج بيانات المريض والأمراض المزمنة من الـ JSON المرسل من البوستمان
+            
             const patientData = item.patient || {};
             const badges = [];
             if (patientData.smoker) badges.push("Smoker");
@@ -173,9 +173,18 @@ const DoctorCasesPage = () => {
                       ]
                     : []
                 }
-                onReview={() => handleOpenReview(item.session_hash || item.id)}
-                onPdf={() => toast("Opening PDF report...", { icon: "📄" })}
-                onWhatsapp={() => toast("Opening WhatsApp...", { icon: "💬" })}
+                onReview={() => {
+                  if (item.status === "COMPLETED") return; 
+                  if (item.session_hash) {
+                    handleOpenReview(item.session_hash);
+                  } else {
+                    toast.error("هذه الجلسة لا تحتوي على رمز مراجعة صالح");
+                  }
+                }}
+                onPdf={() =>
+                  dispatch(fetchPdfReport(item.session.session_hash))
+                }
+                pdfLoading={pdfLoading}
               />
             );
           })
@@ -187,6 +196,7 @@ const DoctorCasesPage = () => {
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}
         sessionHash={currentSessionHash}
+        onPdf={() => dispatch(fetchPdfReport(currentSessionHash))}
       />
     </div>
   );
