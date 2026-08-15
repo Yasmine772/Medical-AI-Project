@@ -172,7 +172,19 @@ def translate_batch(items: List[str], target_lang: str) -> List[str]:
     for f, it in futures.items():
         try:
             res = f.result(timeout=10)
-            out.append(res if isinstance(res, str) and res.strip() else it)
+            # Google Translate rate-limits with an HTTP 500 whose body is an error
+            # page ("Error 500 (Server Error)!!..."). Never surface that to the
+            # user — fall back to the original English string instead.
+            if (
+                isinstance(res, str)
+                and res.strip()
+                and "Error" not in res
+                and "500" not in res
+                and len(res) < len(it) * 15 + 50
+            ):
+                out.append(res)
+            else:
+                out.append(it)
         except Exception as e:
             log("I18N", f"translate_batch item failed: {str(e)[:60]}")
             out.append(it)

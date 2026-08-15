@@ -18,7 +18,7 @@ class LLMService:
         model (str): Default model ID used when a call does not override it.
     """
 
-    def __init__(self, api_key: str = None, model: str = "@cf/meta/llama-3.1-8b-instruct-fp8"):
+    def __init__(self, api_key: str = None, model: str = "@cf/meta/llama-3.1-70b-instruct"):
         key = api_key or os.environ.get("CLOUDFLARE_API_KEY")
         account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
         if not key or not account_id:

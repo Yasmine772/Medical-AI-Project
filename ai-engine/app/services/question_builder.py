@@ -5,19 +5,10 @@ dynamic per-symptom question cap, so they stay trivially testable and are
 shared by the diagnosis service without dragging in dependencies.
 """
 
+from app.services.prompts import FALLBACK_QUESTIONS
+
 MIN_PER_SYMPTOM = 2
 DYNAMIC_EXTRA = 6
-
-FALLBACK_QUESTIONS = [
-    ("Where exactly is the symptom located?", ["Chest", "Abdomen", "Head", "Other"]),
-    ("When did the symptom start? Was it sudden or gradual?", ["Sudden", "Gradual", "Not sure"]),
-    ("How would you describe the quality of the symptom (sharp, dull, burning, etc.)?", ["Sharp", "Dull", "Burning", "Pressure"]),
-    ("Does the symptom spread or radiate to other areas?", ["Yes", "No", "Not sure"]),
-    ("Are there any other symptoms accompanying it?", ["Yes", "No", "Not sure"]),
-    ("Is the symptom constant or does it come and go?", ["Constant", "Comes and goes", "Not sure"]),
-    ("What makes the symptom better or worse?", ["Better with rest", "Worse with activity", "No difference"]),
-    ("On a scale of 0 to 10, how severe is the symptom?", ["0-3", "4-6", "7-10"]),
-]
 
 
 def build_fallback_question(socrates_axis: int) -> dict:
