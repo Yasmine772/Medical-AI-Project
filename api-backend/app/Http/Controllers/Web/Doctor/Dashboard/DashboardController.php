@@ -42,4 +42,22 @@ class DashboardController extends Controller
         }
         return $this->successResponse($profits, 'Doctor profits retrieved successfully', 200);
     }
+
+    public function getDailyProfits()
+    {
+        $profits = $this->doctorDashboardService->getDailyProfits();
+        if ($profits == 'DoctorNotFound') {
+            return $this->errorResponse('Doctor not found!', null, 404);
+        }
+        return $this->successResponse($profits, 'Doctor daily profits retrieved successfully', 200);
+    }
+
+    public function getMonthlyProfits()
+    {
+        $profits = $this->doctorDashboardService->getMonthlyProfits();
+        if ($profits == 'DoctorNotFound') {
+            return $this->errorResponse('Doctor not found!', null, 404);
+        }
+        return $this->successResponse($profits, 'Doctor monthly profits retrieved successfully', 200);
+    }
 }

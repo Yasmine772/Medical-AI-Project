@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 
 from app.services.logger import log
@@ -15,6 +16,15 @@ from app.services.socrates import (
     build_system_prompt,
     build_diagnosis_naming_prompt,
 )
+from app.services.prompts import (
+    NO_MORE_SYMPTOMS_MSG,
+    NEED_MORE_SYMPTOMS_MSG,
+    DEFAULT_NEED_MORE_MSG,
+    DISEASE_EXTRACTION_SYSTEM_MSG,
+    build_related_diseases_prompt,
+    build_disease_names_prompt,
+)
+
 from app.services.i18n import (
     detect_lang,
     to_english,
@@ -115,10 +125,19 @@ class DiagnosisService:
         name_en = result.get("name_en") or result.get("name") or "unknown"
 
         # Special sentinel "no" = the patient has no more NEW symptoms to add.
-        # This does NOT mean questioning is over: clear the need_more marker and
-        # resume the normal loop so the LLM can still ask clarifying questions
-        # about the symptoms already reported before deciding to diagnose.
-        if str(name_en).strip().lower() == "no":
+        # Handled with a STATIC set of "no" tokens across languages — no
+        # translation call, so it works whatever language the client uses.
+        _NO_TOKENS = {
+            "no", "nope", "nop", "nah", "nay",
+            "لا", "non", "nein", "nee", "não", "nao",
+            "нет", "hayır", "نه", "نہیں", "tidak",
+            "不", "否", "いいえ", "아니", "नहीं",
+        }
+
+        def _is_no(val):
+            return (val or "").strip().lower() in _NO_TOKENS
+
+        if _is_no(name_en) or _is_no(result.get("name_local")):
             log("SELECT", f"No more symptoms (sentinel 'no') session={session_id[:8]}")
             conversation = candidates.get("conversation", [])
             # Let the LLM know the patient has nothing else to add, so it
@@ -130,7 +149,7 @@ class DiagnosisService:
                 for m in conversation
             ):
                 conversation.append(
-                    {"role": "user", "content": "Patient reports no more symptoms."}
+                    {"role": "user", "content": NO_MORE_SYMPTOMS_MSG}
                 )
             candidates["conversation"] = conversation
             candidates["current_question"] = None
@@ -192,19 +211,13 @@ class DiagnosisService:
 
         if pdf_texts:
             context = "\n\n".join(pdf_texts)
-            extract_prompt = f"""Extract specific medical conditions/diseases from these passages. For each disease, provide its name and the relevant medical specialist.
-
-Passages:
-{context}
-
-Respond ONLY with valid JSON:
-{{"results": [{{"name_en": "Disease Name", "type": "illness", "summary": "brief description", "specialist": "Specialist type"}}]}}"""
+            extract_prompt = build_related_diseases_prompt(name_en, context)
             try:
                 raw = self.llm.ask(
                     [
                         {
                             "role": "system",
-                            "content": "You extract disease names from medical text. Output ONLY valid JSON.",
+                            "content": DISEASE_EXTRACTION_SYSTEM_MSG,
                         },
                         {"role": "user", "content": extract_prompt},
                     ],
@@ -240,6 +253,20 @@ Respond ONLY with valid JSON:
                 log("SELECT", f"LLM extracted {len(items)} disease names from PDFs")
             except Exception as e:
                 log("SELECT", f"LLM extraction failed: {str(e)[:60]}")
+
+        # Grounding filter: keep only diseases whose description actually
+        # mentions the selected symptom, so unrelated conditions (e.g. malaria
+        # for a headache report) are not injected into the candidate pool.
+        symptom_kw = (name_en or "").strip().lower()
+        if symptom_kw:
+            matched = [
+                r
+                for r in results
+                if symptom_kw
+                in ((r.get("symptoms_en") or "") + " " + (r.get("name_en") or "")).lower()
+            ]
+            if matched:
+                results = matched
 
         if not results:
             results = [
@@ -314,7 +341,7 @@ Respond ONLY with valid JSON:
         if not q:
             return {"response_type": "unknown", "question": None}
         if q.get("type") == "need_more":
-            msg = q.get("question") or "Please search for another symptom."
+            msg = q.get("question") or DEFAULT_NEED_MORE_MSG
             return {
                 "response_type": "need_more_symptoms",
                 "question": {
@@ -372,15 +399,26 @@ Respond ONLY with valid JSON:
             probs_per_option = prev.get("probs_per_option", {})
             options = prev.get("options", [])
             if probs_per_option and options and probabilities:
-                old_top = max(probabilities.items(), key=lambda x: x[1])
-                probabilities = bayes_update(
-                    probabilities, probs_per_option, options, answer
+                matched_idx = self._match_answer_index(
+                    answer, answer_en, options, lang
                 )
-                new_top = max(probabilities.items(), key=lambda x: x[1])
-                log(
-                    "BAYES",
-                    f"Updated: {old_top[0]}={old_top[1]:.2f} -> {new_top[0]}={new_top[1]:.2f}",
-                )
+                if matched_idx is None:
+                    log(
+                        "BAYES",
+                        f"No option matched answer '{answer[:40]}'; skipping update",
+                    )
+                else:
+                    matched_option = options[matched_idx]
+                    old_top = max(probabilities.items(), key=lambda x: x[1])
+                    probabilities = bayes_update(
+                        probabilities, probs_per_option, options, matched_option
+                    )
+                    new_top = max(probabilities.items(), key=lambda x: x[1])
+                    log(
+                        "BAYES",
+                        f"Updated (matched '{matched_option}'): "
+                        f"{old_top[0]}={old_top[1]:.2f} -> {new_top[0]}={new_top[1]:.2f}",
+                    )
 
         # Dynamic re-search every 3 axes
         if socrates_axis >= 3 and socrates_axis % 3 == 0:
@@ -466,12 +504,12 @@ Respond ONLY with valid JSON:
                 "role": "assistant",
                 "content": json.dumps({
                     "type": "need_more_symptoms",
-                    "message": "To narrow down the diagnosis, please search for an additional symptom you are experiencing.",
+                    "message": NEED_MORE_SYMPTOMS_MSG,
                 }),
             })
             candidates["conversation"] = conversation
             msg = from_english(
-                "To narrow down the diagnosis, please search for an additional symptom you are experiencing.",
+                NEED_MORE_SYMPTOMS_MSG,
                 lang,
             )
             candidates["current_question"] = {
@@ -514,6 +552,8 @@ Respond ONLY with valid JSON:
             force=force_diagnosis,
             baseline=baseline,
             asked_questions=self._extract_asked_questions(conversation),
+            no_more_symptoms=bool(candidates.get("no_more_symptoms")),
+            symptoms_text=", ".join(self._get_symptoms(candidates, "en")),
         )
         messages = [{"role": "system", "content": system_prompt}, *conversation]
         content = self.llm.ask(messages, model=model_name)
@@ -524,17 +564,24 @@ Respond ONLY with valid JSON:
         )
 
         if parsed.get("type") == "error":
-            messages.append({"role": "assistant", "content": content})
-            messages.append(
-                {
-                    "role": "user",
-                    "content": "Please respond with valid JSON using the exact format specified.",
-                }
-            )
-            content = self.llm.ask(messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
+            log("LLM", "Parse error from model, using local fallback question")
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
 
         llm_type = parsed.get("type")
+
+        # Issue 3: if the LLM repeats a question it already asked, replace it with
+        # a fresh fallback question on the current SOCRATES axis instead of looping.
+        asked_qs = self._extract_asked_questions(conversation)
+        new_q = parsed.get("question", "")
+        if llm_type == "question" and new_q and self._is_repeated_question(new_q, asked_qs):
+            log(
+                "LLM",
+                f"Repeated question detected q{question_count + 1}, using fallback",
+            )
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
+            llm_type = parsed.get("type")
 
         # LLM wants more symptoms
         if llm_type == "need_more_symptoms":
@@ -546,7 +593,7 @@ Respond ONLY with valid JSON:
                 candidates["socrates_axis"] = socrates_axis + 1
                 candidates["conversation"] = conversation
                 msg = from_english(
-                    parsed.get("message", "Please search for another symptom."), lang
+                    parsed.get("message", DEFAULT_NEED_MORE_MSG), lang
                 )
                 candidates["current_question"] = {
                     "type": "need_more",
@@ -576,34 +623,11 @@ Respond ONLY with valid JSON:
             if question_count < MIN_QUESTIONS_BEFORE_DIAGNOSIS:
                 log(
                     "LLM",
-                    f"Premature diagnosis rejected at q{question_count}/{MIN_QUESTIONS_BEFORE_DIAGNOSIS}, re-asking",
+                    f"Premature diagnosis rejected at q{question_count}/{MIN_QUESTIONS_BEFORE_DIAGNOSIS}, using fallback",
                 )
-                retry_messages = [
-                    *messages,
-                    {"role": "assistant", "content": content},
-                    {
-                        "role": "user",
-                        "content": (
-                            "Do NOT give a diagnosis yet. You need more information. "
-                            "Respond ONLY with valid JSON of type 'question' containing a "
-                            "single follow-up question and its options."
-                        ),
-                    },
-                ]
-                content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-                parsed = parse_llm_response(content)
+                parsed = build_fallback_question(socrates_axis)
+                content = json.dumps(parsed, ensure_ascii=False)
                 llm_type = parsed.get("type")
-                if (
-                    llm_type == "diagnosis"
-                    or parsed.get("diagnoses")
-                    or parsed.get("diagnosis")
-                ):
-                    log(
-                        "LLM",
-                        f"LLM insists on diagnosis at q{question_count}, serving fallback question",
-                    )
-                    parsed = build_fallback_question(socrates_axis)
-                    content = json.dumps(parsed, ensure_ascii=False)
             else:
                 conversation.append({"role": "assistant", "content": content})
                 candidates["socrates_axis"] = socrates_axis + 1
@@ -621,34 +645,19 @@ Respond ONLY with valid JSON:
                     forced=False,
                 )
 
-        # Normal question -> persist and continue
-        q_index = question_count + 1
+        # Issues 4/5: the patient explicitly reported no more symptoms. Once we
+        # have gathered the minimum number of questions, stop asking altogether
+        # (this also prevents "rate this symptom" prompts for a non-existent
+        # symptom) and finalize the diagnosis.
         if (
-            not isinstance(parsed.get("question"), str)
-            or not parsed.get("question").strip()
+            candidates.get("no_more_symptoms")
+            and question_count >= MIN_QUESTIONS_BEFORE_DIAGNOSIS
         ):
             log(
                 "LLM",
-                f"Empty question rejected q{question_count+1}/{MAX_QUESTIONS}, retrying",
+                f"No-more-symptoms guard: finalizing at q{question_count}",
             )
-            retry_messages = [
-                *messages,
-                {"role": "assistant", "content": content},
-                {
-                    "role": "user",
-                    "content": "Your previous answer had an empty question field. "
-                    "Respond ONLY with valid JSON containing a non-empty 'question' string and its options.",
-                },
-            ]
-            content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
-        if (
-            not isinstance(parsed.get("question"), str)
-            or not parsed.get("question").strip()
-        ):
-            log("LLM", "Empty question after retry, forcing diagnosis")
             conversation.append({"role": "assistant", "content": content})
-            candidates["socrates_axis"] = socrates_axis + 1
             candidates["conversation"] = conversation
             candidates["current_question"] = None
             self._save_candidates(session_id, candidates)
@@ -661,6 +670,20 @@ Respond ONLY with valid JSON:
                 lang,
                 forced=True,
             )
+
+        # Question quality is now the responsibility of the reasoning model (70B),
+        # guided by the SOCRATES + reasoning rules in the prompt. No hardcoded guards.
+        q_index = question_count + 1
+        if (
+            not isinstance(parsed.get("question"), str)
+            or not parsed.get("question").strip()
+        ):
+            log(
+                "LLM",
+                f"Empty question rejected q{question_count+1}/{MAX_QUESTIONS}, using fallback",
+            )
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
         parsed = self._tag_question(session_id, parsed, q_index)
         conversation.append({"role": "assistant", "content": content})
         candidates["socrates_axis"] = socrates_axis + 1
@@ -711,6 +734,8 @@ Respond ONLY with valid JSON:
             force=False,
             baseline=baseline,
             asked_questions=self._extract_asked_questions(conversation),
+            no_more_symptoms=bool(candidates.get("no_more_symptoms")),
+            symptoms_text=", ".join(self._get_symptoms(candidates, "en")),
         )
         if initial_msg and not conversation:
             conversation = [
@@ -723,16 +748,12 @@ Respond ONLY with valid JSON:
         log("LLM", f"First question type={parsed.get('type')} session={session_id[:8]}")
 
         if parsed.get("type") == "error":
-            messages.append({"role": "assistant", "content": content})
-            messages.append(
-                {
-                    "role": "user",
-                    "content": "Please respond with valid JSON using the exact format specified.",
-                }
-            )
-            content = self.llm.ask(messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
+            log("LLM", "Parse error from model, using local fallback question")
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
 
+        # Question quality is now the responsibility of the reasoning model (70B),
+        # guided by the SOCRATES + reasoning rules in the prompt. No hardcoded guards.
         llm_type = parsed.get("type")
         if (
             llm_type == "diagnosis"
@@ -742,34 +763,11 @@ Respond ONLY with valid JSON:
             if question_count < MIN_QUESTIONS_BEFORE_DIAGNOSIS:
                 log(
                     "LLM",
-                    f"Premature diagnosis rejected in _ask_next at q{question_count}/{MIN_QUESTIONS_BEFORE_DIAGNOSIS}, re-asking",
+                    f"Premature diagnosis rejected in _ask_next at q{question_count}/{MIN_QUESTIONS_BEFORE_DIAGNOSIS}, using fallback",
                 )
-                retry_messages = [
-                    *messages,
-                    {"role": "assistant", "content": content},
-                    {
-                        "role": "user",
-                        "content": (
-                            "Do NOT give a diagnosis yet. You need more information. "
-                            "Respond ONLY with valid JSON of type 'question' containing a "
-                            "single follow-up question and its options."
-                        ),
-                    },
-                ]
-                content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-                parsed = parse_llm_response(content)
+                parsed = build_fallback_question(socrates_axis)
+                content = json.dumps(parsed, ensure_ascii=False)
                 llm_type = parsed.get("type")
-                if (
-                    llm_type == "diagnosis"
-                    or parsed.get("diagnoses")
-                    or parsed.get("diagnosis")
-                ):
-                    log(
-                        "LLM",
-                        f"LLM insists on diagnosis in _ask_next at q{question_count}, serving fallback question",
-                    )
-                    parsed = build_fallback_question(socrates_axis)
-                    content = json.dumps(parsed, ensure_ascii=False)
             else:
                 conversation.append({"role": "assistant", "content": content})
                 candidates["conversation"] = conversation
@@ -792,36 +790,9 @@ Respond ONLY with valid JSON:
             not isinstance(parsed.get("question"), str)
             or not parsed.get("question").strip()
         ):
-            log("LLM", "Empty first question rejected, retrying")
-            retry_messages = [
-                *messages,
-                {"role": "assistant", "content": content},
-                {
-                    "role": "user",
-                    "content": "Your previous answer had an empty question field. "
-                    "Respond ONLY with valid JSON containing a non-empty 'question' string and its options.",
-                },
-            ]
-            content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
-        if (
-            not isinstance(parsed.get("question"), str)
-            or not parsed.get("question").strip()
-        ):
-            log("LLM", "Empty first question after retry, forcing diagnosis")
-            conversation.append({"role": "assistant", "content": content})
-            candidates["conversation"] = conversation
-            candidates["current_question"] = None
-            self._save_candidates(session_id, candidates)
-            return self._finalize(
-                session_id,
-                candidates,
-                conversation,
-                probabilities,
-                diseases,
-                lang,
-                forced=True,
-            )
+            log("LLM", "Empty first question rejected, using fallback")
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
         parsed = self._tag_question(session_id, parsed, q_index)
         conversation.append({"role": "assistant", "content": content})
         candidates["socrates_axis"] = socrates_axis + 1
@@ -897,6 +868,17 @@ Respond ONLY with valid JSON:
             named = self._name_diagnoses(
                 probabilities, diseases, lang, model_name=model_name
             )
+
+        # Normalize any LLM-supplied probabilities to a 0-1 fraction. The LLM
+        # routinely emits percent-scale values (e.g. 80 meaning 80%) instead of
+        # 0.8, which the template turns into 8000%. This protects every path
+        # (loop override OR dedicated naming call) from absurd percentages.
+        for d in named:
+            p = d.get("probability")
+            if isinstance(p, (int, float)):
+                d["probability"] = p / 100.0 if p > 1 else float(p)
+            else:
+                d["probability"] = 0.0
 
         diagnoses = self._merge_diagnoses(backbone, named)
         parsed = {"type": "diagnosis", "diagnoses": diagnoses}
@@ -975,6 +957,17 @@ Respond ONLY with valid JSON:
             for d in raw:
                 d["probability"] = round(d["probability"] / total, 2)
             merged = raw
+
+        # Final safety net: clamp every probability into a valid 0-1 fraction.
+        # Guards against any path that emitted percent-scale values so the UI
+        # never renders >100% (e.g. 33000%).
+        for d in merged:
+            p = d.get("probability")
+            if isinstance(p, (int, float)):
+                p = p / 100.0 if p > 1 else float(p)
+                d["probability"] = round(max(0.0, min(1.0, p)), 2)
+            else:
+                d["probability"] = 0.0
         return merged
 
     def _name_diagnoses(
@@ -1190,6 +1183,85 @@ Respond ONLY with valid JSON:
                     asked.append(q)
         return asked
 
+    @staticmethod
+    def _is_repeated_question(new_q: str, asked: list) -> bool:
+        """Detect whether the candidate question repeats one already asked.
+
+        Matches exact normalized text and strong containment (rephrases), so the
+        SOCRATES loop never gets stuck re-asking the same thing.
+        """
+        def normalize(s):
+            s = (s or "").lower()
+            s = re.sub(r"[^a-z0-9\u0600-\u06ff\s]", " ", s)
+            return re.sub(r"\s+", " ", s).strip()
+
+        target = normalize(new_q)
+        if len(target) < 8:
+            return False
+        for a in asked or []:
+            na = normalize(a)
+            if not na:
+                continue
+            if target == na:
+                return True
+            if len(target) >= 12 and len(na) >= 12 and (target in na or na in target):
+                return True
+        return False
+
+    def _match_answer_index(self, answer, answer_en, options, lang) -> int | None:
+        """Map a free-text / translated user answer to the index of the option the
+        model actually used, so the Bayesian update works regardless of language or
+        small phrasing differences.
+
+        Returns the matched option index, or None if nothing relates (in which
+        case the caller should skip the update rather than silently mismatching).
+        """
+        if not options:
+            return None
+        ans = (answer or "").strip().lower()
+        ans_en = (answer_en or "").strip().lower()
+        if not ans and not ans_en:
+            return None
+
+        def _tokens(s):
+            return set(re.findall(r"[A-Za-z0-9]+", s)) | set(
+                re.findall(r"[\u0600-\u06ff]+", s)
+            )
+
+        ans_tok = _tokens(ans) | _tokens(ans_en)
+        best_idx = None
+        best_score = 0.0
+        for i, opt in enumerate(options):
+            o = (opt or "").strip().lower()
+            if not o:
+                continue
+            o_local = (
+                from_english(opt, lang).strip().lower()
+                if lang and lang != "en"
+                else ""
+            )
+            # Exact match on any representation (raw, English, or translated).
+            if ans == o or ans_en == o or (o_local and ans == o_local):
+                return i
+            score = 0.0
+            o_tok = _tokens(o) | _tokens(o_local)
+            if ans_tok & o_tok:
+                score = 0.6
+            if ans and (
+                ans in o
+                or o in ans
+                or (o_local and (ans in o_local or o_local in ans))
+            ):
+                score = max(score, 0.7)
+            if score > best_score:
+                best_score = score
+                best_idx = i
+        return best_idx if best_score >= 0.6 else None
+
+    # NOTE: question-validity heuristics (negation / site / naming guards) were
+    # removed. With the Llama 3.3 70B reasoning model, question quality is governed
+    # entirely by the SOCRATES + reasoning rules in the prompt — no hardcoded checks.
+
     def _re_search(
         self,
         conversation: list,
@@ -1205,7 +1277,35 @@ Respond ONLY with valid JSON:
         if not user_texts or len(user_texts) < 2:
             return existing_probs
 
-        query = " | ".join(user_texts[-5:])
+        # Ground the re-search to the PATIENT'S SELECTED SYMPTOMS so unrelated,
+        # severe-sounding diseases (e.g. cancer, kidney failure) are not injected
+        # into the candidate pool just because the conversation text is similar.
+        selected = (candidates or {}).get("selected_symptoms", []) or []
+        symptom_kw = set()
+        for s in selected:
+            for key in ("name_en", "name_local"):
+                v = (s.get(key) or "").strip().lower()
+                if v:
+                    symptom_kw.add(v)
+                    for w in re.split(r"\W+", v):
+                        if len(w) >= 3:
+                            symptom_kw.add(w)
+
+        def _related_to_symptoms(r):
+            if not symptom_kw:
+                return True
+            text = " ".join([
+                (r.get("name_en") or ""),
+                (r.get("symptoms_en") or ""),
+                (r.get("document") or ""),
+            ]).lower()
+            return any(kw in text for kw in symptom_kw)
+
+        symptom_query = " | ".join(sorted({
+            s.get("name_en", "") for s in selected if s.get("name_en")
+        }))
+        query_parts = ([symptom_query] if symptom_query else []) + user_texts[-3:]
+        query = " | ".join([p for p in query_parts if p])
         query_vector = self.embedder.encode_query(query)
         results = self.store.search(query_vector, limit=10) or []
 
@@ -1227,7 +1327,7 @@ Respond ONLY with valid JSON:
             if len(existing_diseases) >= MAX_TOTAL_DISEASES:
                 break
             name = r.get("name_en", "")
-            if name and name not in existing_names:
+            if name and name not in existing_names and _related_to_symptoms(r):
                 existing_diseases.append(r)
                 existing_probs[name] = 0.01
                 existing_names.add(name)
@@ -1250,18 +1350,13 @@ Respond ONLY with valid JSON:
             )[:500]
             if pdf_texts:
                 context = "\n\n".join(pdf_texts)
-                prompt = f"""Extract specific medical condition/disease names mentioned in these passages. For each, provide the relevant medical specialist.
-
-Passages:
-{context}
-
-Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Specialist"}}]}}"""
+                prompt = build_disease_names_prompt(context)
                 try:
                     raw = self.llm.ask(
                         [
                             {
                                 "role": "system",
-                                "content": "You extract disease names from medical text. Output ONLY valid JSON.",
+                                "content": DISEASE_EXTRACTION_SYSTEM_MSG,
                             },
                             {"role": "user", "content": prompt},
                         ],
@@ -1287,19 +1382,20 @@ Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Special
                             name = (item.get("name_en") or "").strip()
                             spec = (item.get("specialist") or "General").strip()
                         if name and name not in existing_names:
-                            existing_diseases.append(
-                                {
-                                    "name_en": name,
-                                    "name_local": (
-                                        from_english(name, lang)
-                                        if lang != "en"
-                                        else name
-                                    ),
-                                    "symptoms_en": combined_text,
-                                    "specialist": spec,
-                                    "similarity": max_sim if max_sim > 0 else 0.5,
-                                }
-                            )
+                            candidate = {
+                                "name_en": name,
+                                "name_local": (
+                                    from_english(name, lang)
+                                    if lang != "en"
+                                    else name
+                                ),
+                                "symptoms_en": combined_text,
+                                "specialist": spec,
+                                "similarity": max_sim if max_sim > 0 else 0.5,
+                            }
+                            if not _related_to_symptoms(candidate):
+                                continue
+                            existing_diseases.append(candidate)
                             existing_probs[name] = 0.01
                             existing_names.add(name)
                             found_any = True
