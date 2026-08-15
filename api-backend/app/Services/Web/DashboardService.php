@@ -73,9 +73,7 @@ class DashboardService
         $totalCents = (int) PaymentSplit::sum('platform_amount');
 
         return [
-            'total_amount' => $totalCents,
-            'total_display' => '$' . number_format($totalCents / 100, 2),
-            'currency' => 'usd',
+            'total_amount' => $totalCents
         ];
     }
 }
