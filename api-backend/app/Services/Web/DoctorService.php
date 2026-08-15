@@ -140,4 +140,10 @@ class DoctorService
     {
         return DoctorRequest::where('status', 'pending')->count();
     }
+    //************************************************************* */
+    public function pushToken($user, $fcmToken)
+    {
+        $user->update(['fcm_token' => $fcmToken]);
+        return $user;
+    }
 }

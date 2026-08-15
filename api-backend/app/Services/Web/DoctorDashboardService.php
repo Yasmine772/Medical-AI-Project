@@ -46,7 +46,44 @@ class DoctorDashboardService
 
         return [
             'total_amount' => $totalCents,
-            'total_display' => '$' . number_format($totalCents / 100, 2),
+            
+        ];
+    }
+
+    public function getDailyProfits()
+    {
+        $doctor = Doctor::where('user_id', auth()->user()->id)->first();
+
+        if (!$doctor) {
+            return 'DoctorNotFound';
+        }
+
+        $dailyCents = (int) PaymentSplit::where('doctor_id', $doctor->id)
+            ->whereDate('created_at', now()->toDateString())
+            ->sum('doctor_amount');
+
+        return [
+            'daily_amount' => $dailyCents,
+            'daily_display' => '$' . number_format($dailyCents / 100, 2),
+            'currency' => 'usd',
+        ];
+    }
+
+    public function getMonthlyProfits()
+    {
+        $doctor = Doctor::where('user_id', auth()->user()->id)->first();
+
+        if (!$doctor) {
+            return 'DoctorNotFound';
+        }
+
+        $monthlyCents = (int) PaymentSplit::where('doctor_id', $doctor->id)
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('doctor_amount');
+
+        return [
+            'monthly_amount' => $monthlyCents,
+            'monthly_display' => '$' . number_format($monthlyCents / 100, 2),
             'currency' => 'usd',
         ];
     }
