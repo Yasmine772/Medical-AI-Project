@@ -1,6 +1,7 @@
+import api from "../../../api/axios";
 const JoinRequestCard = ({ doctor, onViewDetails }) => {
   const imageUrl = doctor.photo
-    ? `http://127.0.0.1:8001/storage/${doctor.photo}`
+    ? `${api.defaults.baseURL}/storage/${doctor.photo}`
     : "/profile-photo.jpg";
 
   return (

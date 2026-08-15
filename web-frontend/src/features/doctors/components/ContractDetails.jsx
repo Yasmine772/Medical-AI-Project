@@ -143,7 +143,7 @@ const ContractDetails = ({ doctorId, onBack }) => {
       <div className="flex gap-4 mb-8 pt-4 border-t border-gray-100">
         {doctorDetails.cv_file && (
           <a
-            href={`http://127.0.0.1:8001/storage/${doctorDetails.cv_file}`}
+            href={`${api.defaults.baseURL}/storage/${doctorDetails.cv_file}`}
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition"
@@ -153,7 +153,7 @@ const ContractDetails = ({ doctorId, onBack }) => {
         )}
         {doctorDetails.license_file && (
           <a
-            href={`http://127.0.0.1:8001/storage/${doctorDetails.license_file}`}
+            href={`${api.defaults.baseURL}/storage/${doctorDetails.license_file}`}
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition"

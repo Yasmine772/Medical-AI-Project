@@ -16,7 +16,8 @@ const DoctorsTable = () => {
     if (photoPath.startsWith("http")) return photoPath;
    
     return `${api.defaults.baseURL}/storage/${photoPath}`;
-   
+    // أو إذا كان الـ API يخزنها مباشرة بدون storage/ ارجعي للرابط السابق:
+    // return `${api.defaults.baseURL}/${photoPath}`;
   };
 
   return (
