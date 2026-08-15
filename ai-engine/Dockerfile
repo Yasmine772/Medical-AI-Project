@@ -4,14 +4,29 @@ FROM python:3.14-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies (incl. Chromium libs for Playwright PDF)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libatspi2.0-0 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libpangocairo-1.0-0 \
-    libgdk-pixbuf-xlib-2.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libxshmfence1 \
     libffi-dev \
     libcairo2 \
     libcairo2-dev \
