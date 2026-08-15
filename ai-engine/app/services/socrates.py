@@ -14,7 +14,6 @@ SOCRATES_AXES = [
     "Site — Where exactly is the symptom located?",
     "Onset — When did it start? Sudden or gradual?",
     "Character — Describe the quality (sharp, dull, burning, etc.)",
-    "Radiation — Does it spread to other areas?",
     "Associated symptoms — Any other symptoms accompanying it?",
     "Timing — Constant or comes and goes? Any pattern?",
     "Exacerbating / relieving factors — What makes it better or worse?",
@@ -133,6 +132,8 @@ def build_system_prompt(
     force: bool = False,
     baseline: dict | None = None,
     asked_questions: list | None = None,
+    no_more_symptoms: bool = False,
+    symptoms_text: str = "",
 ) -> str:
     """Build the system prompt for the SOCRATES follow-up loop.
 
@@ -151,6 +152,22 @@ def build_system_prompt(
     axis_label = SOCRATES_AXES[socrates_axis] if socrates_axis < len(SOCRATES_AXES) else "Any remaining clarifying questions"
     covered = SOCRATES_AXES[:socrates_axis]
     covered_text = "\n".join(f"- {a}" for a in covered) if covered else "None yet"
+
+    symptoms_block = ""
+    if symptoms_text:
+        symptoms_block = f"\nReported symptom(s): {symptoms_text}\n"
+
+    no_more_text = ""
+    if no_more_symptoms:
+        no_more_text = (
+            "\n\nIMPORTANT: The patient has explicitly stated they have NO MORE symptoms to "
+            "report. Do NOT ask for additional symptoms and do NOT ask questions that presuppose "
+            "a specific new symptom (e.g. 'rate this symptom'). Ask ONLY clarifying questions "
+            "about the ALREADY-REPORTED symptom(s) BY NAME (severity, duration, impact on daily "
+            "life) — never about generic or unmentioned 'symptoms'. If you already have enough "
+            "information, provide the final diagnosis now; otherwise ask at most one or two such "
+            "questions and then diagnose."
+        )
 
     # Build patient context from baseline — include ALL values so the LLM
     # does not re-ask questions already answered by the patient.
@@ -180,7 +197,7 @@ def build_system_prompt(
     prompt = f"""You are a medical diagnosis assistant. All output MUST be in English only — the system translates for the patient.
 
 Patient context: {patient_context}
-
+{symptoms_block}
 Possible diseases from database:
 {candidates_text}
 
@@ -192,7 +209,7 @@ SOCRATES framework — axes covered so far:
 
 Current axis to ask about:
 {axis_label}
-{asked_text}
+{asked_text}{no_more_text}
 Rules:
 - Respond ONLY with valid JSON, no other text.
 - Ask ONE question about the current axis only
@@ -200,6 +217,11 @@ Rules:
 - Only provide a final diagnosis when you are confident (probability > 70%)
 - You may ask multiple questions on the same axis if needed
 - ALL text fields (question, options, message, disease_name, specialist, advice) MUST be in English only
+- CLINICAL COHERENCE: Every question MUST be specific to the patient's REPORTED SYMPTOM(S). Do NOT ask about body areas, features, or mechanisms that are not clinically plausible for the reported symptom. Example: for a headache, never ask if it "spreads to the back or neck" — that is nonsense; instead ask about radiation to the eye/temple/face or skip the Radiation axis.
+- NAME THE SYMPTOM: Every question MUST explicitly name the patient's reported symptom(s) (e.g. "How severe is your COUGH on a scale of 0-10?" — NOT a vague "how severe are the symptoms?"). Never refer to generic, unmentioned, or plural "symptoms" as if they were additional ones the patient did not report.
+- NEVER ask about the ABSENCE or NEGATION of a symptom (e.g. "lack of pallor", "absence of fever", "قلة الشحوب"). You cannot ask the timing, severity, or character of a symptom that is not present. If you want to check whether a symptom exists, ask a POSITIVE question ("Do you also have pallor?") — never phrase it as a question about its absence.
+- For the "Associated symptoms" axis, ask ONLY about plausible POSITIVE symptoms the patient may additionally have (e.g. fever, fatigue, nausea) — never about the lack of something.
+- If the current axis does not apply to the reported symptom (e.g. Radiation for a headache, or Severity when already rated), DO NOT force a nonsense question. Instead ask about the next most useful axis (Character, Timing, Associated symptoms, Exacerbating/relieving factors) and keep the conversation medically coherent.
 
 You MUST respond with ONE of these three JSON shapes:
 

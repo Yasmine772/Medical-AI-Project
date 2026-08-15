@@ -20,6 +20,49 @@ _TRANSLATOR_LOCAL = threading.local()
 _POOL = ThreadPoolExecutor(max_workers=8)
 
 
+# Curated medical glossary: overrides Google Translate for clinical descriptor
+# terms it routinely mistranslates. Example: English "dull" -> Arabic "ممل"
+# (boring) when the correct clinical term is "باهت". Keyed by target language;
+# matched on the lowercased full string (covers short option labels like
+# "dull", "sharp", "burning").
+MEDICAL_GLOSSARY = {
+    "ar": {
+        "dull": "باهت",
+        "sharp": "حاد",
+        "burning": "حارق",
+        "throbbing": "نابض",
+        "stabbing": "طاعن",
+        "aching": "موجِع",
+        "cramping": "تشنّجي",
+        "tingling": "تنميل",
+        "numb": "خدر",
+        "tickly": "دغدغة",
+        "dry": "جاف",
+        "wet": "رطب",
+        "productive": "مصحوب ببلغم",
+        "barking": "نباحي",
+        "wheezy": "صفيري",
+        "gradual": "تدريجي",
+        "sudden": "مفاجئ",
+        "constant": "مستمر",
+        "intermittent": "متقطع",
+        "mild": "خفيف",
+        "moderate": "متوسط",
+        "severe": "شديد",
+        "better": "أفضل",
+        "worse": "أسوأ",
+    },
+}
+
+# Post-translation fixes: known bad Arabic tokens Google emits inside longer
+# sentences, replaced with the correct clinical term.
+ARABIC_TOKEN_FIXES = {
+    "ممل": "باهت",
+    "صعلك": "سعالك",
+    "الصعل": "السعال",
+}
+
+
 
 def _translator(target: str) -> GoogleTranslator:
     key = target.lower()
@@ -75,15 +118,27 @@ def from_english(text: str, target_lang: str) -> str:
         return text
     if not target_lang or target_lang == "en":
         return text
+    # Exact-match glossary override for short clinical descriptor labels.
+    gloss = MEDICAL_GLOSSARY.get(target_lang)
+    if gloss:
+        mapped = gloss.get(text.strip().lower())
+        if mapped:
+            return mapped
     try:
         future = _POOL.submit(lambda: _translator(target_lang).translate(text))
         result = future.result(timeout=8)
         if result and len(result) < len(text) * 10 and "Error" not in result and "500" not in result:
-            return result
-        return text
+            out = result
+        else:
+            out = text
     except Exception as e:
         log("I18N", f"from_english failed: {str(e)[:60]}")
-        return text
+        out = text
+    # Post-translation token fixes (Arabic only).
+    if target_lang.startswith("ar"):
+        for bad, good in ARABIC_TOKEN_FIXES.items():
+            out = out.replace(bad, good)
+    return out
 
 
 def translate_list(items: List[str], target_lang: str) -> List[str]:
@@ -99,17 +154,26 @@ def translate_list(items: List[str], target_lang: str) -> List[str]:
 def translate_batch(items: List[str], target_lang: str) -> List[str]:
     """Translate a list of English strings concurrently (one round-trip of latency).
 
-    English target is a passthrough.
+    English target is a passthrough. Each item is translated independently, so a
+    single failing translation (GoogleTranslator quota/lang-detect/empty input)
+    falls back to the original string instead of raising a 500 on /symptoms.
     """
     if not target_lang or target_lang == "en":
         return items
     if not items:
         return items
-    try:
-        # _translator() must be called INSIDE each thread so it gets the
-        # thread-local translator instance (not the main thread's)
-        futures = [_POOL.submit(lambda t=it: _translator(target_lang).translate(t)) for it in items]
-        return [f.result(timeout=10) or it for f, it in zip(futures, items)]
-    except Exception as e:
-        log("I18N", f"translate_batch failed: {str(e)[:60]}")
-        return items
+    # _translator() must be called INSIDE each thread so it gets the
+    # thread-local translator instance (not the main thread's).
+    futures = {
+        _POOL.submit(lambda t=it: _translator(target_lang).translate(t)): it
+        for it in items
+    }
+    out = []
+    for f, it in futures.items():
+        try:
+            res = f.result(timeout=10)
+            out.append(res if isinstance(res, str) and res.strip() else it)
+        except Exception as e:
+            log("I18N", f"translate_batch item failed: {str(e)[:60]}")
+            out.append(it)
+    return out
