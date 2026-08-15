@@ -112,6 +112,8 @@ Route::prefix('doctor')->group(function () {
         Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
         Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
         Route::get('/profits', [DoctorDashboardController::class, 'getDoctorProfits'])->middleware('permission:get-doctor-summary');
+        Route::get('/profits/daily', [DoctorDashboardController::class, 'getDailyProfits'])->middleware('permission:get-doctor-summary');
+        Route::get('/profits/monthly', [DoctorDashboardController::class, 'getMonthlyProfits'])->middleware('permission:get-doctor-summary');
 
         //Weekly Schedule routes
         Route::get('/schedules', [DoctorScheduleController::class, 'index'])->middleware('permission:view-doctor-schedules');
