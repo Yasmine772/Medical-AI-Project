@@ -19,8 +19,8 @@ const WelcomeCard = () => {
 
   const doctorName = summary?.full_name || "Doctor";
   const doctorPhoto = summary?.doctor_photo
-    ? `http://127.0.0.1:8000/storage/${summary.doctor_photo}`
-    : "/doctor-brain.png";
+    ? `http://127.0.0.1:8001/storage/${summary.doctor_photo}`
+    : null;
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -69,7 +69,6 @@ const WelcomeCard = () => {
         </div>
 
         <div className="flex items-center gap-3">
-     
           <button
             onClick={handleToggleAvailability}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border font-medium cursor-pointer transition-all duration-300 ${

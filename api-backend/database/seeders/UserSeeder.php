@@ -33,14 +33,12 @@ class UserSeeder extends Seeder
         );
         $patient->assignRole('patient');
 
-        $user_1 = User::firstOrCreate(
-            ['email' => 'ramaalwanni83@gmail.com'],
-            [
+        $user_1 = User::create([
                 'full_name' => 'Doctor',
+                'email' => 'razankhaderr@gmail.com',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
-            ]
-        );
+                ]);
         $user_1->assignRole('doctor');
 
         Doctor::updateOrCreate(
