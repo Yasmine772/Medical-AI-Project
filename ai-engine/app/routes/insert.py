@@ -47,7 +47,7 @@ def _insert_disease(disease: DiseaseItem):
         "symptoms_en": ", ".join(disease.symptoms),
         "symptoms_ar": ", ".join(disease.symptoms_ar),
     }
-    store.insert(disease_id, document, embedding, "disease", metadata)
+    store.insert_batch([(disease_id, document, embedding, "disease", metadata)])
 
 
 @router.post("/insert/json-file")

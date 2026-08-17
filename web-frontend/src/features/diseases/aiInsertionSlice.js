@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import aiApi from "../../api/aiApi";
+import api from "../../api/axios";
 
 export const insertJsonFile = createAsyncThunk(
   "aiInsertion/insertJsonFile",
@@ -8,7 +8,7 @@ export const insertJsonFile = createAsyncThunk(
       const formData = new FormData();
       formData.append("file", fileData); 
 
-      const response = await aiApi.post("/insert/json-file", formData, {
+      const response = await api.post("/admin/ai/insert/json-file", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -27,7 +27,7 @@ export const insertPdfFile = createAsyncThunk(
       const formData = new FormData();
       formData.append("file", fileData);
 
-      const response = await aiApi.post("/insert/pdf", formData, {
+      const response = await api.post("/admin/ai/insert/pdf", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

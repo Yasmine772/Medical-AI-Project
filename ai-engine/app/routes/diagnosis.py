@@ -87,6 +87,7 @@ async def search_symptoms(
 
     name_en_list = []
     summary_en_list = []
+    type_en_list = []
     seen_names = set()
     for it in items:
         # Cap results so the UI isn't flooded with 100+ items AND so we don't
@@ -103,8 +104,13 @@ async def search_symptoms(
             continue
         seen_names.add(key)
         summary = (it.get("summary") or "").strip()[:200]
+        raw_type = (it.get("type") or "illness").strip().lower()
+        item_type = raw_type if raw_type in ("illness", "symptom") else "illness"
+        if item_type != "symptom":
+            continue
         name_en_list.append(name_en)
         summary_en_list.append(summary)
+        type_en_list.append(item_type)
 
     if lang != "en":
         names_local = translate_batch(name_en_list, lang)
@@ -119,7 +125,7 @@ async def search_symptoms(
             "id": idx,
             "name_en": ne,
             "name_local": names_local[idx],
-            "type": "illness",
+            "type": type_en_list[idx],
             "summary": summaries_local[idx],
             "source_id": "",
             "similarity": 1.0,
