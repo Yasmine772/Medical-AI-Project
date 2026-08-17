@@ -1,5 +1,11 @@
 import KPICard from "../components/KPICard";
-import { Users, Activity, Stethoscope, FileText } from "lucide-react";
+import {
+  Users,
+  Activity,
+  Stethoscope,
+  FileText,
+  DollarSign,
+} from "lucide-react";
 import TopDiseasesCard from "../components/TopDiseasesCard";
 import PatientTypeCard from "../components/PatientTypeCard";
 import doctorImg from "../../../assets/doctor-illustration.png";
@@ -7,10 +13,10 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchDashboardStats } from "../dashboardSlice";
 import SessionStatusChart from "../components/SessionStatusChart";
-import aiDoctorImg from "../../../assets/ai-doctors.png";
 import { UserCircle } from "lucide-react";
 import ProfileDrawer from "../components/ProfileDrawer";
 import NotificationDropdown from "../../notifications/NotificationDropdown";
+
 const DashboardPage = () => {
   const dispatch = useDispatch();
   const dashboardState = useSelector((state) => state.dashboard) || {};
@@ -56,16 +62,8 @@ const DashboardPage = () => {
         onClose={() => setIsDrawerOpen(false)}
       />
 
-      {/* Welcome Card & Patient Type */}
+      {/* Welcome Card on Left, Profits & Patient Type on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-        <div className="h-32 overflow-hidden rounded-[32px]">
-          <img
-            src={aiDoctorImg}
-            alt="AI Doctors Collaboration"
-            className="w-full h-full object-cover"
-          />
-        </div>
-
         {/* welcome card */}
         <div className="lg:col-span-2 bg-gradient-to-r from-[#72A6BB] to-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex items-center relative overflow-hidden h-32">
           <div className="flex-1 z-10 pl-2 space-y-1">
@@ -85,14 +83,26 @@ const DashboardPage = () => {
             />
           </div>
         </div>
-        <div className="lg:col-span-1">
+
+        {/* Total Platform Profits Card */}
+        <div className="lg:col-span-1 h-32">
+          <KPICard
+            title="Total Platform Profits"
+            value={`$${stats.totalProfits || 0}`}
+            icon={DollarSign}
+            className="h-full rounded-[32px] shadow-sm border border-gray-100 flex flex-col justify-center"
+          />
+        </div>
+
+        {/* Patient Type Card */}
+        <div className="lg:col-span-1 h-32">
           <PatientTypeCard
             now={stats.patientStats.now}
             regular={stats.patientStats.regular}
+            className="h-full"
           />
         </div>
       </div>
-
       {/* Four Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
         <KPICard title="Active Users" value={stats.activeUsers} icon={Users} />
@@ -116,7 +126,7 @@ const DashboardPage = () => {
       {/* bottom part */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Top Diseases */}
-        <div className="lg:col-span-1bg-white p-4 rounded-[24px] shadow-sm">
+        <div className="lg:col-span-1 bg-white p-4 rounded-[24px] shadow-sm">
           <TopDiseasesCard diseases={stats.topDiseases} />
         </div>
 
@@ -124,9 +134,9 @@ const DashboardPage = () => {
         <div className="lg:col-span-2 bg-white p-4 rounded-[24px] shadow-sm">
           <SessionStatusChart data={stats.sessionStatus} />
         </div>
+
         {/* roznama */}
         <div className="lg:col-span-1 bg-white/40 backdrop-blur-md rounded-[24px] border border-white/50 shadow-sm overflow-hidden flex flex-col">
-      
           <div className="bg-[#72A6BB] p-4 text-center">
             <h3 className="text-white font-bold text-sm uppercase tracking-wider">
               {monthYear}
@@ -134,7 +144,6 @@ const DashboardPage = () => {
           </div>
 
           <div className="p-4">
-           
             <div className="grid grid-cols-7 gap-1 mb-2">
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
                 <span
@@ -146,7 +155,6 @@ const DashboardPage = () => {
               ))}
             </div>
 
-           
             <div className="grid grid-cols-7 gap-y-2 gap-x-1 text-center text-xs">
               {[...Array(30).keys()].map((day) => {
                 const d = day + 1;

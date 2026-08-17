@@ -1,6 +1,31 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios";
 
+// أضيفي هذه الـ Thunks الجديدة بجانب البقية
+export const fetchDoctorMonthlyProfits = createAsyncThunk(
+  "doctorDashboard/fetchDoctorMonthlyProfits",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/doctor/profits/monthly");
+      return response.data.data; // يعيد { monthly_amount, monthly_display, currency }
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
+export const fetchDoctorDailyProfits = createAsyncThunk(
+  "doctorDashboard/fetchDoctorDailyProfits",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/doctor/profits/daily");
+      return response.data.data; // يعيد { daily_amount, daily_display, currency }
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
 export const fetchDoctorSchedules = createAsyncThunk(
   "doctorDashboard/fetchDoctorSchedules",
   async (_, { rejectWithValue }) => {
@@ -53,6 +78,8 @@ const doctorDashboardSlice = createSlice({
   initialState: {
     summary: null,
     schedules: [],
+    monthlyProfits: null,
+    dailyProfits: null,
     loading: false,
     error: null,
   },
@@ -80,7 +107,6 @@ const doctorDashboardSlice = createSlice({
         state.schedules = action.payload;
       })
       .addCase(updateDoctorScheduleItem.fulfilled, (state, action) => {
-     
         const index = state.schedules.findIndex(
           (s) => s.id === action.payload.id,
         );
@@ -89,6 +115,13 @@ const doctorDashboardSlice = createSlice({
         } else {
           state.schedules.push(action.payload);
         }
+      })
+      .addCase(fetchDoctorMonthlyProfits.fulfilled, (state, action) => {
+        state.monthlyProfits = action.payload;
+      })
+      // حالات الأرباح اليومية
+      .addCase(fetchDoctorDailyProfits.fulfilled, (state, action) => {
+        state.dailyProfits = action.payload;
       });
   },
 });

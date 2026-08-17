@@ -13,6 +13,7 @@ export const fetchDashboardStats = createAsyncThunk(
       sessionStatus,
       topDiseases,
       dateRes,
+      totalProfits,
     ] = await Promise.all([
       api.get("/admin/dashboard/user-active-count"),
       api.get("/admin/dashboard/daily-diagnoses-count"),
@@ -22,6 +23,7 @@ export const fetchDashboardStats = createAsyncThunk(
       api.get("/admin/dashboard/diagnosis-sessions-status-count"),
       api.get("/admin/dashboard/top-specialties-by-diagnoses"),
       api.get("/admin/dashboard/current-date"),
+      api.get("/admin/dashboard/platform-profits"),
     ]);
 
     return {
@@ -29,14 +31,15 @@ export const fetchDashboardStats = createAsyncThunk(
       dailyDiagnoses: diagnoses.data.data.count,
       activeDoctors: doctors.data.data.count.active_doctors,
       newContentItems: content.data.data.count,
+      totalProfits: totalProfits.data.data.total_amount,
       patientStats: {
         now: patientTypes.data.data.now_patients,
         regular: patientTypes.data.data.regular_patients,
       },
       sessionStatus: {
-        active: sessionStatus.data.data.active , 
-        completed: sessionStatus.data.data.completed ,
-        pending: sessionStatus.data.data.pending ,
+        active: sessionStatus.data.data.active,
+        completed: sessionStatus.data.data.completed,
+        pending: sessionStatus.data.data.pending,
       },
       topDiseases: topDiseases.data.data || [],
       currentDate: dateRes.data,

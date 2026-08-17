@@ -64,7 +64,7 @@ const DoctorLoginForm = () => {
     >
       <h2 className="text-xl font-bold text-gray-800 tracking-tight mt-2">
         Login to your{" "}
-        <span className="text-[#72A6BB] font-medium">doctor account</span>
+        <span className="text-[#72A6BB] font-medium">Doctor Account</span>
       </h2>
 
       <div className="flex flex-col gap-3">
