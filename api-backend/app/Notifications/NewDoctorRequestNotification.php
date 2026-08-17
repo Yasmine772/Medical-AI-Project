@@ -24,7 +24,7 @@ class NewDoctorRequestNotification extends Notification implements ShouldQueue
      */
     public function via($notifiable): array
     {
-        return ['database', FirebaseChannel::class]; 
+        return ['database', 'firebase']; 
     }
 
     /**
