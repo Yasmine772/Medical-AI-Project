@@ -6,38 +6,46 @@ export const fetchDashboardStats = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get("/admin/audit-logs/count");
-      return response.data.data; 
+      return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response.data);
     }
   },
 );
 
-// (Async Thunk)
-// في ملف auditLogsSlice.js
+export const fetchDoctorRequestsCount = createAsyncThunk(
+  "auditLogs/fetchDoctorRequestsCount",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/admin/doctor-requests/count");
+      return response.data.data.count; 
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  },
+);
+
 export const fetchAuditLogs = createAsyncThunk(
   "auditLogs/fetchAuditLogs",
   async (filters = {}, { rejectWithValue }) => {
     try {
-      // إرسال الفلاتر كـ params مع الطلب
+      
       const response = await api.get("/admin/audit-logs", { params: filters });
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data);
     }
-  }
+  },
 );
 
 const auditLogsSlice = createSlice({
   name: "auditLogs",
   initialState: {
     logs: [],
-    stats: { 
-      count: 0, 
-      data_changes: 0, 
-      doctor_requests: 0, 
-      sent_notifications: 0 
+    stats: {
+      count: 0,
     },
+    doctorRequestsCount: 0,
     loading: false,
     error: null,
   },
@@ -56,7 +64,10 @@ const auditLogsSlice = createSlice({
         state.error = action.payload.data;
       })
       .addCase(fetchDashboardStats.fulfilled, (state, action) => {
-        state.stats = action.payload; 
+        state.stats = action.payload;
+      })
+      .addCase(fetchDoctorRequestsCount.fulfilled, (state, action) => {
+        state.doctorRequestsCount = action.payload; 
       });
   },
 });

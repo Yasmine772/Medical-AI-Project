@@ -15,7 +15,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/app/dashboard"); // if authenticated dont show otp verification
+      navigate("/app/dashboard"); // if authenticated don`t show otp verification
     }
   }, [isAuthenticated, navigate]);
   return (

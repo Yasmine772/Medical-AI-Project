@@ -1,17 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchDoctorSchedules,
+  updateDoctorScheduleItem,
+} from "../doctorDashboardSlice";
 
 const WeeklySchedule = () => {
+  const dispatch = useDispatch();
+  const apiSchedules = useSelector((state) => state.doctorDashboard.schedules);
+
   const [isEditing, setIsEditing] = useState(false);
-  // سنقوم بتفكيك الـ time إلى start و end للتحكم الأفضل
-  const [schedule, setSchedule] = useState([
-    { day: "Sun", start: "14", end: "09", open: true },
-    { day: "Mon", start: "", end: "", open: false },
-    { day: "Tue", start: "14", end: "09", open: true },
-    { day: "Wed", start: "20", end: "14", open: true },
-    { day: "Thu", start: "", end: "", open: false },
-    { day: "Fri", start: "16", end: "10", open: true },
-    { day: "Sat", start: "", end: "", open: false },
-  ]);
+
+  const baseDays = [
+    { full: "Sunday", short: "Sun" },
+    { full: "Monday", short: "Mon" },
+    { full: "Tuesday", short: "Tue" },
+    { full: "Wednesday", short: "Wed" },
+    { full: "Thursday", short: "Thu" },
+    { full: "Friday", short: "Fri" },
+    { full: "Saturday", short: "Sat" },
+  ];
+
+  const formatSchedules = (schedules) => {
+    return baseDays.map((bDay) => {
+      const found = schedules?.find(
+        (item) =>
+          item.day_of_week &&
+          item.day_of_week.toLowerCase().startsWith(bDay.short.toLowerCase()),
+      );
+
+      return {
+        id: found ? found.id : null, 
+        day: bDay.short,
+        fullDay: bDay.full,
+        start: found && found.start_time ? found.start_time.slice(0, 5) : "",
+        end: found && found.end_time ? found.end_time.slice(0, 5) : "",
+        open: found ? !found.is_closed : false, 
+      };
+    });
+  };
+
+  const [schedule, setSchedule] = useState(() => formatSchedules(apiSchedules));
+
+  useEffect(() => {
+    dispatch(fetchDoctorSchedules());
+  }, [dispatch]);
+
+  const [prevApiSchedules, setPrevApiSchedules] = useState(apiSchedules);
+  if (apiSchedules !== prevApiSchedules) {
+    setPrevApiSchedules(apiSchedules);
+    setSchedule(formatSchedules(apiSchedules));
+  }
 
   const handleUpdate = (index, field, value) => {
     const newSchedule = [...schedule];
@@ -25,12 +64,51 @@ const WeeklySchedule = () => {
     setSchedule(newSchedule);
   };
 
+  const handleSave = () => {
+    if (isEditing) {
+      schedule.forEach((item) => {
+        if (item.id) {
+          let scheduleData;
+
+          if (!item.open) {
+            scheduleData = {
+              day_of_week: item.day,
+              start_time: "00:00:00",
+              end_time: "00:00:01",
+              is_closed: true,
+            };
+          } else {
+            const startTime = item.start
+              ? item.start.length === 5
+                ? `${item.start}:00`
+                : item.start
+              : "00:00:00";
+            const endTime = item.end
+              ? item.end.length === 5
+                ? `${item.end}:00`
+                : item.end
+              : "00:00:00";
+
+            scheduleData = {
+              day_of_week: item.day,
+              start_time: startTime,
+              end_time: endTime,
+              is_closed: false,
+            };
+          }
+
+          dispatch(updateDoctorScheduleItem({ id: item.id, scheduleData }));
+        }
+      });
+    }
+    setIsEditing(!isEditing);
+  };
   return (
     <div className="bg-white/70 backdrop-blur-md border border-white/50 p-6 rounded-3xl shadow-sm w-full">
       <div className="flex justify-between items-center mb-6">
         <h3 className="font-bold text-gray-800 text-lg">Weekly Schedule</h3>
         <button
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={handleSave}
           className={`text-xs px-4 py-1.5 rounded-lg transition-colors ${isEditing ? "bg-[#72A6BB] text-white" : "bg-[#D17D87] text-white"}`}
         >
           {isEditing ? "Save Changes" : "Edit"}
@@ -49,26 +127,26 @@ const WeeklySchedule = () => {
                 {item.open ? (
                   <div className="flex flex-col gap-0.5">
                     <input
-                      type="number"
-                      placeholder="From"
+                      type="text"
+                      placeholder="09:00"
                       value={item.start}
                       onChange={(e) =>
                         handleUpdate(index, "start", e.target.value)
                       }
-                      className="w-full text-center text-[9px] border rounded"
+                      className="w-full text-center text-[9px] border rounded py-1"
                     />
                     <input
-                      type="number"
-                      placeholder="To"
+                      type="text"
+                      placeholder="17:00"
                       value={item.end}
                       onChange={(e) =>
                         handleUpdate(index, "end", e.target.value)
                       }
-                      className="w-full text-center text-[9px] border rounded"
+                      className="w-full text-center text-[9px] border rounded py-1"
                     />
                   </div>
                 ) : (
-                  <div className="h-10 text-[8px] flex items-center justify-center text-gray-300">
+                  <div className="h-12 text-[8px] flex items-center justify-center text-gray-300">
                     Closed
                   </div>
                 )}
@@ -84,7 +162,15 @@ const WeeklySchedule = () => {
               <div
                 className={`rounded-xl text-[9px] font-bold w-full aspect-square flex flex-col items-center justify-center p-0.5 ${item.open ? "bg-[#72A6BB] text-white" : "bg-gray-100 text-gray-400"}`}
               >
-                {item.open ? `${item.start}-${item.end}` : "Closed"}
+                {item.open ? (
+                  <>
+                    <span>{item.start}</span>
+                    <span className="text-[7px] opacity-75">to</span>
+                    <span>{item.end}</span>
+                  </>
+                ) : (
+                  "Closed"
+                )}
               </div>
             )}
           </div>

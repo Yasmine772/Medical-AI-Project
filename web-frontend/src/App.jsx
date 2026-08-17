@@ -24,6 +24,7 @@ import DoctorVerifyOtp from "./features/doctorAuth/pages/DoctorVerifyOtp";
 import DoctorForgotPassword from "./features/doctorAuth/pages/DoctorForgotPassword";
 import DoctorVerifyResetOtp from "./features/doctorAuth/pages/DoctorVerifyResetOtp";
 import DoctorResetPassword from "./features/doctorAuth/pages/DoctorResetPassword";
+import DoctorCasesPage from "./features/doctorCases/pages/DoctorCasesPage";
 function App() {
   return (
     <Router>
@@ -50,6 +51,7 @@ function App() {
         {/* doctors routes*/}
         <Route path="/Layout" element={<DoctorLayout />}>
           <Route path="dashboard" element={<HomePage />} />
+          <Route path="cases" element={<DoctorCasesPage />} />
         </Route>
         <Route path="/loginDoctor" element={<DoctorLoginPage />} />
         <Route path="/otp-verification-doctor" element={<DoctorVerifyOtp />} />
