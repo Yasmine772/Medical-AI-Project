@@ -42,20 +42,6 @@ services:
     networks:
       - app-network
 
-  # React
-  react-app:
-    build:
-      context: ./web-frontend
-      dockerfile: Dockerfile
-    container_name: react-app
-    restart: always
-    ports:
-      - "3000:80"
-    networks:
-      - app-network
-    depends_on:
-      - laravel-app
-
   # Queue Worker
   queue-worker:
     build:

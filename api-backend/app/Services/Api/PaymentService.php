@@ -163,7 +163,7 @@ class PaymentService
 
         try {
             $doctorId = app(DoctorAssignmentService::class)->assign($session->id, $specialist);
-
+           
             Log::info('Doctor assigned after payment', [
                 'session_hash' => $session->session_hash,
                 'specialist' => $specialist,

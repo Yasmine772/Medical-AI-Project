@@ -14,11 +14,13 @@
         "laravel-notification-channels/fcm": "^6.1",
         "laravel/cashier": "^16.6",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "^1.11",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.28",
         "laravel/telescope": "^5.20",
         "laravel/tinker": "^2.10.1",
         "owen-it/laravel-auditing": "^14.0",
+        "pusher/pusher-php-server": "^7.3",
         "spatie/laravel-permission": "^6.25"
     },
     "require-dev": {

@@ -32,6 +32,7 @@ return [
         'show-approved-doctors',
         'show-doctor-request-count',
         'view-tracking-data',
+        'insert-disease',
 
 
         //doctor
@@ -85,6 +86,7 @@ return [
             'show-all-notifications', 'show-count-unread-notifications',
             'mark-all-as-read-notifications', 'mark-as-read-notifications',
             'view-tracking-data',
+            'insert-disease',
         ],
 
         'patient' => [
