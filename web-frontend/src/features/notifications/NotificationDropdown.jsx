@@ -40,27 +40,32 @@ const NotificationDropdown = () => {
     dispatch(fetchNotifications());
   }, [dispatch]);
 
+  // useEffect(() => {
+  //   dispatch(fetchUnreadCount());
+  //   dispatch(fetchNotifications());
+
+  //   // متغير تحكم: اجعليه false إذا أردتِ إيقاف الـ Polling مؤقتاً أثناء العمل
+  //   const enablePolling = false;
+
+  //   let interval = null;
+
+  //   if (enablePolling) {
+  //     interval = setInterval(() => {
+  //       console.log("Polling for new notifications...");
+  //       dispatch(fetchUnreadCount());
+  //       dispatch(fetchNotifications());
+  //     }, 15000); // كل 15 ثانية
+  //   }
+
+  //   return () => {
+  //     if (interval) clearInterval(interval);
+  //   };
+  // }, [dispatch]);
+
   useEffect(() => {
     dispatch(fetchUnreadCount());
     dispatch(fetchNotifications());
-
-    // متغير تحكم: اجعليه false إذا أردتِ إيقاف الـ Polling مؤقتاً أثناء العمل
-    const enablePolling = false;
-
-    let interval = null;
-
-    if (enablePolling) {
-      interval = setInterval(() => {
-        console.log("Polling for new notifications...");
-        dispatch(fetchUnreadCount());
-        dispatch(fetchNotifications());
-      }, 15000); // كل 15 ثانية
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [dispatch]);
+}, [dispatch]);
 
   const handleToggleDropdown = () => {
     setIsOpen(!isOpen);
