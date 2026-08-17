@@ -30,10 +30,12 @@ export const sendJoinRequest = createAsyncThunk(
         },
       });
       return response.data;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "حدث خطأ ما أثناء إرسال الطلب",
-      );
+     } catch (error) {
+      return rejectWithValue({
+        message:
+          error.response?.data?.message || "حدث خطأ ما أثناء إرسال الطلب",
+        errors: error.response?.data?.errors || null,
+      });
     }
   },
 );

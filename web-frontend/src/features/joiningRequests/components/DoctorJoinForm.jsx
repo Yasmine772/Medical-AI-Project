@@ -94,9 +94,18 @@ export default function DoctorJoinForm() {
 
       {/* رسالة الخطأ */}
       {error && (
-        <div className="mb-5 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fadeIn">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
+        <div className="mb-5 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-start gap-2 animate-fadeIn">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <span>{error.message}</span>
+            {error.errors && (
+              <ul className="mt-1 list-disc pr-5 space-y-0.5 font-normal">
+                {Object.entries(error.errors).map(([field, msgs]) => (
+                  <li key={field}>{Array.isArray(msgs) ? msgs[0] : msgs}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 
@@ -311,6 +320,7 @@ export default function DoctorJoinForm() {
               type="file"
               name="license_file"
               onChange={handleFileChange}
+              accept=".pdf"
               className="file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#72A6BB]/15 file:text-[#72A6BB] hover:file:bg-[#72A6BB] hover:file:text-white file:transition-all p-2 rounded-xl border border-gray-200 bg-gray-50/50 text-xs text-gray-500 cursor-pointer"
               required
             />
@@ -327,6 +337,7 @@ export default function DoctorJoinForm() {
               type="file"
               name="cv_file"
               onChange={handleFileChange}
+              accept=".pdf"
               className="file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#72A6BB]/15 file:text-[#72A6BB] hover:file:bg-[#72A6BB] hover:file:text-white file:transition-all p-2 rounded-xl border border-gray-200 bg-gray-50/50 text-xs text-gray-500 cursor-pointer"
               required
             />
@@ -340,6 +351,7 @@ export default function DoctorJoinForm() {
               type="file"
               name="photo"
               onChange={handleFileChange}
+              accept="image/*"
               className="file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#72A6BB]/15 file:text-[#72A6BB] hover:file:bg-[#72A6BB] hover:file:text-white file:transition-all p-2 rounded-xl border border-gray-200 bg-gray-50/50 text-xs text-gray-500 cursor-pointer"
             />
           </div>

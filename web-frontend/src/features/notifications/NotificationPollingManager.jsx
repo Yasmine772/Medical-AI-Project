@@ -25,7 +25,7 @@ const NotificationPollingManager = () => {
           const vapidKey =
             "BJOAbsWXIIJTNrMx9oEHLEgoV8jkb7K6izZd0lB9N88-w8Tla5DZmWFHrSoJk13wp4O29-zMy0L-BUpppi_0_Rg";
 
-          const token = await getToken(messaging, { vapidKey });
+          const token = messaging ? await getToken(messaging, { vapidKey }) : null;
 
           if (token) {
             console.log("FCM Token Generated:", token);
@@ -43,7 +43,8 @@ const NotificationPollingManager = () => {
 
     requestPermissionAndSendToken();
 
-    const unsubscribe = onMessage(messaging, (payload) => {
+    const unsubscribe = messaging
+      ? onMessage(messaging, (payload) => {
       console.log("New foreground notification received: ", payload);
       toast.success(
         payload.notification?.title || "New notification received!",
@@ -51,7 +52,8 @@ const NotificationPollingManager = () => {
 
       dispatch(fetchUnreadCount());
       dispatch(fetchNotifications());
-    });
+    })
+      : null;
 
     return () => {
       if (unsubscribe) unsubscribe();
