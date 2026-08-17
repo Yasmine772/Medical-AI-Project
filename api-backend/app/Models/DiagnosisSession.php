@@ -35,11 +35,12 @@ class DiagnosisSession extends Model
     protected $casts = [
         'doctor_reviewed_at'  => 'datetime',
         'report_generated_at' => 'datetime',
-        'patient_data'        => 'array',
-        'symptoms'            => 'array',
-        'ai_result'           => 'array',
+        'patient_data'        => 'array:encrypted',
+        'symptoms'            => 'array:encrypted',
+        'ai_result'           => 'array:encrypted',
         'tips'                => 'array',
         'doctor_edited'       => 'boolean',
+        'doctor_notes'        => 'string:encrypted',
     ];
 
     public function user()

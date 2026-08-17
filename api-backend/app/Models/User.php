@@ -55,6 +55,8 @@ class User extends Authenticatable implements Auditable
             'otp_verified_at' => 'datetime',
             'password' => 'hashed',
             'expires_at' => 'datetime',
+            'otp' => 'string:encrypted',
+            'fcm_token' => 'string:encrypted',
         ];
     }
 

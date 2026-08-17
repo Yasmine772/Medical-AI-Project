@@ -9,12 +9,51 @@ use App\Models\PaymentSplit;
 use App\Models\User;
 use App\Notifications\NewDiagnosisAssignedNotification;
 use App\Services\Api\DoctorAssignmentService;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class PaymentService
 {
     private const DIAGNOSIS_AMOUNT = 500;
+
+    private int $maxRetries;
+
+    private int $retryDelay;
+
+    public function __construct()
+    {
+        $this->maxRetries = config('services.fastapi.max_retries', 3);
+        $this->retryDelay = config('services.fastapi.retry_delay', 1);
+    }
+
+    // ── Retry helper ──────────────────────────────────────────
+    private function withRetry(callable $fn): mixed
+    {
+        $lastException = null;
+
+        for ($attempt = 0; $attempt <= $this->maxRetries; $attempt++) {
+            try {
+                return $fn();
+            } catch (ConnectionException $e) {
+                $lastException = $e;
+                if ($attempt < $this->maxRetries) {
+                    $delay = $this->retryDelay * pow(2, $attempt);
+                    Log::warning("Payment retry {$attempt}/{$this->maxRetries}", [
+                        'error' => $e->getMessage(),
+                        'retry_in' => "{$delay}s",
+                    ]);
+                    sleep($delay);
+                }
+            } catch (\Exception $e) {
+                throw $e;
+            }
+        }
+
+        throw $lastException;
+    }
 
     public function getCost(User $user, string $sessionHash): ?array
     {
@@ -49,7 +88,7 @@ class PaymentService
         ];
     }
 
-    public function createPaymentIntent(User $user, string $sessionHash): ?array
+    public function createPaymentIntent(User $user, string $sessionHash, ?string $idempotencyKey = null): ?array
     {
         $session = DiagnosisSession::where('session_hash', $sessionHash)
             ->where('user_id', $user->id)
@@ -59,17 +98,54 @@ class PaymentService
             return null;
         }
 
-        try {
-            if (!$user->hasStripeId()) {
-                $user->createOrGetStripeCustomer();
-            }
+        $cacheKey = "payment:{$user->id}:{$sessionHash}";
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            Log::info('Payment cache hit', ['user_id' => $user->id, 'session' => $sessionHash]);
 
-            $payment = $user->pay(self::DIAGNOSIS_AMOUNT, [
-                'metadata' => [
-                    'session_hash' => $sessionHash,
-                    'user_id' => $user->id,
-                ],
+            return $cached;
+        }
+
+        $existingPayment = Payment::where('diagnosis_session_id', $session->id)
+            ->where('status', 'pending')
+            ->whereNotNull('stripe_payment_intent_id')
+            ->first();
+
+        if ($existingPayment) {
+            Log::info('Payment intent already exists', [
+                'payment_id' => $existingPayment->id,
+                'session' => $sessionHash,
             ]);
+
+            $result = [
+                'client_secret' => $existingPayment->stripe_payment_intent_id,
+                'payment_intent_id' => $existingPayment->stripe_payment_intent_id,
+                'payment_id' => $existingPayment->id,
+            ];
+
+            Cache::put($cacheKey, $result, 300);
+
+            return $result;
+        }
+
+        try {
+            $result = $this->withRetry(function () use ($user, $sessionHash, $idempotencyKey) {
+                if (!$user->hasStripeId()) {
+                    $user->createOrGetStripeCustomer();
+                }
+
+                $payment = $user->pay(self::DIAGNOSIS_AMOUNT, [
+                    'idempotency_key' => $idempotencyKey,
+                    'metadata' => [
+                        'session_hash' => $sessionHash,
+                        'user_id' => $user->id,
+                    ],
+                ]);
+
+                return $payment;
+            });
+
+            $session = DiagnosisSession::where('session_hash', $sessionHash)->first();
 
             $record = Payment::updateOrCreate(
                 [
@@ -78,18 +154,22 @@ class PaymentService
                 ],
                 [
                     'user_id' => $user->id,
-                    'stripe_payment_intent_id' => $payment->id,
+                    'stripe_payment_intent_id' => $result->id,
                     'amount' => self::DIAGNOSIS_AMOUNT,
                     'currency' => 'usd',
                     'paid_at' => now(),
                 ]
             );
 
-            return [
-                'client_secret' => $payment->client_secret,
-                'payment_intent_id' => $payment->id,
+            $response = [
+                'client_secret' => $result->client_secret,
+                'payment_intent_id' => $result->id,
                 'payment_id' => $record->id,
             ];
+
+            Cache::put($cacheKey, $response, 300);
+
+            return $response;
 
         } catch (\Exception $e) {
             Log::error('Payment intent creation failed', [

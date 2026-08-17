@@ -45,6 +45,8 @@ return [
         'url' => env('FASTAPI_URL', 'http://localhost:5000'),
         'timeout' => env('FASTAPI_TIMEOUT', 100),
         'report_timeout' => env('FASTAPI_REPORT_TIMEOUT', 60),
+        'max_retries' => env('FASTAPI_MAX_RETRIES', 3),
+        'retry_delay' => env('FASTAPI_RETRY_DELAY', 1),
     ],
 
     'stripe' => [

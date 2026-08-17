@@ -6,6 +6,9 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use \Illuminate\Auth\AuthenticationException;
 use App\Http\Middleware\CheckRole;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -28,6 +31,35 @@ return Application::configure(basePath: dirname(__DIR__))
             'v1/stripe/webhook',
             'doctor/*'
         ]);
+
+        // ── Rate Limiters ──────────────────────────────────────
+        RateLimiter::for('api', function (mixed $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('login', function (mixed $request) {
+            return Limit::perMinute(5)->by($request->input('email') ?: $request->ip());
+        });
+
+        RateLimiter::for('register', function (mixed $request) {
+            return Limit::perMinute(3)->by($request->ip());
+        });
+
+        RateLimiter::for('otp', function (mixed $request) {
+            return Limit::perMinute(3)->by($request->input('email') ?: $request->ip());
+        });
+
+        RateLimiter::for('password-reset', function (mixed $request) {
+            return Limit::perMinute(3)->by($request->input('email') ?: $request->ip());
+        });
+
+        RateLimiter::for('diagnosis', function (mixed $request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('payment', function (mixed $request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
     $exceptions->render(function (AuthenticationException $e, $request) {
