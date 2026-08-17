@@ -81,8 +81,6 @@ services:
       - ai_reports:/app/reports
     environment:
       - PYTHONUNBUFFERED=1
-      - CLOUDFLARE_API_KEY=${CLOUDFLARE_API_KEY}
-      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
     depends_on:
       - database
     networks:
