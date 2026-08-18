@@ -6,6 +6,7 @@ const api = axios.create({
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "1",
   },
 });
 
@@ -19,7 +20,7 @@ api.interceptors.request.use((config) => {
   }
 
   const token =
-    localStorage.getItem("doctor_token") || localStorage.getItem("token");
+    localStorage.getItem("token") || localStorage.getItem("doctor_token");
 
   if (token) {
     const cleanToken = token.replace(/['"]+/g, "").trim();

@@ -76,6 +76,7 @@ const authSlice = createSlice({
         localStorage.setItem("token", token);
         localStorage.setItem("email", email);
         localStorage.setItem("role", role);
+        localStorage.removeItem("doctor_token");
       }
     },
     logout: (state) => {
