@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { sendJoinRequest, clearStatus } from "../joiningRequestsSlice";
-// استيراد أيقونات Lucide React المناسبة للحقول والوثائق
+
 import {
   User,
   Phone,
@@ -73,7 +73,7 @@ export default function DoctorJoinForm() {
       onSubmit={handleSubmit}
       className="bg-white border border-gray-100 rounded-2xl p-6 sm:p-8 shadow-xl shadow-gray-100 relative overflow-hidden"
     >
-      {/* رأس النموذج */}
+     
       <div className="mb-6 pb-4 border-b border-gray-100">
         <div className="text-[18px] font-extrabold text-gray-900 mb-1 flex items-center gap-2">
           <Stethoscope className="w-5 h-5 text-[#72A6BB]" />
@@ -84,7 +84,7 @@ export default function DoctorJoinForm() {
         </div>
       </div>
 
-      {/* رسالة النجاح */}
+     
       {successMessage && (
         <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fadeIn">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -206,22 +206,15 @@ export default function DoctorJoinForm() {
             </label>
             <div className="relative flex items-center">
               <Stethoscope className="absolute right-3 w-4 h-4 text-gray-400 pointer-events-none" />
-              <select
+              <input
+                type="text"
                 name="specialization"
                 value={formData.specialization}
                 onChange={handleChange}
-                className="w-full pr-10 pl-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-black text-[13px] outline-none focus:border-[#72A6BB] focus:bg-white focus:ring-2 focus:ring-[#72A6BB]/10 transition-all duration-300 cursor-pointer appearance-none"
+                placeholder="أدخل التخصص يدوياً"
+                className="w-full pr-10 pl-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-black text-[13px] outline-none focus:border-[#72A6BB] focus:bg-white focus:ring-2 focus:ring-[#72A6BB]/10 transition-all duration-300"
                 required
-              >
-                <option value="">اختر التخصص</option>
-                <option value="أمراض جلدية">أمراض جلدية</option>
-                <option value="أمراض باطنية">أمراض باطنية</option>
-                <option value="أطفال">أطفال</option>
-                <option value="قلبية وأوعية دموية">قلبية وأوعية دموية</option>
-                <option value="عظام ومفاصل">عظام ومفاصل</option>
-                <option value="طب عام">طب عام</option>
-                <option value="أخرى">أخرى</option>
-              </select>
+              />
             </div>
           </div>
 
@@ -358,7 +351,7 @@ export default function DoctorJoinForm() {
         </div>
       </div>
 
-      {/* زر الإرسال */}
+      
       <button
         type="submit"
         disabled={loading}

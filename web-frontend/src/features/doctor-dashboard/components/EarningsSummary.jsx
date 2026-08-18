@@ -17,7 +17,7 @@ const EarningsSummary = () => {
     dispatch(fetchDoctorDailyProfits());
   }, [dispatch]);
 
-  // استخراج القيم بأمان سواء كانت مخزنة مباشرة أو داخل حقل data
+ 
   const monthlyDisplay =
     monthlyProfits?.monthly_display || monthlyProfits?.data?.monthly_display;
   const dailyDisplay =

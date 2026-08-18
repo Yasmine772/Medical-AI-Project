@@ -9,7 +9,7 @@ export default {
       colors: {
         medical: {
             fontFamily: {
-        // هنا نضيف الخط. 'Tajawal' هو الاسم الذي سنستخدمه في الكلاسات
+       
         sans: ['Tajawal', 'sans-serif'],
       },
           DEFAULT: '#72A6BB',

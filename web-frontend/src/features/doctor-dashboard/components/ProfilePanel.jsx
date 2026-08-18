@@ -165,7 +165,7 @@ const ProfilePanel = ({ isOpen, onClose }) => {
                 />
               </div>
 
-              {/* الحقول النصية */}
+    
               <div className="p-4 bg-white/60 rounded-2xl border border-white/85 shadow-sm">
                 <label className="text-[10px] text-[#72A6BB] font-bold uppercase tracking-wider">
                   Full Name
@@ -274,7 +274,7 @@ const ProfilePanel = ({ isOpen, onClose }) => {
                 />
               </div>
 
-              {/* ملف الـ CV */}
+              {/* CV */}
               <div className="p-4 bg-white/60 rounded-2xl border border-white/85 shadow-sm flex items-center justify-between">
                 <div>
                   <label className="text-[10px] text-[#72A6BB] font-bold uppercase tracking-wider block">
@@ -289,7 +289,7 @@ const ProfilePanel = ({ isOpen, onClose }) => {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* زر المعاينة يظهر دائماً إذا كان هناك رابط قديم أو تم اختيار ملف جديد */}
+                 
                   {(doctorProfile?.cv_file || selectedCv) && (
                     <a
                       href={
@@ -371,7 +371,7 @@ const ProfilePanel = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* زر الحفظ */}
+              
               <div className="pt-4">
                 <button
                   type="submit"

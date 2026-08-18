@@ -1,4 +1,4 @@
-// استيراد أيقونات Lucide React المناسبة لكل ميزة
+
 import {
   Brain,
   UserCheck,
@@ -47,7 +47,7 @@ export default function FeaturesSection() {
       className="py-20 px-6 sm:px-10 max-w-[1000px] mx-auto relative overflow-hidden"
       id="features"
     >
-      {/* خلفية جمالية خفيفة متناسقة */}
+      
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 w-[500px] h-[500px] bg-[#72A6BB]/5 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="text-center md:text-right mb-12">
@@ -65,7 +65,7 @@ export default function FeaturesSection() {
         </p>
       </div>
 
-      {/* شبكة الميزات بتصميم بطاقات تفاعلية */}
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
         {featuresList.map((f, index) => {
           const IconComponent = f.icon;
@@ -75,7 +75,7 @@ export default function FeaturesSection() {
               className="group bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative flex flex-col justify-between"
             >
               <div>
-                {/* حاوية الأيقونة مع تأثيرات الـ Hover */}
+               
                 <div className="w-[44px] h-[44px] rounded-xl bg-[#72A6BB]/15 flex items-center justify-center mb-4 text-[#72A6BB] transition-all duration-300 group-hover:scale-110 group-hover:bg-[#72A6BB] group-hover:text-white">
                   <IconComponent
                     className="w-[22px] h-[22px]"
@@ -92,7 +92,7 @@ export default function FeaturesSection() {
                 </div>
               </div>
 
-              {/* شريط جمالي سفلي خفيف يظهر عند تمرير الماوس */}
+             
               <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#72A6BB] scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
             </div>
           );
