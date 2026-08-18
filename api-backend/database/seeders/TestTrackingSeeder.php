@@ -36,41 +36,7 @@ class TestTrackingSeeder extends Seeder
         }
         $this->command->info('Seeded '.count($diseases).' diseases with specialists.');
 
-        // 2. Create test doctors with real specializations
-        $doctorData = [
-            ['full_name' => 'Dr. Ahmed Hassan',   'email' => 'ahmed@test.com',     'specialization' => 'Dermatologist'],
-            ['full_name' => 'Dr. Sara Ali',       'email' => 'sara@test.com',      'specialization' => 'Cardiologist'],
-            ['full_name' => 'Dr. Omar Yousef',    'email' => 'omar@test.com',      'specialization' => 'Neurologist'],
-            ['full_name' => 'Dr. Lina Khaled',    'email' => 'lina@test.com',      'specialization' => 'Gastroenterologist'],
-            ['full_name' => 'Dr. Nour Ibrahim',   'email' => 'nour@test.com',      'specialization' => 'Pulmonologist'],
-            ['full_name' => 'Dr. Huda Mahmoud',   'email' => 'huda@test.com',      'specialization' => 'Endocrinologist'],
-            ['full_name' => 'Dr. Khaled Waleed',  'email' => 'khaled@test.com',    'specialization' => 'General Physician'],
-        ];
-
-        foreach ($doctorData as $d) {
-            $user = User::firstOrCreate(
-                ['email' => $d['email']],
-                [
-                    'full_name' => $d['full_name'],
-                    'password' => Hash::make('password'),
-                    'email_verified_at' => now(),
-                ]
-            );
-            $user->assignRole('doctor');
-
-            Doctor::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'specialization' => $d['specialization'],
-                    'is_active' => true,
-                    'phone' => '0599'.random_int(100000, 999999),
-                    'years_of_experience' => random_int(3, 20),
-                ]
-            );
-        }
-        $this->command->info('Seeded '.count($doctorData).' doctors.');
-
-        // 2a. One doctor per AI specialist value so doctor assignment always finds a match
+        // 2. One doctor per AI specialist value so doctor assignment always finds a match
         $extraSpecialists = [
             'Allergist',
             'Allergy Specialist',
@@ -350,7 +316,7 @@ class TestTrackingSeeder extends Seeder
         $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         foreach ($specializations as $spec) {
-            $specDoctors = Doctor::where('specialization', $spec)->take(2)->get();
+            $specDoctors = Doctor::where('specialization', $spec)->take(3)->get();
 
             if ($specDoctors->count() > 0) {
                 foreach ($days as $index => $day) {
