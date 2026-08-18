@@ -17,6 +17,19 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+const SPECIALIZATIONS = [
+  "Allergist", "Allergy Specialist", "Cardiologist", "Dentist", "Dermatologist",
+  "Endocrinologist", "ENT Specialist", "Eye Specialist", "Gastroenterologist",
+  "General Physician", "General Practitioner", "Gynaecologist", "Gynecologist",
+  "Health Care Physician", "Hepatologist", "HIV Specialist", "Immunologist",
+  "Infectious Disease Specialist", "Nephrologist", "Anesthesiologist", "Neurologist",
+  "Neurosurgeon", "Nutritionist", "Oncologist", "Ophthalmic Surgeon", "Ophthalmologist",
+  "Optometrist", "Orthopedic Surgeon", "Otorhinolaryngologist", "Pathologist", "Pediatrician",
+  "Pharmacist", "Physician", "Psychiatrist", "Pulmonologist", "Renal Specialist",
+  "Rheumatologist", "Skin Specialist", "Sleep Specialist", "Specialist", "Surgeon",
+  "Technician", "Therapist", "Urologist",
+];
+
 export default function DoctorJoinForm() {
   const dispatch = useDispatch();
   const { loading, successMessage, error } = useSelector(
@@ -214,7 +227,14 @@ export default function DoctorJoinForm() {
                 placeholder="أدخل التخصص يدوياً"
                 className="w-full pr-10 pl-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-black text-[13px] outline-none focus:border-[#72A6BB] focus:bg-white focus:ring-2 focus:ring-[#72A6BB]/10 transition-all duration-300"
                 required
-              />
+              >
+                <option value="">اختر التخصص</option>
+                {SPECIALIZATIONS.map((spec) => (
+                  <option key={spec} value={spec}>
+                    {spec}
+                  </option>
+                ))}
+              </input>
             </div>
           </div>
 

@@ -841,6 +841,63 @@ class DiagnosisService:
 
     # ── Finalize diagnosis ──
 
+    def _ground_probabilities_by_symptoms(
+        self, probabilities: dict, diseases: list, candidates: dict
+    ) -> dict:
+        """Re-weight disease probabilities by how well each disease's documented
+        symptoms overlap the patient's REPORTED symptoms.
+
+        The Bayesian ``probabilities`` are seeded from retrieval popularity
+        (how common a disease's source text is in the KB), which lets a
+        retrieval-strong disease (e.g. Influenza) dominate even when it has
+        nothing to do with the patient. This blends in a symptom-fit score so
+        the actual reported picture drives the differential.
+
+        Returns a normalized ``{disease: probability}`` dict.
+        """
+        # Collect the patient's REPORTED symptoms in ENGLISH (name_en), so we can
+        # match them against the English symptom text of candidate diseases.
+        # Must read name_en directly: the lang-aware _get_symptoms() returns the
+        # localized (e.g. Arabic) name for a non-English patient, which never
+        # matches the English disease text and silently disables grounding.
+        # Absorbed answer-revealed symptoms live in selected_symptoms too.
+        patient_syms = []
+        for s in candidates.get("selected_symptoms", []) or []:
+            ne = (s.get("name_en") or s.get("name_local") or "").strip()
+            if ne:
+                patient_syms.append(ne)
+        tokens = set()
+        for s in patient_syms:
+            for w in re.split(r"\W+", s.lower()):
+                if len(w) >= 3:
+                    tokens.add(w)
+        if not tokens:
+            return probabilities  # nothing reported to ground on
+
+        # Per-disease symptom-fit in [0, 1].
+        fit = {}
+        for d in diseases or []:
+            name = d.get("name_en") or ""
+            syms = d.get("symptoms_en") or ""
+            doc = d.get("document") or ""
+            text = ((syms if syms else doc) + " " + name).lower()
+            if not text.strip():
+                fit[name] = None  # no symptom info -> keep prior
+                continue
+            matched = sum(1 for t in tokens if t in text)
+            fit[name] = min(1.0, matched / max(1, len(tokens)))
+
+        w = 0.6  # weight given to symptom fit vs retrieval prior
+        out = {}
+        for name, p in probabilities.items():
+            f = fit.get(name)
+            if f is None:
+                out[name] = p
+            else:
+                out[name] = (1 - w) * p + w * f
+        total = sum(out.values()) or 1.0
+        return {k: v / total for k, v in out.items()}
+
     def _finalize(
         self,
         session_id,
@@ -855,6 +912,12 @@ class DiagnosisService:
         labels = candidates.get("id_labels", {})
         model_name = candidates.get("model_name")
 
+        # Ground the probabilities in the patient's REPORTED symptoms so a
+        # retrieval-popular disease can't dominate an unrelated picture.
+        probabilities = self._ground_probabilities_by_symptoms(
+            probabilities, diseases, candidates
+        )
+
         # The Bayesian posterior is the source of truth for WHICH diseases rank
         # top-3 and their probabilities. The LLM may only contribute names,
         # specialists, and advice; its self-reported probabilities are ignored
@@ -865,11 +928,12 @@ class DiagnosisService:
         # picking the top-3 so we never answer "chest pain" when the patient
         # reported chest pain. The remaining probabilities are renormalized so
         # the real diseases get a fair share of the mass.
-        symptom_names = {
-            (s.get("name_en") or "").strip().lower()
-            for s in candidates.get("selected_symptoms", [])
-            if s.get("name_en")
-        }
+        symptom_names = set()
+        for s in candidates.get("selected_symptoms", []) or []:
+            for key in ("name_en", "name_local"):
+                v = (s.get(key) or "").strip().lower()
+                if v:
+                    symptom_names.add(v)
         posterior = dict(probabilities)
         if symptom_names:
             for name in list(posterior):
@@ -898,9 +962,11 @@ class DiagnosisService:
             else:
                 named = parsed_override.get("diagnoses") or []
         if not named:
+            summary_text, _ = self._patient_facts(candidates, conversation)
             named = self._name_diagnoses(
                 probabilities, diseases, lang, model_name=model_name,
                 baseline=candidates.get("baseline"),
+                summary_text=summary_text,
             )
 
         # Normalize any LLM-supplied probabilities to a 0-1 fraction. The LLM
@@ -1002,10 +1068,22 @@ class DiagnosisService:
                 d["probability"] = round(max(0.0, min(1.0, p)), 2)
             else:
                 d["probability"] = 0.0
+
+        # No single diagnosis may claim 100%: a differential always carries some
+        # uncertainty. Cap the top probability and renormalize the rest so the
+        # engine can never report a literally certain (and often wrong) disease.
+        MAX_SINGLE = 0.95
+        top_p = max((d.get("probability") or 0) for d in merged)
+        if top_p > MAX_SINGLE:
+            for d in merged:
+                d["probability"] = round(min(d["probability"], MAX_SINGLE), 2)
+            total = sum(d["probability"] for d in merged) or 1.0
+            for d in merged:
+                d["probability"] = round(d["probability"] / total, 2)
         return merged
 
     def _name_diagnoses(
-        self, probabilities, diseases, lang, model_name: str = None, baseline: dict = None
+        self, probabilities, diseases, lang, model_name: str = None, baseline: dict = None, summary_text: str = ""
     ) -> list:
         try:
             top = sorted(probabilities.items(), key=lambda x: -x[1])[:5]
@@ -1023,7 +1101,8 @@ class DiagnosisService:
             probs_text = "\n".join(f"  {k}: {v*100:.0f}%" for k, v in top)
             priors_text = self._prior_query(baseline or {})
             prompt = build_diagnosis_naming_prompt(
-                candidates_text, probs_text, lang, priors_text=priors_text
+                candidates_text, probs_text, lang,
+                priors_text=priors_text, summary_text=summary_text,
             )
             content = self.llm.ask(
                 [{"role": "system", "content": prompt}],
