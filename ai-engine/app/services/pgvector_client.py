@@ -82,7 +82,7 @@ class PgVectorClient:
             batch_size: Rows per upsert call.
         """
         payloads = [
-            self._build_payload(rid, doc, emb, typ, meta)
+            self._build_payload(rid, doc, self._to_list(emb), typ, meta)
             for rid, doc, emb, typ, meta in rows
         ]
         for i in range(0, len(payloads), batch_size):

@@ -1,32 +1,71 @@
 import { useState, useRef, useEffect } from "react";
+
 import { useDispatch, useSelector } from "react-redux";
+
 import { useNavigate } from "react-router-dom";
+
 import {
   fetchNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   fetchUnreadCount,
 } from "./notificationsSlice";
+
 import { Bell, Loader2, CheckCircle2, Check, CheckCheck } from "lucide-react";
+
 import toast from "react-hot-toast";
 
 const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState("all");
+
   const dispatch = useDispatch();
+
   const navigate = useNavigate();
+
   const dropdownRef = useRef(null);
 
   const {
     list: notifications,
+
     unreadCount,
+
     loading,
   } = useSelector((state) => state.notifications);
 
   useEffect(() => {
     dispatch(fetchUnreadCount());
+
     dispatch(fetchNotifications());
   }, [dispatch]);
+
+  // useEffect(() => {
+  //   dispatch(fetchUnreadCount());
+  //   dispatch(fetchNotifications());
+
+  //   // متغير تحكم: اجعليه false إذا أردتِ إيقاف الـ Polling مؤقتاً أثناء العمل
+  //   const enablePolling = false;
+
+  //   let interval = null;
+
+  //   if (enablePolling) {
+  //     interval = setInterval(() => {
+  //       console.log("Polling for new notifications...");
+  //       dispatch(fetchUnreadCount());
+  //       dispatch(fetchNotifications());
+  //     }, 15000); // كل 15 ثانية
+  //   }
+
+  //   return () => {
+  //     if (interval) clearInterval(interval);
+  //   };
+  // }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchUnreadCount());
+    dispatch(fetchNotifications());
+}, [dispatch]);
 
   const handleToggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -38,17 +77,23 @@ const NotificationDropdown = () => {
         setIsOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleMarkAsRead = (id) => {
     dispatch(markNotificationAsRead(id))
       .unwrap()
+
       .then(() => {
         toast.success("Notification read successfully");
+
         dispatch(fetchUnreadCount());
+        dispatch(fetchNotifications());
       })
+
       .catch((err) => {
         toast.error(err || "Failed to mark as read");
       });
@@ -57,10 +102,14 @@ const NotificationDropdown = () => {
   const handleMarkAllAsRead = () => {
     dispatch(markAllNotificationsAsRead())
       .unwrap()
+
       .then(() => {
         toast.success("All notifications marked as read");
+
         dispatch(fetchUnreadCount());
+        dispatch(fetchNotifications());
       })
+
       .catch((err) => {
         toast.error(err || "Failed to mark all as read");
       });
@@ -70,6 +119,7 @@ const NotificationDropdown = () => {
     if (!notif.read_at) {
       handleMarkAsRead(notif.id);
     }
+
     setIsOpen(false);
 
     navigate("/app/doctors", { state: { activeTab: "Join Requests" } });
@@ -77,6 +127,7 @@ const NotificationDropdown = () => {
 
   const filteredNotifications = notifications.filter((notif) => {
     if (activeTab === "unread") return !notif.read_at;
+
     return true;
   });
 
@@ -88,6 +139,7 @@ const NotificationDropdown = () => {
         aria-label="Notifications"
       >
         <Bell className="w-6 h-6 text-amber-500 fill-amber-100" />
+
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white"></span>
         )}
@@ -97,6 +149,7 @@ const NotificationDropdown = () => {
         <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
             <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
+
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
@@ -120,6 +173,7 @@ const NotificationDropdown = () => {
             >
               All ({notifications.length})
             </button>
+
             <button
               onClick={() => setActiveTab("unread")}
               className={`pb-2 px-3 text-xs font-semibold transition-all border-b-2 flex items-center gap-1.5 ${
@@ -161,17 +215,21 @@ const NotificationDropdown = () => {
                     <div className="p-2 rounded-xl bg-[#58889B]/10 text-[#58889B] shrink-0 mt-0.5">
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
+
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-gray-900 truncate">
                         {notif.data?.title || "Notification"}
                       </p>
+
                       <p className="text-xs text-gray-600 mt-1 leading-relaxed">
                         {notif.data?.message || "You have a new update."}
                       </p>
+
                       <span className="text-[10px] text-gray-400 mt-2 block">
                         {new Date(notif.created_at).toLocaleDateString()} -{" "}
                         {new Date(notif.created_at).toLocaleTimeString([], {
                           hour: "2-digit",
+
                           minute: "2-digit",
                         })}
                       </span>

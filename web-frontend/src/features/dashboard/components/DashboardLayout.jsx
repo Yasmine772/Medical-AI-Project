@@ -8,6 +8,7 @@ import Sidebar from "./Sidebar";
 import LogoutModal from "../../auth/components/LogoutModal";
 import ConfirmationModal from "../../doctors/components/ConfirmationModal";
 import toast from "react-hot-toast";
+import NotificationPollingManager from "../../notifications/NotificationPollingManager";
 const DashboardLayout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -28,9 +29,8 @@ const DashboardLayout = () => {
     } finally {
       dispatch(logout());
 
-     
       setTimeout(() => {
-        navigate("/login"); 
+        navigate("/login");
       }, 500);
     }
   };
@@ -45,6 +45,7 @@ const DashboardLayout = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
+      <NotificationPollingManager />
       <Sidebar onLogoutClick={() => setIsLogoutModalOpen(true)} />
 
       <main className="flex-1 h-full overflow-y-auto p-6">

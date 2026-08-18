@@ -114,6 +114,10 @@ class DiagnosisSession extends Model
         $doctorReviewDone = $this->doctor_reviewed_at
             || in_array($this->phase, ['report_ready', 'completed']);
 
+        $paymentDone = $this->payment
+            && $this->payment->status === 'succeeded'
+            && !is_null($this->payment->paid_at);
+
         $labels = [
             'ai_analysis'    => $lang === 'ar' ? 'تحليل الأعراض بالذكاء الاصطناعي' : 'AI Symptom Analysis',
             'payment'        => $lang === 'ar' ? 'تم الدفع بنجاح' : 'Payment Successful',
@@ -128,9 +132,10 @@ class DiagnosisSession extends Model
                 'status'  => 'completed',
             ],
             [
-                'key'     => 'payment',
-                'label'   => $labels['payment'],
-                'status'  => 'completed',
+                'key'          => 'payment',
+                'label'        => $labels['payment'],
+                'status'       => $paymentDone ? 'completed' : 'pending',
+                'completed_at' => $paymentDone ? $this->payment->paid_at : null,
             ],
             [
                 'key'         => 'doctor_review',

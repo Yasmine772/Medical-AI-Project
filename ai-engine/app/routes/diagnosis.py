@@ -112,20 +112,47 @@ async def search_symptoms(
     except Exception as e:
         log("SYMPTOMS", f"LLM extraction failed: {str(e)[:80]}")
 
+    # Cloudflare Workers AI is rate-limited and, instead of raising, sometimes
+    # returns a single item named "Server Error". Drop any such artifacts so they
+    # are never shown to the user; the caller gets empty results instead.
+    items = [
+        it
+        for it in items
+        if isinstance(it, dict)
+        and (it.get("name_en") or "").strip()
+        and "server error" not in (it.get("name_en") or "").strip().lower()
+        and "error" not in (it.get("name_en") or "").strip().lower()
+    ]
+
     if not items:
         return {"status": "success", "data": {"query": q, "results": []}}
 
     name_en_list = []
     summary_en_list = []
+    type_en_list = []
+    seen_names = set()
     for it in items:
+        # Cap results so the UI isn't flooded with 100+ items AND so we don't
+        # fire 200+ translation calls (which trips Google Translate rate limits).
+        if len(name_en_list) >= 20:
+            break
         if not isinstance(it, dict):
             continue
         name_en = (it.get("name_en") or "").strip()
         if not name_en:
             continue
+        key = name_en.lower()
+        if key in seen_names:
+            continue
+        seen_names.add(key)
         summary = (it.get("summary") or "").strip()[:200]
+        raw_type = (it.get("type") or "illness").strip().lower()
+        item_type = raw_type if raw_type in ("illness", "symptom") else "illness"
+        if item_type != "symptom":
+            continue
         name_en_list.append(name_en)
         summary_en_list.append(summary)
+        type_en_list.append(item_type)
 
     if lang != "en":
         names_local = translate_batch(name_en_list, lang)
@@ -140,7 +167,7 @@ async def search_symptoms(
             "id": idx,
             "name_en": ne,
             "name_local": names_local[idx],
-            "type": "illness",
+            "type": type_en_list[idx],
             "summary": summaries_local[idx],
             "source_id": "",
             "similarity": 1.0,

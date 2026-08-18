@@ -25,7 +25,6 @@ const AuditFilters = ({ onFilterChange }) => {
         <option value="">All Categories</option>
         <option value="App\Models\User">Users</option>
 
-        {/* أضف باقي الموديلات هنا بنفس طريقة الـ value */}
       </select>
 
       {/* 2. Operation */}

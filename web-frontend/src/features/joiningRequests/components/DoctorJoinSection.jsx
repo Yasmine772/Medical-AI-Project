@@ -1,41 +1,97 @@
-
-import DoctorJoinForm from './DoctorJoinForm';
+import DoctorJoinForm from "./DoctorJoinForm";
+// استيراد أيقونات Lucide React المطلوبة
+import {
+  CirclePercent,
+  CalendarDays,
+  Award,
+  MessageSquareHeart,
+} from "lucide-react";
 
 const perksList = [
-  { icon: 'ti-cash', title: '٧٠٪ من كل حالة لك', desc: '١٤٬٠٠٠ ل.س لكل مراجعة — تُحوَّل شهرياً بشكل منتظم' },
-  { icon: 'ti-calendar', title: 'أنت تحدد جدولك', desc: 'حدد أيام وساعات توفرك، نحن لا نتدخل' },
-  { icon: 'ti-star', title: 'سمعة طبية رقمية', desc: 'اسمك وتوقيعك على كل تقرير — يبني حضورك الرقمي' },
-  { icon: 'ti-brand-whatsapp', title: 'تواصل بسيط عبر واتساب', desc: 'التواصل مع المرضى بدون تعقيد أو أنظمة إضافية' }
+  {
+    // تم استبدال النص السابق بأيقونة React
+    icon: CirclePercent,
+    title: "٧٠٪ من كل حالة لك",
+    desc: "١٤٬٠٠٠ ل.س لكل مراجعة — تُحوَّل شهرياً بشكل منتظم",
+  },
+  {
+    icon: CalendarDays,
+    title: "أنت تحدد جدولك",
+    desc: "حدد أيام وساعات توفرك، نحن لا نتدخل",
+  },
+  {
+    icon: Award,
+    title: "سمعة طبية رقمية",
+    desc: "اسمك وتوقيعك على كل تقرير — يبني حضورك الرقمي",
+  },
+  {
+    icon: MessageSquareHeart,
+    title: "تواصل بسيط عبر واتساب",
+    desc: "التواصل مع المرضى بدون تعقيد أو أنظمة إضافية",
+  },
 ];
 
 export default function DoctorJoinSection() {
   return (
-    <div className="bg-white border-t border-b border-gray-200 py-16 px-10">
-      <div className="max-w-[940px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-14 items-start">
-        
-        <div>
-          <div className="text-[12px] font-semibold text-[#72A6BB] tracking-wide mb-2">للأطباء</div>
-          <h2 className="text-[24px] font-bold text-black mb-2.5">انضم إلى شبكة أطباء DX</h2>
-          <p className="text-[13px] text-gray-600 leading-[1.7] mb-0">راجع الحالات من أي مكان وفي أوقاتك المناسبة. أنت تحدد جدولك، نحن نرسل لك الحالات.</p>
-          
-          <div className="flex flex-col gap-3.5 mt-7">
-            {perksList.map((p, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="w-[34px] h-[34px] rounded-lg bg-[#72A6BB]/15 flex items-center justify-center shrink-0">
-                  <i className={`ti ${p.icon} text-[17px] text-[#72A6BB]`} aria-hidden="true"></i>
+    <section className="relative bg-gradient-to-b from-white via-[#F8FAFC] to-white border-t border-b border-gray-100 py-20 px-6 sm:px-10 overflow-hidden">
+      {/* خلفية جمالية خفيفة */}
+      <div className="absolute top-0 right-0 -z-10 w-96 h-96 bg-[#72A6BB]/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 -z-10 w-96 h-96 bg-blue-400/5 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="max-w-[1000px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-12 lg:gap-16 items-start">
+        {/* قسم النصوص والمميزات */}
+        <div className="flex flex-col">
+          {/* شارة "للأطباء" مع حركة نبض */}
+          <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[#72A6BB]/10 text-[#72A6BB] text-[12px] font-bold tracking-wide mb-3 transition-all duration-300 hover:bg-[#72A6BB]/20">
+            <span className="w-2 h-2 rounded-full bg-[#72A6BB] animate-pulse"></span>
+            للأطباء
+          </div>
+
+          <h2 className="text-[26px] sm:text-[28px] font-extrabold text-gray-900 mb-3 tracking-tight">
+            انضم إلى شبكة أطباء DX
+          </h2>
+
+          <p className="text-[14px] text-gray-600 leading-[1.8] mb-8">
+            راجع الحالات من أي مكان وفي أوقاتك المناسبة. أنت تحدد جدولك، نحن
+            نرسل لك الحالات.
+          </p>
+
+          <div className="flex flex-col gap-4">
+            {perksList.map((p, index) => {
+              const IconComponent = p.icon; // تعيين الأيقونة لمكون
+              return (
+                <div
+                  key={index}
+                  className="group flex items-start gap-4 p-3 rounded-xl transition-all duration-300 hover:bg-white hover:shadow-md hover:shadow-gray-100 border border-transparent hover:border-gray-100"
+                >
+                  {/* حاوية الأيقونة */}
+                  <div className="w-[40px] h-[40px] rounded-xl bg-[#72A6BB]/15 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#72A6BB]">
+                    {/* الأيقونة نفسها، تتغير للأبيض عند الـ hover */}
+                    <IconComponent
+                      className="w-[20px] h-[20px] text-[#72A6BB] group-hover:text-white transition-colors duration-300"
+                      strokeWidth={1.5}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-[14px] font-bold text-gray-900 mb-1 transition-colors duration-300 group-hover:text-[#72A6BB]">
+                      {p.title}
+                    </div>
+                    <div className="text-[12px] text-gray-500 leading-[1.6]">
+                      {p.desc}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-[13px] font-bold text-black mb-0.5">{p.title}</div>
-                  <div className="text-[12px] text-gray-600 leading-[1.5]">{p.desc}</div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        <DoctorJoinForm />
-
+        {/* نموذج الانضمام (تم الحفاظ عليه) */}
+        <div className="transition-all duration-500 hover:shadow-xl rounded-2xl bg-white p-6 border border-gray-100">
+          <DoctorJoinForm />
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

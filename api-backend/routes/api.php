@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/v1/stripe/webhook', [PaymentController::class, 'handleWebhook']);
 
+Route::get('/user', function () {
+    return response()->json(auth()->user());
+})->middleware('auth:sanctum');
+
 Route::prefix('v1/auth')->group(function () {
     // ── Public routes with rate limiting ──────────────────────
     Route::middleware('throttle:register')->group(function () {

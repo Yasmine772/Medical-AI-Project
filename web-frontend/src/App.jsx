@@ -1,3 +1,9 @@
+import { useEffect, useState} from 'react';
+import { useDispatch } from 'react-redux'; 
+import echo from './echo';         
+import api from './api/axios';
+import { fetchNotifications, fetchUnreadCount } from './features/notifications/notificationsSlice'; 
+import { getFCMToken, listenForMessages } from './firebase';
 import {
   BrowserRouter as Router,
   Routes,
@@ -24,7 +30,82 @@ import DoctorVerifyOtp from "./features/doctorAuth/pages/DoctorVerifyOtp";
 import DoctorForgotPassword from "./features/doctorAuth/pages/DoctorForgotPassword";
 import DoctorVerifyResetOtp from "./features/doctorAuth/pages/DoctorVerifyResetOtp";
 import DoctorResetPassword from "./features/doctorAuth/pages/DoctorResetPassword";
+import DoctorCasesPage from "./features/doctorCases/pages/DoctorCasesPage";
+
 function App() {
+    const dispatch = useDispatch();
+    const [userId, setUserId] = useState(() => {
+    const storedUserId = localStorage.getItem('user_id');
+    return storedUserId ? parseInt(storedUserId) : null;
+  });
+
+    useEffect(() => {
+        if (userId) return; 
+
+          api.get('/api/user')
+              .then(response => {
+                  setUserId(response.data.id);
+                  localStorage.setItem('user_id', response.data.id);
+              })
+              .catch(() => console.log('User not logged in'));
+      }, [userId]); 
+
+      useEffect(() => {
+         if (userId){
+            console.log(' Getting FCM Token...');
+            getFCMToken().then(token => {
+                if (token) {
+                    console.log(' FCM Token saved:', token);
+                    listenForMessages(); 
+                }
+            });
+        }
+    }, [userId]);
+
+    useEffect(() => {
+        if (!userId) {
+            console.log('Waiting for user ID...');
+            return;
+        }
+
+        console.log(`Listening for Reverb notifications on user.${userId}...`);
+
+        try {
+            const channel = echo.private(`user.${userId}`);
+
+            channel.listen('.notification.received', (e) => {
+                console.log('New notification:', e);
+
+                dispatch(fetchUnreadCount());
+                dispatch(fetchNotifications());
+            });
+
+            setTimeout(() => {
+                if (echo.connector && echo.connector.socket) {
+                    echo.connector.socket.on('connect', () => {
+                        console.log('WebSocket connected successfully!');
+                    });
+
+                    echo.connector.socket.on('disconnect', () => {
+                        console.log('WebSocket disconnected!');
+                    });
+                }
+            }, 1000);
+
+            return () => {
+                try {
+                    echo.leaveChannel(`user.${userId}`);
+                    console.log(` Left channel user.${userId}`);
+                    //  isSubscribed.current = false; 
+                } catch (err) {
+                    console.log('Error leaving channel:', err);
+                }
+            };
+        } catch (error) {
+            console.log(' WebSocket error (non-critical):', error);
+        }
+    }, [userId]);
+
   return (
     <Router>
       <Routes>
@@ -50,6 +131,7 @@ function App() {
         {/* doctors routes*/}
         <Route path="/Layout" element={<DoctorLayout />}>
           <Route path="dashboard" element={<HomePage />} />
+          <Route path="cases" element={<DoctorCasesPage />} />
         </Route>
         <Route path="/loginDoctor" element={<DoctorLoginPage />} />
         <Route path="/otp-verification-doctor" element={<DoctorVerifyOtp />} />

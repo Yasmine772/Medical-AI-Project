@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, User, LogOut } from "lucide-react";
+import { LayoutDashboard, User, LogOut, Inbox } from "lucide-react";
 
 const DoctorSidebar = ({ onLogoutClick, onProfileClick }) => {
   const location = useLocation();
@@ -16,6 +16,18 @@ const DoctorSidebar = ({ onLogoutClick, onProfileClick }) => {
           }`}
         >
           <LayoutDashboard size={24} />
+        </Link>
+
+        {/* Cases Link (New) */}
+        <Link
+          to="/layout/cases"
+          className={`p-3 rounded-xl transition-all duration-300 ${
+            location.pathname === "/layout/cases"
+              ? "bg-white text-[#72A6BB] shadow-lg scale-110"
+              : "text-white hover:bg-white/20"
+          }`}
+        >
+          <Inbox size={24} />
         </Link>
 
         <button

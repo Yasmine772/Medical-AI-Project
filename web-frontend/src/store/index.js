@@ -23,6 +23,8 @@ import auditLogsReducer from "../features/audit-logs/auditLogsSlice";
 import doctorRequestsReducer from "../features/doctors/doctorRequestsSlice";
 import notificationsReducer from "../features/notifications/notificationsSlice";
 import doctorDashboardReducer from "../features/doctor-dashboard/doctorDashboardSlice";
+import doctorCasesReducer from "../features/doctorCases/doctorCasesSlice";
+import aiInsertionReducer from "../features/diseases/aiInsertionSlice";
 const persistConfig = {
   key: "root",
   storage,
@@ -33,6 +35,7 @@ const persistConfig = {
     "joiningRequests",
     "doctorRequests",
     "notifications",
+    "aiInsertion",
   ],
 };
 
@@ -49,6 +52,8 @@ const persistedReducer = persistReducer(
     doctorRequests: doctorRequestsReducer,
     notifications: notificationsReducer,
     doctorDashboard: doctorDashboardReducer,
+    doctorCases: doctorCasesReducer,
+    aiInsertion: aiInsertionReducer,
   }),
 );
 

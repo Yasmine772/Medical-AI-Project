@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\Auth\AuthController as WebAuthController;
 use App\Http\Controllers\Web\Admin\DoctorManagement\DoctorController;
 use App\Http\Controllers\Web\Doctor\DoctorReviewController;
 use App\Http\Controllers\Web\Doctor\DoctorScheduleController;
+use App\Http\Controllers\Api\V1\Ai\AiController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -50,6 +51,10 @@ Route::prefix('admin')->group(function () {
         Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
 
         Route::post('/push-fcm-token', [DoctorController::class, 'pushToken']);
+
+        // AI disease ingestion (proxied to FastAPI)
+        Route::post('/ai/insert/json-file', [AiController::class, 'insertJsonFile'])->middleware('permission:insert-disease');
+        Route::post('/ai/insert/pdf', [AiController::class, 'insertPdfFile'])->middleware('permission:insert-disease');
 
 
         // User Management 

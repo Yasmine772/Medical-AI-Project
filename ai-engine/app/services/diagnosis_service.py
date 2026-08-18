@@ -16,6 +16,15 @@ from app.services.socrates import (
     build_system_prompt,
     build_diagnosis_naming_prompt,
 )
+from app.services.prompts import (
+    NO_MORE_SYMPTOMS_MSG,
+    NEED_MORE_SYMPTOMS_MSG,
+    DEFAULT_NEED_MORE_MSG,
+    DISEASE_EXTRACTION_SYSTEM_MSG,
+    build_related_diseases_prompt,
+    build_disease_names_prompt,
+)
+
 from app.services.i18n import (
     detect_lang,
     to_english,
@@ -140,7 +149,7 @@ class DiagnosisService:
                 for m in conversation
             ):
                 conversation.append(
-                    {"role": "user", "content": "Patient reports no more symptoms."}
+                    {"role": "user", "content": NO_MORE_SYMPTOMS_MSG}
                 )
             candidates["conversation"] = conversation
             candidates["current_question"] = None
@@ -202,23 +211,13 @@ class DiagnosisService:
 
         if pdf_texts:
             context = "\n\n".join(pdf_texts)
-            extract_prompt = f"""You are given passages retrieved by searching for the patient's reported symptom: "{name_en}".
-
-TASK: Extract ONLY the specific medical conditions/diseases for which "{name_en}" is a recognized symptom or feature. Do NOT list unrelated rare or severe diseases (e.g. cancers, kidney failure) unless the passage explicitly links them to "{name_en}".
-
-For each disease provide its name, a brief description that mentions the symptom, and the relevant medical specialist.
-
-Passages:
-{context}
-
-Respond ONLY with valid JSON:
-{{"results": [{{"name_en": "Disease Name", "type": "illness", "summary": "brief description mentioning {name_en}", "specialist": "Specialist type"}}]}}"""
+            extract_prompt = build_related_diseases_prompt(name_en, context)
             try:
                 raw = self.llm.ask(
                     [
                         {
                             "role": "system",
-                            "content": "You extract disease names from medical text. Output ONLY valid JSON.",
+                            "content": DISEASE_EXTRACTION_SYSTEM_MSG,
                         },
                         {"role": "user", "content": extract_prompt},
                     ],
@@ -342,7 +341,7 @@ Respond ONLY with valid JSON:
         if not q:
             return {"response_type": "unknown", "question": None}
         if q.get("type") == "need_more":
-            msg = q.get("question") or "Please search for another symptom."
+            msg = q.get("question") or DEFAULT_NEED_MORE_MSG
             return {
                 "response_type": "need_more_symptoms",
                 "question": {
@@ -505,12 +504,12 @@ Respond ONLY with valid JSON:
                 "role": "assistant",
                 "content": json.dumps({
                     "type": "need_more_symptoms",
-                    "message": "To narrow down the diagnosis, please search for an additional symptom you are experiencing.",
+                    "message": NEED_MORE_SYMPTOMS_MSG,
                 }),
             })
             candidates["conversation"] = conversation
             msg = from_english(
-                "To narrow down the diagnosis, please search for an additional symptom you are experiencing.",
+                NEED_MORE_SYMPTOMS_MSG,
                 lang,
             )
             candidates["current_question"] = {
@@ -565,15 +564,9 @@ Respond ONLY with valid JSON:
         )
 
         if parsed.get("type") == "error":
-            messages.append({"role": "assistant", "content": content})
-            messages.append(
-                {
-                    "role": "user",
-                    "content": "Please respond with valid JSON using the exact format specified.",
-                }
-            )
-            content = self.llm.ask(messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
+            log("LLM", "Parse error from model, using local fallback question")
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
 
         llm_type = parsed.get("type")
 
@@ -600,7 +593,7 @@ Respond ONLY with valid JSON:
                 candidates["socrates_axis"] = socrates_axis + 1
                 candidates["conversation"] = conversation
                 msg = from_english(
-                    parsed.get("message", "Please search for another symptom."), lang
+                    parsed.get("message", DEFAULT_NEED_MORE_MSG), lang
                 )
                 candidates["current_question"] = {
                     "type": "need_more",
@@ -630,34 +623,11 @@ Respond ONLY with valid JSON:
             if question_count < MIN_QUESTIONS_BEFORE_DIAGNOSIS:
                 log(
                     "LLM",
-                    f"Premature diagnosis rejected at q{question_count}/{MIN_QUESTIONS_BEFORE_DIAGNOSIS}, re-asking",
+                    f"Premature diagnosis rejected at q{question_count}/{MIN_QUESTIONS_BEFORE_DIAGNOSIS}, using fallback",
                 )
-                retry_messages = [
-                    *messages,
-                    {"role": "assistant", "content": content},
-                    {
-                        "role": "user",
-                        "content": (
-                            "Do NOT give a diagnosis yet. You need more information. "
-                            "Respond ONLY with valid JSON of type 'question' containing a "
-                            "single follow-up question and its options."
-                        ),
-                    },
-                ]
-                content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-                parsed = parse_llm_response(content)
+                parsed = build_fallback_question(socrates_axis)
+                content = json.dumps(parsed, ensure_ascii=False)
                 llm_type = parsed.get("type")
-                if (
-                    llm_type == "diagnosis"
-                    or parsed.get("diagnoses")
-                    or parsed.get("diagnosis")
-                ):
-                    log(
-                        "LLM",
-                        f"LLM insists on diagnosis at q{question_count}, serving fallback question",
-                    )
-                    parsed = build_fallback_question(socrates_axis)
-                    content = json.dumps(parsed, ensure_ascii=False)
             else:
                 conversation.append({"role": "assistant", "content": content})
                 candidates["socrates_axis"] = socrates_axis + 1
@@ -701,38 +671,8 @@ Respond ONLY with valid JSON:
                 forced=True,
             )
 
-        # Normal question -> persist and continue
-        # Nonsense guard: reject questions about the ABSENCE/negation of a symptom
-        # (e.g. "lack of pallor" / "قلة الشحوب") and force the model to re-ask a
-        # positive, concrete question about the reported or an associated symptom.
-        if parsed.get("type") == "question" and self._is_nonsensical_question(
-            parsed.get("question", "")
-        ):
-            log(
-                "LLM",
-                f"Nonsensical question rejected q{question_count + 1}, retrying",
-            )
-            retry_messages = [
-                *messages,
-                {"role": "assistant", "content": content},
-                {
-                    "role": "user",
-                    "content": "Your previous question was clinically invalid: it asked "
-                    "about the absence or negation of a symptom (or was otherwise "
-                    "nonsensical). Ask ONLY a positive, concrete question about the "
-                    "reported symptom or a plausible associated symptom the patient "
-                    "may have. Respond with valid JSON.",
-                },
-            ]
-            content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
-            if parsed.get("type") == "question" and self._is_nonsensical_question(
-                parsed.get("question", "")
-            ):
-                log("LLM", "Still nonsensical after retry, using fallback question")
-                parsed = build_fallback_question(socrates_axis)
-                content = json.dumps(parsed, ensure_ascii=False)
-
+        # Question quality is now the responsibility of the reasoning model (70B),
+        # guided by the SOCRATES + reasoning rules in the prompt. No hardcoded guards.
         q_index = question_count + 1
         if (
             not isinstance(parsed.get("question"), str)
@@ -740,38 +680,10 @@ Respond ONLY with valid JSON:
         ):
             log(
                 "LLM",
-                f"Empty question rejected q{question_count+1}/{MAX_QUESTIONS}, retrying",
+                f"Empty question rejected q{question_count+1}/{MAX_QUESTIONS}, using fallback",
             )
-            retry_messages = [
-                *messages,
-                {"role": "assistant", "content": content},
-                {
-                    "role": "user",
-                    "content": "Your previous answer had an empty question field. "
-                    "Respond ONLY with valid JSON containing a non-empty 'question' string and its options.",
-                },
-            ]
-            content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
-        if (
-            not isinstance(parsed.get("question"), str)
-            or not parsed.get("question").strip()
-        ):
-            log("LLM", "Empty question after retry, forcing diagnosis")
-            conversation.append({"role": "assistant", "content": content})
-            candidates["socrates_axis"] = socrates_axis + 1
-            candidates["conversation"] = conversation
-            candidates["current_question"] = None
-            self._save_candidates(session_id, candidates)
-            return self._finalize(
-                session_id,
-                candidates,
-                conversation,
-                probabilities,
-                diseases,
-                lang,
-                forced=True,
-            )
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
         parsed = self._tag_question(session_id, parsed, q_index)
         conversation.append({"role": "assistant", "content": content})
         candidates["socrates_axis"] = socrates_axis + 1
@@ -836,16 +748,12 @@ Respond ONLY with valid JSON:
         log("LLM", f"First question type={parsed.get('type')} session={session_id[:8]}")
 
         if parsed.get("type") == "error":
-            messages.append({"role": "assistant", "content": content})
-            messages.append(
-                {
-                    "role": "user",
-                    "content": "Please respond with valid JSON using the exact format specified.",
-                }
-            )
-            content = self.llm.ask(messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
+            log("LLM", "Parse error from model, using local fallback question")
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
 
+        # Question quality is now the responsibility of the reasoning model (70B),
+        # guided by the SOCRATES + reasoning rules in the prompt. No hardcoded guards.
         llm_type = parsed.get("type")
         if (
             llm_type == "diagnosis"
@@ -855,34 +763,11 @@ Respond ONLY with valid JSON:
             if question_count < MIN_QUESTIONS_BEFORE_DIAGNOSIS:
                 log(
                     "LLM",
-                    f"Premature diagnosis rejected in _ask_next at q{question_count}/{MIN_QUESTIONS_BEFORE_DIAGNOSIS}, re-asking",
+                    f"Premature diagnosis rejected in _ask_next at q{question_count}/{MIN_QUESTIONS_BEFORE_DIAGNOSIS}, using fallback",
                 )
-                retry_messages = [
-                    *messages,
-                    {"role": "assistant", "content": content},
-                    {
-                        "role": "user",
-                        "content": (
-                            "Do NOT give a diagnosis yet. You need more information. "
-                            "Respond ONLY with valid JSON of type 'question' containing a "
-                            "single follow-up question and its options."
-                        ),
-                    },
-                ]
-                content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-                parsed = parse_llm_response(content)
+                parsed = build_fallback_question(socrates_axis)
+                content = json.dumps(parsed, ensure_ascii=False)
                 llm_type = parsed.get("type")
-                if (
-                    llm_type == "diagnosis"
-                    or parsed.get("diagnoses")
-                    or parsed.get("diagnosis")
-                ):
-                    log(
-                        "LLM",
-                        f"LLM insists on diagnosis in _ask_next at q{question_count}, serving fallback question",
-                    )
-                    parsed = build_fallback_question(socrates_axis)
-                    content = json.dumps(parsed, ensure_ascii=False)
             else:
                 conversation.append({"role": "assistant", "content": content})
                 candidates["conversation"] = conversation
@@ -905,36 +790,9 @@ Respond ONLY with valid JSON:
             not isinstance(parsed.get("question"), str)
             or not parsed.get("question").strip()
         ):
-            log("LLM", "Empty first question rejected, retrying")
-            retry_messages = [
-                *messages,
-                {"role": "assistant", "content": content},
-                {
-                    "role": "user",
-                    "content": "Your previous answer had an empty question field. "
-                    "Respond ONLY with valid JSON containing a non-empty 'question' string and its options.",
-                },
-            ]
-            content = self.llm.ask(retry_messages, temperature=0.1, model=model_name)
-            parsed = parse_llm_response(content)
-        if (
-            not isinstance(parsed.get("question"), str)
-            or not parsed.get("question").strip()
-        ):
-            log("LLM", "Empty first question after retry, forcing diagnosis")
-            conversation.append({"role": "assistant", "content": content})
-            candidates["conversation"] = conversation
-            candidates["current_question"] = None
-            self._save_candidates(session_id, candidates)
-            return self._finalize(
-                session_id,
-                candidates,
-                conversation,
-                probabilities,
-                diseases,
-                lang,
-                forced=True,
-            )
+            log("LLM", "Empty first question rejected, using fallback")
+            parsed = build_fallback_question(socrates_axis)
+            content = json.dumps(parsed, ensure_ascii=False)
         parsed = self._tag_question(session_id, parsed, q_index)
         conversation.append({"role": "assistant", "content": content})
         candidates["socrates_axis"] = socrates_axis + 1
@@ -1400,20 +1258,9 @@ Respond ONLY with valid JSON:
                 best_idx = i
         return best_idx if best_score >= 0.6 else None
 
-    @staticmethod
-    def _is_nonsensical_question(text: str) -> bool:
-        """Reject clinically invalid questions — e.g. asking about the ABSENCE or
-        NEGATION of a symptom ("lack of pallor", "قلة الشحوب", "absence of fever").
-        You cannot ask the timing/severity/character of a symptom that isn't there.
-        """
-        if not text or not text.strip():
-            return False
-        t = text.lower()
-        patterns = [
-            "lack of", "absence of", "without ", "no sign of", "no presence of",
-            "قلة", "عدم", "انعدام", "غياب", "لا يوجد", "ليس هناك", "انتفاء",
-        ]
-        return any(p in t for p in patterns)
+    # NOTE: question-validity heuristics (negation / site / naming guards) were
+    # removed. With the Llama 3.3 70B reasoning model, question quality is governed
+    # entirely by the SOCRATES + reasoning rules in the prompt — no hardcoded checks.
 
     def _re_search(
         self,
@@ -1503,18 +1350,13 @@ Respond ONLY with valid JSON:
             )[:500]
             if pdf_texts:
                 context = "\n\n".join(pdf_texts)
-                prompt = f"""Extract specific medical condition/disease names mentioned in these passages. For each, provide the relevant medical specialist.
-
-Passages:
-{context}
-
-Respond ONLY with: {{"diseases": [{{"name_en": "disease", "specialist": "Specialist"}}]}}"""
+                prompt = build_disease_names_prompt(context)
                 try:
                     raw = self.llm.ask(
                         [
                             {
                                 "role": "system",
-                                "content": "You extract disease names from medical text. Output ONLY valid JSON.",
+                                "content": DISEASE_EXTRACTION_SYSTEM_MSG,
                             },
                             {"role": "user", "content": prompt},
                         ],
