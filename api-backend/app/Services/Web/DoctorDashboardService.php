@@ -171,38 +171,16 @@ class DoctorDashboardService
                                     ?? null;
                 }
             }
-            // $timeAgo = $this->getTimeAgo($case->completed_at);
-
             return [
                 'id' => $case->id,
                 'patient_number' => $patientNumber,
                 'patient_name' => $patientName,
                 'disease_name' => $diseaseName,
                 'status_text' => 'Review Completed',
-                // 'time_ago' => $timeAgo,
                 'view_url' => "/doctor/case/{$case->id}",
             ];
         })->values()->toArray();
     }
-
-    // private function getTimeAgo($dateTime)
-    // {
-    //     $diff = abs(now()->diffInMinutes($dateTime));
-
-    //     if ($diff < 1) {
-    //         return 'Just now';
-    //     } elseif ($diff < 60) {
-    //         return $diff . ' minute' . ($diff > 1 ? 's' : '') . ' ago';
-    //     } elseif ($diff < 1440) {
-    //         $hours = floor($diff / 60);
-    //         return $hours . ' hour' . ($hours > 1 ? 's' : '') . ' ago';
-    //     } elseif ($diff < 2880) { 
-    //         return 'Yesterday';
-    //     } else {
-    //         $days = floor($diff / 1440);
-    //         return $days . ' day' . ($days > 1 ? 's' : '') . ' ago';
-    //     }
-    // }
 //*************************************** */
     public function getCase($id)
     {
@@ -385,48 +363,6 @@ class DoctorDashboardService
             ];
         })->values()->toArray();
     }
-
-    //*************************************** */
-    public function checkExpiredCases()
-    {
-        $doctor = Doctor::where('user_id', auth()->id())->first();
-
-        if (!$doctor) {
-            return 'DoctorNotFound';
-        }
-
-        $expiredCases = DiagnosisSession::where('doctor_id', $doctor->id)
-            ->where('phase', 'doctor_review')
-            ->whereNull('doctor_reviewed_at')
-            ->get()
-            ->filter(function ($case) {
-                return $case->isReviewExpired();
-            });
-
-        if ($expiredCases->isEmpty()) {
-            return [
-                'message' => 'No expired cases found',
-                'reassigned_count' => 0,
-                'reassigned_cases' => [],
-            ];
-        }
-
-        $reassigned = [];
-
-        foreach ($expiredCases as $case) {
-            $result = $this->reassignCase($case->id);
-
-            if ($result !== 'NoDoctorAvailable' && $result !== 'NotAuthorized') {
-                $reassigned[] = $result;
-            }
-        }
-
-        return [
-            'message' => 'Expired cases checked',
-            'reassigned_count' => count($reassigned),
-            'reassigned_cases' => $reassigned,
-        ];
-    }
     //******************************** */
     public function reassignCase($caseId)
     {
@@ -487,9 +423,8 @@ class DoctorDashboardService
         $oldDoctorId = $case->doctor_id;
         $case->doctor_id = $newDoctor->id;
         $case->phase = 'doctor_review';
-        $case->status = 'ACTIVE';
         $case->save();
-        
+
         Log::warning('Case reassigned', [
             'case_id' => $case->id,
             'old_doctor_id' => $oldDoctorId,

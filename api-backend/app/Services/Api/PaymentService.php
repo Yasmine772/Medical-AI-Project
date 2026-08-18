@@ -11,6 +11,8 @@ use App\Notifications\NewDiagnosisAssignedNotification;
 use App\Services\Api\DoctorAssignmentService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\ReassignExpiredCases; 
+
 
 class PaymentService
 {
@@ -172,6 +174,7 @@ class PaymentService
 
             if ($doctorId) {
                 $this->notifyAssignedDoctor($session->refresh());
+                ReassignExpiredCases::dispatch($session->id)->delay(now()->addMinutes(45));
             }
 
         } catch (\Exception $e) {
@@ -182,7 +185,7 @@ class PaymentService
         }
     }
 
-    private function notifyAssignedDoctor(DiagnosisSession $session): void
+    public function notifyAssignedDoctor(DiagnosisSession $session): void
     {
         try {
             app(DiagnosisDataService::class)->store($session);
