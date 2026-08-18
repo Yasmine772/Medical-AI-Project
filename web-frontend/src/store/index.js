@@ -35,7 +35,6 @@ const persistConfig = {
     "joiningRequests",
     "doctorRequests",
     "notifications",
-    "doctorCases",
     "aiInsertion",
   ],
 };

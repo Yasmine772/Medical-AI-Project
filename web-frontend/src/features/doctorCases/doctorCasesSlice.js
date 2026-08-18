@@ -110,6 +110,7 @@ const doctorCasesSlice = createSlice({
       .addCase(fetchDoctorReviews.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.casesList = [];
       })
       .addCase(fetchCaseDetails.pending, (state) => {
         state.detailsLoading = true;

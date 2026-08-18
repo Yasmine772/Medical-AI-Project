@@ -12,9 +12,22 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const messaging = getMessaging(app);
+
+// Firebase Messaging requires a secure context (HTTPS or localhost) and a service worker.
+// Initializing it in an insecure context (e.g. http://192.168.x.x) throws and would crash
+// the whole app, so only set it up when both are available.
+export let messaging = null;
+if (typeof window !== "undefined" && "serviceWorker" in navigator && window.isSecureContext) {
+  try {
+    messaging = getMessaging(app);
+  } catch (e) {
+    console.warn("Firebase messaging unavailable:", e?.message || e);
+    messaging = null;
+  }
+}
 
 export const listenForMessages = () => {
+  if (!messaging) return;
   console.log('Setting up notification listener (Foreground)...');
   
   onMessage(messaging, (payload) => {
@@ -47,6 +60,7 @@ export const listenForMessages = () => {
 };
 
 export const getFCMToken = async () => {
+  if (!messaging) return null;
   try {
     const permission = await Notification.requestPermission();
     

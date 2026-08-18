@@ -158,10 +158,10 @@ const DoctorCasesPage = () => {
                 caseId={item.id}
                 patientType={`${item.patient_name || "Patient"} (${patientData.gender || "N/A"}, ${patientData.age || "?"} yrs)`}
                 status={
-                  item.is_urgent
-                    ? "urgent"
-                    : item.status === "COMPLETED"
-                      ? "done"
+                  item.doctor_reviewed_at
+                    ? "done"
+                    : item.is_urgent
+                      ? "urgent"
                       : "new"
                 }
                 timeInfo={
@@ -184,7 +184,7 @@ const DoctorCasesPage = () => {
                     : []
                 }
                 onReview={() => {
-                  if (item.status === "COMPLETED") return;
+                  if (item.doctor_reviewed_at) return;
                   if (item.session_hash) {
                     handleOpenReview(item.session_hash);
                   } else {
@@ -192,7 +192,9 @@ const DoctorCasesPage = () => {
                   }
                 }}
                 onPdf={() =>
-                  dispatch(fetchPdfReport(item.session.session_hash))
+                  item.session_hash
+                    ? dispatch(fetchPdfReport(item.session_hash))
+                    : toast.error("لا يوجد تقرير PDF لهذه الجلسة")
                 }
                 pdfLoading={pdfLoading}
               />
