@@ -119,9 +119,23 @@ Route::prefix('doctor')->group(function () {
 
         Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
         Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
-        Route::get('/profits', [DoctorDashboardController::class, 'getDoctorProfits'])->middleware('permission:get-doctor-summary');
-        Route::get('/profits/daily', [DoctorDashboardController::class, 'getDailyProfits'])->middleware('permission:get-doctor-summary');
-        Route::get('/profits/monthly', [DoctorDashboardController::class, 'getMonthlyProfits'])->middleware('permission:get-doctor-summary');
+    
+        Route::get('/profits', [DoctorDashboardController::class, 'getDoctorProfits'])->middleware('permission:get-profits');
+        Route::get('/profits/daily', [DoctorDashboardController::class, 'getDailyProfits'])->middleware('permission:get-daily-profits');
+        Route::get('/profits/monthly', [DoctorDashboardController::class, 'getMonthlyProfits'])->middleware('permission:get-monthly-profits');
+
+        Route::get('/today-cases', [DoctorDashboardController::class, 'todayCases'])->middleware('permission:view-today-cases');
+        Route::get('/month-cases', [DoctorDashboardController::class, 'monthCases'])->middleware('permission:view-month-cases');
+
+        Route::get('/recent-completed', [DoctorDashboardController::class, 'recentCompleted'])->middleware('permission:view-recent-completed-cases');
+        Route::get('/case/{id}', [DoctorDashboardController::class, 'getCase'])->middleware('permission:view-case-details');
+        Route::get('/incoming-cases', [DoctorDashboardController::class, 'incomingCases'])->middleware('permission:view-incoming-cases');
+        Route::get('/urgent-cases', [DoctorDashboardController::class, 'urgentCases'])->middleware('permission:view-urgent-cases');
+
+        Route::post('/check-expired', [DoctorDashboardController::class, 'checkExpired']);
+        Route::post('/reassign/{id}', [DoctorDashboardController::class, 'reassign']);
+
+
 
         //Weekly Schedule routes
         Route::get('/schedules', [DoctorScheduleController::class, 'index'])->middleware('permission:view-doctor-schedules');
@@ -134,5 +148,14 @@ Route::prefix('doctor')->group(function () {
         Route::get('/reviews/{sessionHash}', [DoctorReviewController::class, 'show'])->middleware('permission:view-doctor-reviews');
         Route::get('/reviews/{sessionHash}/pdf', [DoctorReviewController::class, 'getPdf'])->middleware('permission:view-doctor-reviews');
         Route::post('/reviews/{sessionHash}/submit', [DoctorReviewController::class, 'submit'])->middleware('permission:submit-doctor-review');
+
+
+
+
+
+
+
+
+
     });
 });

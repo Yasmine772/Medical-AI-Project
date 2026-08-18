@@ -20,8 +20,9 @@ class PaymentController extends Controller
     {
         $user = $request->user();
         $sessionHash = $request->input('session_hash');
+        $idempotencyKey = $request->input('idempotency_key') ?? \Illuminate\Support\Str::uuid()->toString();
         
-        $result = $this->paymentService->createPaymentIntent($user, $sessionHash);
+        $result = $this->paymentService->createPaymentIntent($user, $sessionHash, $idempotencyKey);
       
         if ($result === null) {
             return $this->errorResponse('Failed to create payment intent. Please try again.', null, 500);

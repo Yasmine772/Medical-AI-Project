@@ -6,8 +6,10 @@ use App\Models\DiagnosisSession;
 use App\Models\PatientProfile;
 use Carbon\Carbon;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class AiService
 {
@@ -17,6 +19,10 @@ class AiService
 
     protected int $reportTimeout;
 
+    protected int $maxRetries;
+
+    protected int $retryDelay;
+
     protected DiagnosisTrackingService $trackingService;
 
     public function __construct(DiagnosisTrackingService $trackingService)
@@ -24,7 +30,35 @@ class AiService
         $this->fastApiUrl = config('services.fastapi.url');
         $this->timeout = config('services.fastapi.timeout', 60);
         $this->reportTimeout = config('services.fastapi.report_timeout', 60);
+        $this->maxRetries = config('services.fastapi.max_retries', 3);
+        $this->retryDelay = config('services.fastapi.retry_delay', 1);
         $this->trackingService = $trackingService;
+    }
+
+    // ── Retry helper ──────────────────────────────────────────
+    private function withRetry(callable $fn, ?string $idempotencyKey = null): mixed
+    {
+        $lastException = null;
+
+        for ($attempt = 0; $attempt <= $this->maxRetries; $attempt++) {
+            try {
+                return $fn($attempt, $idempotencyKey);
+            } catch (ConnectionException $e) {
+                $lastException = $e;
+                if ($attempt < $this->maxRetries) {
+                    $delay = $this->retryDelay * pow(2, $attempt);
+                    Log::warning("FastAPI retry {$attempt}/{$this->maxRetries}", [
+                        'error' => $e->getMessage(),
+                        'retry_in' => "{$delay}s",
+                    ]);
+                    sleep($delay);
+                }
+            } catch (\Exception $e) {
+                throw $e;
+            }
+        }
+
+        throw $lastException;
     }
 
     // ------------------------------------------------------------------------------
@@ -130,21 +164,38 @@ class AiService
     // *********************************************** */
     public function getSymptomQuestions($data): ?array
     {
+        $cacheKey = "symptom_select:{$data['session_id']}:".md5($data['name']);
+        $idempotencyKey = $data['idempotency_key'] ?? Str::uuid()->toString();
+
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            Log::info('FastAPI cache hit (getSymptomQuestions)', ['name' => $data['name']]);
+
+            return $cached;
+        }
+
         try {
-            $response = Http::timeout(120)
-                ->asForm()
-                ->post($this->fastApiUrl.'/symptom/select', [
-                    'session_id' => $data['session_id'],
-                    'name' => $data['name'],
-                ]);
+            $result = $this->withRetry(function ($attempt, $key) use ($data) {
+                $response = Http::timeout(120)
+                    ->withHeaders(['Idempotency-Key' => $key])
+                    ->asForm()
+                    ->post($this->fastApiUrl.'/symptom/select', [
+                        'session_id' => $data['session_id'],
+                        'name' => $data['name'],
+                    ]);
 
-            if ($response->successful()) {
-                return $response->json();
+                if ($response->successful()) {
+                    return $response->json();
+                }
+
+                return null;
+            }, $idempotencyKey);
+
+            if ($result) {
+                Cache::put($cacheKey, $result, 300);
             }
-            Log::error('FastAPI get symptom questions failed', ['name' => $data['name']]);
 
-            return null;
-
+            return $result;
         } catch (ConnectionException $e) {
             Log::error('FastAPI timeout (getSymptomQuestions): '.$e->getMessage());
 
@@ -193,28 +244,42 @@ class AiService
     public function submitDiagnosisAnswer($data): ?array
     {
         $user = auth()->user();
+        $cacheKey = "answer:{$data['session_id']}:{$data['question_id']}";
+        $idempotencyKey = $data['idempotency_key'] ?? Str::uuid()->toString();
+
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            Log::info('FastAPI cache hit (submitDiagnosisAnswer)', ['question_id' => $data['question_id']]);
+
+            return $cached;
+        }
+
         try {
-            $response = Http::timeout($this->timeout)
-                ->asForm()
-                ->post($this->fastApiUrl.'/follow-up/answer', [
-                    'session_id' => $data['session_id'],
-                    'question_id' => $data['question_id'],
-                    'answer' => $data['answer'],
-                    'force_diagnosis' => $data['force_diagnosis'] ?? false,
-                ]);
+            $result = $this->withRetry(function ($attempt, $key) use ($data) {
+                $response = Http::timeout($this->timeout)
+                    ->withHeaders(['Idempotency-Key' => $key])
+                    ->asForm()
+                    ->post($this->fastApiUrl.'/follow-up/answer', [
+                        'session_id' => $data['session_id'],
+                        'question_id' => $data['question_id'],
+                        'answer' => $data['answer'],
+                        'force_diagnosis' => $data['force_diagnosis'] ?? false,
+                    ]);
 
-            if ($response->successful()) {
-                Log::info($response->json());
+                if ($response->successful()) {
+                    return $response->json();
+                }
 
-                $result = $response->json();
+                return null;
+            }, $idempotencyKey);
+
+            if ($result) {
+                Log::info($result);
                 $this->persistDiagnosisResult($data['session_id'], $result);
-
-                return $result;
+                Cache::put($cacheKey, $result, 300);
             }
-            Log::error('FastAPI submit diagnosis answer failed', ['body' => $response->body()]);
 
-            return null;
-
+            return $result;
         } catch (ConnectionException $e) {
             Log::error('FastAPI timeout (submitDiagnosisAnswer): '.$e->getMessage());
 

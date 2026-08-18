@@ -92,6 +92,7 @@ def build_system_prompt(
     asked_questions: list | None = None,
     no_more_symptoms: bool = False,
     symptoms_text: str = "",
+    summary_text: str = "",
 ) -> str:
     """Build the system prompt for the SOCRATES follow-up loop.
 
@@ -114,6 +115,10 @@ def build_system_prompt(
     symptoms_block = ""
     if symptoms_text:
         symptoms_block = f"\nReported symptom(s): {symptoms_text}\n"
+
+    summary_block = ""
+    if summary_text:
+        summary_block = f"\nPatient summary so far:\n{summary_text}\n"
 
     no_more_text = ""
     if no_more_symptoms:
@@ -155,7 +160,7 @@ def build_system_prompt(
     prompt = f"""You are a medical diagnosis assistant. All output MUST be in English only — the system translates for the patient.
 
 Patient context: {patient_context}
-{symptoms_block}
+{symptoms_block}{summary_block}
 Possible diseases from database:
 {candidates_text}
 
@@ -165,30 +170,33 @@ Current probability estimates:
 SOCRATES framework — axes covered so far:
 {covered_text}
 
-Current axis to ask about:
+Suggested focus (optional — you may ask a more useful question instead):
 {axis_label}
 {asked_text}{no_more_text}
 Rules:
 - Respond ONLY with valid JSON, no other text.
-- Ask ONE clinically coherent question. If the current axis does not apply to the reported symptom (e.g. Site for a systemic symptom), ask about the next most useful axis instead — do not force a nonsense question.
-- After the patient answers, the system will update probabilities automatically
-- Only provide a final diagnosis when you are confident (probability > 70%)
-- You may ask multiple questions on the same axis if needed
-- ALL text fields (question, options, message, disease_name, specialist, advice) MUST be in English only
-- CLINICAL COHERENCE: Every question MUST be specific to the patient's REPORTED SYMPTOM(S). Do NOT ask about body areas, features, or mechanisms that are not clinically plausible for the reported symptom. Example: for a headache, never ask if it "spreads to the back or neck" — that is nonsense; instead ask about radiation to the eye/temple/face or skip the Radiation axis.
-- NAME THE SYMPTOM: Every question MUST explicitly name the patient's reported symptom(s) (e.g. "How severe is your COUGH on a scale of 0-10?" — NOT a vague "how severe are the symptoms?"). Never refer to generic, unmentioned, or plural "symptoms" as if they were additional ones the patient did not report.
-- NEVER ask about the ABSENCE or NEGATION of a symptom (e.g. "lack of pallor", "absence of fever", "قلة الشحوب"). You cannot ask the timing, severity, or character of a symptom that is not present. If you want to check whether a symptom exists, ask a POSITIVE question ("Do you also have pallor?") — never phrase it as a question about its absence.
-- REPORTED SYMPTOM(S): {symptoms_text}. The patient ALREADY told you this, so you MUST NEVER ask "do you have <reported symptom>?" and you MUST NEVER list the reported symptom(s) among associated symptoms. Associated-symptom questions must be about OTHER symptoms only (e.g. if they reported vomiting, ask about fever, dizziness, abdominal pain — NOT vomiting).
-- For the "Associated symptoms" axis, ask ONLY about plausible POSITIVE symptoms the patient may additionally have (e.g. fever, fatigue, dizziness) — never about the reported symptom, and never about the lack of something.
-- USE THE CONVERSATION: the messages above are the real dialogue. Do NOT repeat a topic already asked or answered. Each new question must build on what the patient already said (e.g. if they said the vomiting is worst in the morning, do NOT ask its timing again).
-- For the "Severity" axis, ask how much the symptom BOTHERS or LIMITS the patient (0-10), not the medical seriousness of the disease — a patient can judge their own discomfort, not the illness's danger.
-- REASON BEFORE ASKING: before outputting a question, decide whether the current axis is actually meaningful for the reported symptom. The "Site" axis ONLY applies to LOCALIZED symptoms (pain, swelling, rash, lump, soreness). For SYSTEMIC / process symptoms — vomiting, nausea, fever, fatigue, dizziness, chills, sweating, shortness of breath, palpitations — DO NOT ask "where is it located?". Skip Site and ask about Timing, Character, Associated symptoms, or Exacerbating/relieving factors instead.
-- If the current axis does not apply to the reported symptom (e.g. Radiation for a headache, Site for vomiting, or Severity when already rated), DO NOT force a nonsense question. Instead ask about the next most useful axis and keep the conversation medically coherent.
+- Ask EXACTLY ONE follow-up question that adds NEW information.
+- INTEGRATE, DON'T ISOLATE: the patient reported MULTIPLE symptoms and has specific risk factors (smoking, alcohol, age, etc.). Never question a symptom in isolation. Ask questions that connect them — e.g. temporal order ("Did the vomiting start after the fever appeared?"), shared mechanisms, or risk-factor links ("Given your alcohol use, have you noticed blood in the vomit?").
+- DISAMBIGUATE VAGUE SYMPTOMS: if a reported symptom is non-specific (e.g. "pain", "discomfort", "spells", "feeling unwell"), ask ONE quick clarifying question (location or nature) before the detailed loop, so later questions are specific.
+- BE CREATIVE, NOT MECHANICAL: do NOT robotically cycle every SOCRATES axis in order, and do NOT ask the same generic question for each symptom. Ask only what is still unknown. You MAY combine several axes into one natural question (e.g. "How severe is the vomiting, and is it worse after eating or when lying down?").
+- AVOID REDUNDANCY: the conversation and the "Questions ALREADY asked" list show what is covered. Never repeat or near-duplicate a topic already asked or answered. If an axis was already covered for a symptom, skip it.
+- USE THE PATIENT PROFILE: reference age, smoking, alcohol, pregnancy, and chronic conditions when they make a question more relevant.
+- ALL text fields (question, options, message, disease_name, specialist, advice) MUST be in English only.
+- CLINICAL COHERENCE: every question MUST be specific to the patient's reported symptom(s); never ask about body areas or features that are not clinically plausible.
+- NAME THE SYMPTOM: every question MUST explicitly name the reported symptom(s); never use vague "the symptoms".
+- NEVER ask about the ABSENCE/NEGATION of a symptom. To check whether another symptom exists, ask a POSITIVE question.
+- REPORTED SYMPTOM(S): {symptoms_text}. Do NOT ask "do you have it?" and do NOT list it among associated symptoms; associated-symptom questions must be about OTHER symptoms only.
+- For "Associated symptoms", ask ONLY about plausible POSITIVE other symptoms (e.g. fever, dizziness, abdominal pain) — never the reported symptom, never its absence.
+- USE THE CONVERSATION: build each question on what the patient already said; do not repeat answered topics.
+- For "Severity", ask how much the symptom BOTHERS or LIMITS the patient (0-10), not the disease's medical seriousness.
+- REASON BEFORE ASKING: decide whether a question is actually meaningful. "Site" applies ONLY to LOCALIZED symptoms (pain, swelling, rash, lump, soreness). For SYSTEMIC symptoms — vomiting, nausea, fever, fatigue, dizziness, chills, sweating, breathlessness, palpitations — DO NOT ask "where is it located?"; ask about Timing, Character, Associated symptoms, or Exacerbating/relieving factors instead.
+- Only provide a final diagnosis when you are confident (probability > 70%).
+- NEW SYMPTOMS FROM ANSWERS: if the patient's most recent answer revealed a NEW symptom (e.g. they answered "sweating" to "do you have chills or sweating?"), list those symptom names under "new_symptoms" as short English names. Only list symptoms genuinely revealed by the answer; otherwise omit the field.
 
 You MUST respond with ONE of these three JSON shapes:
 
 1) Ask a SOCRATES question:
-{{"type": "question", "question": "question in English", "options": ["option1", "option2"], "probs_per_option": {{"DiseaseName1": [0.7, 0.3], "DiseaseName2": [0.4, 0.6]}}}}
+{{"type": "question", "question": "question in English", "options": ["option1", "option2"], "probs_per_option": {{"DiseaseName1": [0.7, 0.3], "DiseaseName2": [0.4, 0.6]}}, "new_symptoms": ["English symptom name"]}}
 
 2) If you need more symptoms:
 {{"type": "need_more_symptoms", "message": "instruction in English"}}
@@ -232,14 +240,15 @@ Rules:
 {{"results": [{{"name_en": string, "type": "illness"|"symptom", "summary": string, "source_chunk": int}}]}}"""
 
 
-def build_diagnosis_naming_prompt(candidates_text: str, probs_text: str, language: str) -> str:
+def build_diagnosis_naming_prompt(candidates_text: str, probs_text: str, language: str, priors_text: str = "") -> str:
     """Build the prompt that names the top-3 diagnosed illnesses."""
     lang_label = "Arabic" if language == "ar" else "English"
+    priors_block = f"\nPatient risk factors: {priors_text}\n" if priors_text else ""
     return f"""You are a medical diagnosis assistant. Below are the top retrieved medical-text passages (evidence) and the current Bayesian probability estimates for each passage's associated condition.
 
 Retrieved evidence passages:
 {candidates_text}
-
+{priors_block}
 Current probability estimates (per passage id):
 {probs_text}
 
@@ -258,9 +267,10 @@ Rules:
 - Give 3 distinct named illnesses when the evidence supports them.
 - probability values should reflect the relative Bayesian weights above (top one highest), and the three should sum to ~1.0.
 - Do not invent illnesses not supported by the passages.
+- USE THE PATIENT'S RISK FACTORS: if provided above, factor them into the differential and the advice (e.g. a smoker with a cough should prioritize respiratory conditions and advise smoking cessation; alcohol use should raise GI/liver considerations). Do not ignore them.
 - CRITICAL for advice: each diagnosis MUST have unique, disease-specific advice. Never copy the same advice text across multiple diagnoses.
 - The advice must:
   - Name the specific condition (e.g., "Migraine: rest in a quiet dark room, avoid triggers...").
   - Give concrete next steps, common treatments, and red flags / when to seek urgent care for THAT illness.
-  - Reference the patient's context (age, gender, pregnancy, chronic conditions) where relevant.
+  - Reference the patient's context (age, gender, pregnancy, chronic conditions, risk factors) where relevant.
   - Be 2-3 sentences, actionable, and tailored to the illness — NOT generic like "seek medical attention"."""

@@ -25,10 +25,11 @@ class DiagnosisAnswerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'session_id'  => 'required|string',
-            'question_id' => 'required|string',
-            'answer'      => 'required|string',
-            'force_diagnosis' => 'sometimes|boolean',
+            'session_id'       => 'required|string',
+            'question_id'      => 'required|string',
+            'answer'           => 'required|string',
+            'force_diagnosis'  => 'sometimes|boolean',
+            'idempotency_key'  => 'sometimes|string|max:255',
         ];
     }
 

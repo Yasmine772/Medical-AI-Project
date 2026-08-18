@@ -15,7 +15,8 @@ class CreatePaymentIntentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'session_hash' => 'required|string|exists:diagnosis_sessions,session_hash',
+            'session_hash'     => 'required|string|exists:diagnosis_sessions,session_hash',
+            'idempotency_key'  => 'sometimes|string|max:255',
         ];
     }
 

@@ -6,11 +6,12 @@ use App\Models\DiagnosisSession;
 use App\Models\Disease;
 use App\Models\Doctor;
 use App\Models\DoctorSchedule;
-use App\Models\User;
 use App\Models\PatientProfile;
+use App\Models\User;
 use App\Notifications\NewDiagnosisAssignedNotification;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class TestTrackingSeeder extends Seeder
 {
@@ -21,7 +22,7 @@ class TestTrackingSeeder extends Seeder
             ['name' => 'Diabetes',        'specialist' => 'Endocrinologist'],
             ['name' => 'Hypertension',    'specialist' => 'Cardiologist'],
             ['name' => 'Migraine',        'specialist' => 'Neurologist'],
-            ['name' => 'Fungal infection','specialist' => 'Dermatologist'],
+            ['name' => 'Fungal infection', 'specialist' => 'Dermatologist'],
             ['name' => 'Allergy',         'specialist' => 'Allergist / Immunologist'],
             ['name' => 'GERD',            'specialist' => 'Gastroenterologist'],
             ['name' => 'Pneumonia',       'specialist' => 'Pulmonologist'],
@@ -33,7 +34,7 @@ class TestTrackingSeeder extends Seeder
                 ['specialist' => $d['specialist'], 'risk_weight' => 5, 'description' => '']
             );
         }
-        $this->command->info('Seeded ' . count($diseases) . ' diseases with specialists.');
+        $this->command->info('Seeded '.count($diseases).' diseases with specialists.');
 
         // 2. Create test doctors with real specializations
         $doctorData = [
@@ -62,12 +63,83 @@ class TestTrackingSeeder extends Seeder
                 [
                     'specialization' => $d['specialization'],
                     'is_active' => true,
-                    'phone' => '0599' . random_int(100000, 999999),
+                    'phone' => '0599'.random_int(100000, 999999),
                     'years_of_experience' => random_int(3, 20),
                 ]
             );
         }
-        $this->command->info('Seeded ' . count($doctorData) . ' doctors.');
+        $this->command->info('Seeded '.count($doctorData).' doctors.');
+
+        // 2a. One doctor per AI specialist value so doctor assignment always finds a match
+        $extraSpecialists = [
+            'Allergist',
+            'Allergy Specialist',
+            'Cardiologist',
+            'Dentist',
+            'Dermatologist',
+            'Endocrinologist',
+            'ENT Specialist',
+            'Eye Specialist',
+            'Gastroenterologist',
+            'General Physician',
+            'General Practitioner',
+            'Gynaecologist',
+            'Gynecologist',
+            'Health Care Physician',
+            'Hepatologist',
+            'HIV Specialist',
+            'Immunologist',
+            'Infectious Disease Specialist',
+            'Nephrologist',
+            'Anesthesiologist',
+            'Neurologist',
+            'Neurosurgeon',
+            'Nutritionist',
+            'Oncologist',
+            'Ophthalmic Surgeon',
+            'Ophthalmologist',
+            'Optometrist',
+            'Orthopedic Surgeon',
+            'Otorhinolaryngologist',
+            'Pathologist',
+            'Pediatrician',
+            'Pharmacist',
+            'Physician',
+            'Psychiatrist',
+            'Pulmonologist',
+            'Renal Specialist',
+            'Rheumatologist',
+            'Skin Specialist',
+            'Sleep Specialist',
+            'Specialist',
+            'Surgeon',
+            'Technician',
+            'Therapist',
+            'Urologist',
+        ];
+
+        foreach ($extraSpecialists as $specialist) {
+            $user = User::firstOrCreate(
+                ['email' => 'doctor-'.Str::slug($specialist).'@test.com'],
+                [
+                    'full_name' => 'Dr. '.$specialist,
+                    'password' => Hash::make('password'),
+                    'email_verified_at' => now(),
+                ]
+            );
+            $user->assignRole('doctor');
+
+            Doctor::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'specialization' => $specialist,
+                    'is_active' => true,
+                    'phone' => '0598'.random_int(100000, 999999),
+                    'years_of_experience' => random_int(3, 20),
+                ]
+            );
+        }
+        $this->command->info('Seeded '.count($extraSpecialists).' specialist doctors.');
 
         // 2b. Seed weekly schedules (Sun-Thu 09:00-17:00, closed Fri-Sat)
         $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -78,15 +150,15 @@ class TestTrackingSeeder extends Seeder
                     ['doctor_id' => $doctor->id, 'day_of_week' => $day],
                     [
                         'start_time' => $isClosed ? null : '09:00:00',
-                        'end_time'   => $isClosed ? null : '17:00:00',
-                        'is_closed'  => $isClosed,
+                        'end_time' => $isClosed ? null : '17:00:00',
+                        'is_closed' => $isClosed,
                     ]
                 );
             }
         }
         $this->command->info('Seeded weekly schedules for all doctors.');
 
-        // 3. Create or update test user 
+        // 3. Create or update test user
         /**
          * Note: The test user is created with a known email and password for testing purposes.
          * you should replace the email and password with your own test credentials in a real application
@@ -156,26 +228,26 @@ class TestTrackingSeeder extends Seeder
         ];
 
         $fillAiData = function (DiagnosisSession $session, string $diseaseName) use ($aiData) {
-            if (!isset($aiData[$diseaseName])) {
+            if (! isset($aiData[$diseaseName])) {
                 return;
             }
             $data = $aiData[$diseaseName];
             $session->update([
-                'symptoms'     => $data['symptoms'],
-                'ai_result'    => $data['ai_result'],
-                'tips'         => $data['tips'],
+                'symptoms' => $data['symptoms'],
+                'ai_result' => $data['ai_result'],
+                'tips' => $data['tips'],
             ]);
         };
 
         $doctorEmailByDisease = [
-            'Diabetes'     => 'huda@test.com',
+            'Diabetes' => 'huda@test.com',
             'Hypertension' => 'sara@test.com',
-            'Migraine'     => 'omar@test.com',
+            'Migraine' => 'omar@test.com',
         ];
 
         $sessions = [
             [
-                'session_hash' => 'test-dm-' . uniqid(),
+                'session_hash' => 'test-dm-'.uniqid(),
                 'status' => 'ACTIVE',
                 'phase' => 'doctor_review',
                 'user_id' => $user->id,
@@ -184,7 +256,7 @@ class TestTrackingSeeder extends Seeder
                 'started_at' => now()->subHours(2),
             ],
             [
-                'session_hash' => 'test-ht-' . uniqid(),
+                'session_hash' => 'test-ht-'.uniqid(),
                 'status' => 'ACTIVE',
                 'phase' => 'report_ready',
                 'user_id' => $user->id,
@@ -194,7 +266,7 @@ class TestTrackingSeeder extends Seeder
                 'report_generated_at' => now()->subHours(6),
             ],
             [
-                'session_hash' => 'test-mg-' . uniqid(),
+                'session_hash' => 'test-mg-'.uniqid(),
                 'status' => 'COMPLETED',
                 'phase' => 'completed',
                 'user_id' => $user->id,
@@ -210,20 +282,20 @@ class TestTrackingSeeder extends Seeder
 
         foreach ($sessions as $s) {
             $existing = DiagnosisSession::where('session_hash', $s['session_hash'])->first();
-            if (!$existing) {
+            if (! $existing) {
                 $session = DiagnosisSession::create($s);
                 $diseaseName = Disease::find($session->disease_id)?->name;
                 $fillAiData($session, $diseaseName ?? '');
                 $createdSessions[] = $session;
             }
         }
-        $this->command->info('Seeded ' . count($sessions) . ' test sessions.');
+        $this->command->info('Seeded '.count($sessions).' test sessions.');
 
         // 4a-extra. Incomplete sessions (AI never finished -> no ai_result, no doctor, disease_id null)
         // so patient history / doctor lists filtering can be tested (db:seed only).
         $incompleteSessions = [
             [
-                'session_hash' => 'test-incomplete-' . uniqid(),
+                'session_hash' => 'test-incomplete-'.uniqid(),
                 'status' => 'ACTIVE',
                 'phase' => 'doctor_review',
                 'user_id' => $user->id,
@@ -232,7 +304,7 @@ class TestTrackingSeeder extends Seeder
                 'started_at' => now()->subMinutes(10),
             ],
             [
-                'session_hash' => 'test-incomplete-mid-' . uniqid(),
+                'session_hash' => 'test-incomplete-mid-'.uniqid(),
                 'status' => 'ACTIVE',
                 'phase' => 'doctor_review',
                 'user_id' => $user->id,
@@ -249,7 +321,7 @@ class TestTrackingSeeder extends Seeder
                 $s
             );
         }
-        $this->command->info('Seeded ' . count($incompleteSessions) . ' incomplete test sessions.');
+        $this->command->info('Seeded '.count($incompleteSessions).' incomplete test sessions.');
 
         // 4c. Notify each assigned doctor so the notification is visible right after seeding
         foreach ($createdSessions as $session) {
@@ -258,12 +330,12 @@ class TestTrackingSeeder extends Seeder
                 $doctor->user->notify(new NewDiagnosisAssignedNotification($session));
             }
         }
-        $this->command->info('Notified ' . count($createdSessions) . ' doctors about new diagnoses.');
+        $this->command->info('Notified '.count($createdSessions).' doctors about new diagnoses.');
 
         // 4b. Fill AI data into existing sessions (e.g. test-pay-*) so notifications show data without FastAPI
         foreach ($aiData as $diseaseName => $data) {
             $diseaseId = $diseaseIds[$diseaseName] ?? null;
-            if (!$diseaseId) {
+            if (! $diseaseId) {
                 continue;
             }
             DiagnosisSession::where('disease_id', $diseaseId)
@@ -273,7 +345,7 @@ class TestTrackingSeeder extends Seeder
         }
         $this->command->info('Filled AI data into sessions by disease.');
 
-       // 5. Create or update doctor weekly schedules by specialization (2 doctors per specialization splitting the week)
+        // 5. Create or update doctor weekly schedules by specialization (2 doctors per specialization splitting the week)
         $specializations = Doctor::select('specialization')->distinct()->pluck('specialization');
         $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -284,24 +356,25 @@ class TestTrackingSeeder extends Seeder
                 foreach ($days as $index => $day) {
                     if ($index >= 5) {
                         foreach ($specDoctors as $doc) {
-                            \App\Models\DoctorSchedule::updateOrCreate(
+                            DoctorSchedule::updateOrCreate(
                                 ['doctor_id' => $doc->id, 'day_of_week' => $day],
                                 ['start_time' => null, 'end_time' => null, 'is_closed' => true]
                             );
                         }
+
                         continue;
                     }
 
                     $assignedDoctor = ($index % 2 == 0) ? $specDoctors[0] : ($specDoctors->count() > 1 ? $specDoctors[1] : $specDoctors[0]);
                     $otherDoctor = ($specDoctors->count() > 1) ? (($index % 2 == 0) ? $specDoctors[1] : $specDoctors[0]) : null;
 
-                    \App\Models\DoctorSchedule::updateOrCreate(
+                    DoctorSchedule::updateOrCreate(
                         ['doctor_id' => $assignedDoctor->id, 'day_of_week' => $day],
                         ['start_time' => '09:00:00', 'end_time' => '17:00:00', 'is_closed' => false]
                     );
 
                     if ($otherDoctor) {
-                        \App\Models\DoctorSchedule::updateOrCreate(
+                        DoctorSchedule::updateOrCreate(
                             ['doctor_id' => $otherDoctor->id, 'day_of_week' => $day],
                             ['start_time' => null, 'end_time' => null, 'is_closed' => true]
                         );
@@ -311,6 +384,4 @@ class TestTrackingSeeder extends Seeder
         }
         $this->command->info('Seeded split weekly schedules for doctors by specialization.');
     }
-
-    
 }
