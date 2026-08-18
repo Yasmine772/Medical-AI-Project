@@ -33,7 +33,7 @@ class DoctorAssignmentService
 
         DiagnosisSession::where('id', $diagnosisDbId)->update([
             'doctor_id' => $doctor->id,
-            // 'status' => 'COMPLETED',
+            'status' => 'COMPLETED',
             
         ]);
 

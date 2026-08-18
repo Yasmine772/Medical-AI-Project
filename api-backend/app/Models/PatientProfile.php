@@ -7,8 +7,8 @@ use OwenIt\Auditing\Contracts\Auditable;
 
 class PatientProfile extends Model implements Auditable
 {
-
     use \OwenIt\Auditing\Auditable;
+
     protected $fillable = [
         'birth_date',
         'gender',
@@ -21,8 +21,8 @@ class PatientProfile extends Model implements Auditable
         'last_checkup_date',
         'user_id',
         'occupation',
-        'blood_type'
-    ];                              
+        'blood_type',
+    ];
 
     public function user()
     {
@@ -36,10 +36,9 @@ class PatientProfile extends Model implements Auditable
         'has_hypertension' => 'boolean',
         'is_pregnant' => 'boolean',
         'drinks_alcohol' => 'boolean',
-        'blood_type' => 'string:encrypted',
-        'occupation' => 'string:encrypted',
-        'gender' => 'string:encrypted',
-        'activity_level' => 'string:encrypted',
+        'blood_type' => 'encrypted',
+        'occupation' => 'encrypted',
+        'gender' => 'encrypted',
+        'activity_level' => 'encrypted',
     ];
-
 }

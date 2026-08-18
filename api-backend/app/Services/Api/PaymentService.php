@@ -2,18 +2,15 @@
 
 namespace App\Services\Api;
 
-use App\Mail\DoctorDiagnosisMail;
 use App\Models\DiagnosisSession;
 use App\Models\Payment;
 use App\Models\PaymentSplit;
 use App\Models\User;
 use App\Notifications\NewDiagnosisAssignedNotification;
-use App\Services\Api\DoctorAssignmentService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class PaymentService
 {
@@ -61,7 +58,7 @@ class PaymentService
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$session) {
+        if (! $session) {
             return null;
         }
 
@@ -69,7 +66,7 @@ class PaymentService
             ->where('status', 'pending')
             ->first();
 
-        if (!$payment) {
+        if (! $payment) {
             $payment = Payment::create([
                 'user_id' => $user->id,
                 'diagnosis_session_id' => $session->id,
@@ -83,7 +80,7 @@ class PaymentService
         return [
             'payment_id' => $payment->id,
             'amount' => $payment->amount,
-            'amount_display' => '$' . number_format($payment->amount / 100, 2),
+            'amount_display' => '$'.number_format($payment->amount / 100, 2),
             'currency' => $payment->currency,
         ];
     }
@@ -94,7 +91,7 @@ class PaymentService
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$session) {
+        if (! $session) {
             return null;
         }
 
@@ -130,16 +127,21 @@ class PaymentService
 
         try {
             $result = $this->withRetry(function () use ($user, $sessionHash, $idempotencyKey) {
-                if (!$user->hasStripeId()) {
+                if (! $user->hasStripeId()) {
                     $user->createOrGetStripeCustomer();
                 }
 
-                $payment = $user->pay(self::DIAGNOSIS_AMOUNT, [
-                    'idempotency_key' => $idempotencyKey,
+                $payment = $user->stripe()->paymentIntents->create([
+                    'amount' => self::DIAGNOSIS_AMOUNT,
+                    'currency' => 'usd',
+                    'customer' => $user->stripe_id,
+                    'automatic_payment_methods' => ['enabled' => true],
                     'metadata' => [
                         'session_hash' => $sessionHash,
                         'user_id' => $user->id,
                     ],
+                ], [
+                    'idempotency_key' => $idempotencyKey,
                 ]);
 
                 return $payment;
@@ -186,8 +188,9 @@ class PaymentService
     {
         $payment = Payment::where('stripe_payment_intent_id', $paymentIntentId)->first();
 
-        if (!$payment) {
+        if (! $payment) {
             Log::warning('Payment record not found for intent', ['payment_intent_id' => $paymentIntentId]);
+
             return;
         }
 
@@ -228,22 +231,23 @@ class PaymentService
     {
         $session = DiagnosisSession::find($payment->diagnosis_session_id);
 
-        if (!$session || $session->doctor_id) {
+        if (! $session || $session->doctor_id) {
             return;
         }
 
         $specialist = $this->getSpecialist($session);
 
-        if (!$specialist) {
+        if (! $specialist) {
             Log::warning('Doctor assignment: no specialist found', [
                 'session_hash' => $session->session_hash,
             ]);
+
             return;
         }
 
         try {
             $doctorId = app(DoctorAssignmentService::class)->assign($session->id, $specialist);
-           
+
             Log::info('Doctor assigned after payment', [
                 'session_hash' => $session->session_hash,
                 'specialist' => $specialist,
@@ -315,8 +319,8 @@ class PaymentService
         $payment = Payment::where('stripe_payment_intent_id', $paymentIntentId)
             ->with(['user:id,full_name,email', 'diagnosisSession:id,status'])
             ->first();
-        
-        if (!$payment) {
+
+        if (! $payment) {
             return null;
         }
 
