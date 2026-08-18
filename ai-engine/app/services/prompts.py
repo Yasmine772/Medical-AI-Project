@@ -167,18 +167,25 @@ Possible diseases from database:
 Current probability estimates:
 {probs_text}
 
-SOCRATES framework — axes covered so far:
-{covered_text}
+REASON ABOUT THE PICTURE — DO NOT FILL A CHECKLIST:
+Think like a clinician. From everything reported so far (symptoms, risk factors,
+prior answers, and the candidate diseases + probabilities above), identify the
+leading candidate conditions and the single most useful thing still unknown.
+Then ask ONE elegant question that either (a) surfaces an ASSOCIATED or
+COMPANION symptom that would confirm or refute a candidate, or (b) discriminates
+between the top candidates. Strongly prefer these over mechanically re-applying
+timing/severity/location to the reported symptoms one axis at a time.
 
-Suggested focus (optional — you may ask a more useful question instead):
-{axis_label}
+SOCRATES axes ALREADY covered (do NOT re-ask these topics):
+{covered_text}
 {asked_text}{no_more_text}
 Rules:
 - Respond ONLY with valid JSON, no other text.
 - Ask EXACTLY ONE follow-up question that adds NEW information.
 - INTEGRATE, DON'T ISOLATE: the patient reported MULTIPLE symptoms and has specific risk factors (smoking, alcohol, age, etc.). Never question a symptom in isolation. Ask questions that connect them — e.g. temporal order ("Did the vomiting start after the fever appeared?"), shared mechanisms, or risk-factor links ("Given your alcohol use, have you noticed blood in the vomit?").
 - DISAMBIGUATE VAGUE SYMPTOMS: if a reported symptom is non-specific (e.g. "pain", "discomfort", "spells", "feeling unwell"), ask ONE quick clarifying question (location or nature) before the detailed loop, so later questions are specific.
-- BE CREATIVE, NOT MECHANICAL: do NOT robotically cycle every SOCRATES axis in order, and do NOT ask the same generic question for each symptom. Ask only what is still unknown. You MAY combine several axes into one natural question (e.g. "How severe is the vomiting, and is it worse after eating or when lying down?").
+- BE CREATIVE THROUGH REASONING, NOT MECHANICAL CHECKLIST: do NOT robotically cycle SOCRATES axes in order, and never join the reported symptoms with "and" and bolt a single axis onto them. BAD (mechanical): "Is the fever and chills constant or does it come and go?" or "Rate the fever and chills from 0 to 3?". GOOD (reasoned): "Fever with chills often travels with other signs — have you noticed a rash, a cough, or burning when you urinate?" / "Fever and chills together can point to an infection — any recent travel, a skin wound, or pain in your side?". The question must reflect real clinical reasoning about what accompanies or distinguishes the likely causes, not a templated axis applied to a symptom list.
+- ASK ABOUT ASSOCIATIONS, NOT CHECKLIST ITEMS: when several symptoms are reported together, reason about the CONDITION they suggest and ask for the companion symptoms that would confirm or rule it out — e.g. for fever + chills ask about rash, cough, urinary symptoms, travel, or focal pain; for headache + visual disturbance ask about aura, nausea, light sensitivity. Never paraphrase the reported symptoms back with "and" and an axis.
 - AVOID REDUNDANCY: the conversation and the "Questions ALREADY asked" list show what is covered. Never repeat or near-duplicate a topic already asked or answered. If an axis was already covered for a symptom, skip it.
 - USE THE PATIENT PROFILE: reference age, smoking, alcohol, pregnancy, and chronic conditions when they make a question more relevant.
 - ALL text fields (question, options, message, disease_name, specialist, advice) MUST be in English only.
