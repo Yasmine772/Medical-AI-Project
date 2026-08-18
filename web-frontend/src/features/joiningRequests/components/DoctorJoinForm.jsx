@@ -17,6 +17,19 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+const SPECIALIZATIONS = [
+  "Allergist", "Allergy Specialist", "Cardiologist", "Dentist", "Dermatologist",
+  "Endocrinologist", "ENT Specialist", "Eye Specialist", "Gastroenterologist",
+  "General Physician", "General Practitioner", "Gynaecologist", "Gynecologist",
+  "Health Care Physician", "Hepatologist", "HIV Specialist", "Immunologist",
+  "Infectious Disease Specialist", "Nephrologist", "Anesthesiologist", "Neurologist",
+  "Neurosurgeon", "Nutritionist", "Oncologist", "Ophthalmic Surgeon", "Ophthalmologist",
+  "Optometrist", "Orthopedic Surgeon", "Otorhinolaryngologist", "Pathologist", "Pediatrician",
+  "Pharmacist", "Physician", "Psychiatrist", "Pulmonologist", "Renal Specialist",
+  "Rheumatologist", "Skin Specialist", "Sleep Specialist", "Specialist", "Surgeon",
+  "Technician", "Therapist", "Urologist",
+];
+
 export default function DoctorJoinForm() {
   const dispatch = useDispatch();
   const { loading, successMessage, error } = useSelector(
@@ -214,13 +227,11 @@ export default function DoctorJoinForm() {
                 required
               >
                 <option value="">اختر التخصص</option>
-                <option value="أمراض جلدية">أمراض جلدية</option>
-                <option value="أمراض باطنية">أمراض باطنية</option>
-                <option value="أطفال">أطفال</option>
-                <option value="قلبية وأوعية دموية">قلبية وأوعية دموية</option>
-                <option value="عظام ومفاصل">عظام ومفاصل</option>
-                <option value="طب عام">طب عام</option>
-                <option value="أخرى">أخرى</option>
+                {SPECIALIZATIONS.map((spec) => (
+                  <option key={spec} value={spec}>
+                    {spec}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
