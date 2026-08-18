@@ -1,4 +1,4 @@
- 
+
 <div align="center">
 
 <img src="https://img.shields.io/badge/Medical%20AI-Diagnostic%20System-blue?style=for-the-badge&logo=heart&logoColor=white" alt="Medical AI"/>
@@ -11,7 +11,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![React](https://img.shields.io/badge/React-18.x-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactjs.org)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://mysql.com)
-[![Pinecone](https://img.shields.io/badge/Pinecone-Vector%20DB-00B4D8?style=flat-square)](https://pinecone.io)
+[![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
@@ -25,83 +25,93 @@
 
 ## 📋 Overview
 
-**Medical-AI-Project** is an intelligent medical diagnostic system based on the **Socratic questioning methodology**. Instead of merely processing symptoms to provide an instant diagnosis, the system engages the patient with intelligent, sequential questions to extract precise information. It then leverages a **Retrieval-Augmented Generation (RAG)** pipeline to query a comprehensive medical knowledge base, ensuring accurate and reliable diagnostic suggestions.
+**Medical-AI-Project** is an intelligent medical diagnostic system based on the **Socratic questioning methodology**. Instead of merely processing symptoms to provide an instant diagnosis, the system engages the patient with intelligent, sequential questions to extract precise information. It then leverages a **Retrieval-Augmented Generation (RAG)** pipeline — backed by a Supabase `pgvector` knowledge base — to produce accurate, reliable diagnostic suggestions.
 
-Designed to enhance access to primary medical insights in the Syrian market, this tool serves as a clinical decision support system for practitioners, not a replacement for professional medical advice.
+The platform has three roles: **Patients** (consultations), **Doctors** (join the platform, manage their profile), and **Admins** (manage diseases/symptoms, review doctor join requests, insert medical knowledge).
+
+> **Key architectural rule:** the React frontend communicates **only** with the Laravel API. Laravel is the single entry point and **proxies** all AI calls to the FastAPI engine (e.g. knowledge insertion via `/admin/ai/insert/*`). The frontend never calls FastAPI directly.
 
 ---
 
 ## ✨ Features
 
 ### 🧠 AI Engine
-- **End-to-End RAG Pipeline:** Retrieves medical knowledge from clinical PDFs and protocols.
+- **End-to-End RAG Pipeline:** Retrieves medical knowledge from clinical PDFs and protocols stored as `pgvector` embeddings in Supabase.
 - **Cross-Encoder Reranking:** Enhances diagnostic precision by re-evaluating retrieved documents.
-- **Socratic Questioning Engine:** Implements logic to conduct interactive, step-by-step patient interviews.
-- **Semantic Search:** Understands medical intent beyond simple keyword matching.
+- **Socratic Questioning Engine:** Interactive, step-by-step patient interviews.
+- **Semantic Search:** Understands medical intent beyond keyword matching.
+- **Knowledge Insertion:** Admins upload PDF / JSON files; Laravel forwards them to FastAPI which chunks, embeds, and upserts into Supabase.
 
-### 👨‍⚕️ Patient Experience
+### 👨‍⚕️ Patient & Doctor Experience
 - Guided, intelligent symptom questionnaire.
+- Doctor **join-request** workflow (`/joining-requests` form → admin approval).
 - Comprehensive history of diagnostic sessions.
 - Exportable PDF diagnostic reports.
-- Intuitive, user-friendly interface.
+- Firebase Cloud Messaging (FCM) push notifications.
 
-### 👩‍💼 For Doctors & Admins
-- Integrated dashboard for disease and symptom management.
-- Patient and session tracking.
-- Full Audit Logging for accountability.
-- Detailed statistical reporting.
+### 👩‍💼 Admin
+- Dashboard for disease, symptom, and session management.
+- Review and approve doctor join requests.
+- AI knowledge-base insertion (PDF / JSON).
+- Multi-tier Role-Based Access Control (Patient / Doctor / Admin).
 
 ### 🔒 Security
 - Protection against **Indirect Prompt Injection**.
-- **Audit Logging** for every system interaction.
-- Sensitive data encryption.
-- Multi-tier Role-Based Access Control (Patient / Doctor / Admin).
+- **Audit Logging** for system interactions.
+- Multi-tier RBAC and OTP-based verification for sensitive flows.
+
 ---
+
 ## 📂 Project Structure
-This repository follows a Monorepo structure:
 
-- `/api-backend`: Laravel-based REST API for system management and orchestration.
-- `/ai-engine`: FastAPI service responsible for RAG, vector searches, and LLM integration.
-- `/web-frontend`: React-based Admin Dashboard.
+This repository is a **Monorepo** with three services:
 
----
+- `/api-backend`: Laravel 11 REST API — auth, CRUD, RBAC, orchestration, and AI proxy.
+- `/ai-engine`: FastAPI service — RAG, embeddings (`pgvector`), LLM integration, PDF processing.
+- `/web-frontend`: React 18 + Vite admin/doctor dashboard (run **locally**, not containerized in production).
 
 ```
 Medical-AI-Project/
-├── api-backend/      # Laravel 11.x REST API
-├── ai-engine/        # Python FastAPI engine
-├── web-frontend/     # React 18 Admin Dashboard (Vite)
-├── docker-compose.yml# Container orchestration
-└── .gitignore        # Global git ignore configuration
+├── api-backend/       # Laravel 11.x REST API
+├── ai-engine/         # Python FastAPI engine (uvicorn app.main:app)
+├── web-frontend/      # React 18 dashboard (Vite, runs locally)
+├── docker-compose.yml # Container orchestration (DB + Laravel + worker + AI)
+├── .github/workflows/ # CI/CD (deploy.yml → Azure VM)
+└── .gitignore
 ```
+
+> Note: the `docker-compose.yml` defines `database`, `laravel-app`, `queue-worker`, and `ai-engine`. There is **no** `react-app` service — the frontend is developed/run locally and pointed at the API via `VITE_API_URL`.
 
 ---
 
 ## 🏗️ Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│                    Clients Layer                        │
-│   Flutter Mobile App    React Web Dashboard             │
-└─────────────────────┬───────────────────────────────────┘
-                      │ HTTP / REST API
-┌─────────────────────▼───────────────────────────────────┐
-│                Laravel API (Backend)                    │
-│    Auth · CRUD · Sessions · Queue Dispatcher            │
-└──────────┬──────────────────────────┬───────────────────┘
-           │                          │ Redis Queue
-┌──────────▼──────────┐   ┌──────────▼───────────────────┐
-│        MySQL        │   │    Python FastAPI Engine     │
-│  Users · Diseases   │   │ RAG · Reranker · Gemini LLM  │
-│ Sessions · Doctors  │   └──────────┬───────────────────┘
-└─────────────────────┘              │
-                         ┌──────────▼───────────────────┐
-                         │           Pinecone           │
-                         │    Vector DB · Embeddings    │
-                         └──────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                     Web Frontend (React)                      │
+│   Runs locally (Vite :5173) · Admin & Doctor dashboard        │
+│   Talks ONLY to Laravel (VITE_API_URL)                        │
+└───────────────────────────┬──────────────────────────────────┘
+                            │  HTTPS / REST (Bearer token)
+┌───────────────────────────▼──────────────────────────────────┐
+│                     Laravel API (Backend)                     │
+│   Auth · RBAC · CRUD · Sessions · Queue Dispatcher            │
+│   Proxies AI calls (e.g. /admin/ai/insert/*) → FastAPI        │
+└───────┬───────────────────────┬────────────────┬─────────────┘
+        │                       │                │
+┌───────▼─────────┐   ┌─────────▼─────────┐  ┌───▼──────────────────┐
+│     MySQL       │   │  Queue Worker     │  │   FastAPI AI Engine  │
+│ Users·Diseases  │   │ (database queue)  │  │ RAG · LLM (Cloudflare │
+│ Sessions·Docs   │   └───────────────────┘  │ / Groq / NVIDIA)      │
+└─────────────────┘                          └─────────┬───────────┘
+                                                      │
+                                            ┌─────────▼──────────┐
+                                            │  Supabase (pgvector)│
+                                            │ Embeddings · Storage│
+                                            └─────────────────────┘
 
- ```                    
-
+        Notifications: Firebase Cloud Messaging (FCM) push
+```
 
 ---
 
@@ -109,11 +119,11 @@ Medical-AI-Project/
 
 | Component | Technology |
 | :--- | :--- |
-| **Backend** | Laravel 11.x, PHP 8.3, MySQL 8.0, Redis |
-| **AI Engine** | Python 3.11, FastAPI, LangChain, Pinecone, Google Gemini 1.5 Pro |
-| **Frontend** | React 18, TypeScript, TailwindCSS |
-| **Mobile** | Flutter 3.x, Riverpod |
-| **DevOps** | Docker, Docker Compose, GitHub Actions |
+| **Backend** | Laravel 11, PHP 8.3, MySQL 8.0, database-backed queue/cache/sessions (no Redis) |
+| **AI Engine** | Python 3.11+, FastAPI, Supabase (`pgvector`), Cloudflare AI / Groq / NVIDIA, Playwright (PDF) |
+| **Frontend** | React 18, Vite, Redux Toolkit, TailwindCSS, Firebase (FCM) |
+| **Auth / Payments** | Laravel Sanctum/Passport-style tokens, Google OAuth, Stripe |
+| **DevOps** | Docker, Docker Compose, GitHub Actions, Azure VM |
 
 ---
 
@@ -121,245 +131,212 @@ Medical-AI-Project/
 
 | Tool | Minimum Version | Verification |
 | :--- | :--- | :--- |
-| **Docker** *(Recommended)* | 24.x | `docker --version` |
-| **Docker Compose** *(Recommended)* | 2.x | `docker compose version` |
+| **Docker** *(recommended for the backend + AI engine)* | 24.x | `docker --version` |
+| **Docker Compose** | 2.x | `docker compose version` |
+| **Node.js** *(frontend)* | 18+ | `node --version` |
+| **PHP / Composer** *(local backend, optional)* | 8.3 | `php --version` |
+| **Python** *(local AI engine, optional)* | 3.11+ | `python --version` |
 | Git | 2.x | `git --version` |
 
-> **Note:** Docker is recommended for easier orchestration. For local development without Docker, see the steps below.
-
 ---
+
 ## 🚀 Quick Start
 
-This project is structured as a **Monorepo** with three independent services. Choose your preferred setup method below.
+### Option 1: 🐳 Docker Compose (backend + AI engine)
 
-### Option 1: 🐳 Docker Compose (Recommended)
+Spins up MySQL, Laravel, the queue worker, and the FastAPI engine. The React frontend is **not** containerized — run it separately (Option 2).
 
-#### 1.1 Prerequisites
-Ensure you have installed:
-* **Docker** (v24+)
-* **Docker Compose** (v2+)
-* **Git**
-
-#### 1.2 Clone the Repository
 ```bash
-git clone https://github.com/Yasmine772/Medical-AI-Project.git
-cd Medical-AI-Project
+# From repo root
+docker compose up -d --build
+
+# Logs
+docker compose logs -f laravel-app
+docker compose logs -f ai-engine
+docker compose logs -f queue-worker
+docker compose logs -f database
 ```
 
-#### 1.3 Start All Services
-```bash
-# Build and start all containers (MySQL, Laravel API, React Dashboard, AI Engine)
-docker-compose up -d
-
-# View logs from all services
-docker-compose logs -f
-
-# View logs from specific service
-docker-compose logs -f laravel-app
-docker-compose logs -f react-app
-docker-compose logs -f ai-engine
-docker-compose logs -f database
-```
-
-#### 1.4 Service URLs
-Once running, access the services at:
+**Service URLs (Docker):**
 
 | Service | URL | Port |
 | :--- | :--- | :--- |
 | **Laravel API** | http://localhost:8080 | 8080 |
-| **React Dashboard** | http://localhost:3000 | 3000 |
-| **AI Engine (FastAPI)** | http://localhost:5000 | 5000 |
-| **MySQL Database** | localhost:3306 | 3306 |
+| **AI Engine (FastAPI)** | http://localhost:5000/docs (Swagger) | 5000 |
+| **MySQL** | localhost:3306 (`laravel_user` / `laravel_password`) | 3306 |
 
-#### 1.5 Useful Docker Commands
+After the containers are up, run migrations:
 ```bash
-# Stop all services
-docker-compose down
-
-# Stop services and remove volumes (WARNING: deletes database data)
-docker-compose down -v
-
-# Rebuild specific service
-docker-compose up -d --build laravel-app
-
-# Execute command inside container
-docker-compose exec laravel-app php artisan migrate
-docker-compose exec ai-engine python main.py
-
-# View resource usage
-docker stats
+docker compose exec laravel-app php artisan migrate --force
+docker compose exec laravel-app php artisan db:seed --class=RolePermissionSeeder --force
 ```
 
----
-
-### Option 2: 💻 Local Development Setup (Without Docker)
-
-If you prefer to run services locally without Docker, follow the README.md in each service folder:
-
-#### **API Backend (Laravel)**
-📖 See [api-backend/README.md](api-backend/README.md) for:
-- PHP & Composer installation
-- Database setup
-- Laravel configuration & migrations
-- Local server startup
-
-```bash
-cd api-backend
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-php artisan serve
-```
-
-#### **AI Engine (Python/FastAPI)**
-📖 See [ai-engine/README.md](ai-engine/README.md) for:
-- Python & virtual environment setup
-- Dependencies installation
-- Environment configuration
-- FastAPI server startup
-
-```bash
-cd ai-engine
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-# macOS / Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-# Replace main.py with your service entrypoint file if different
-python main.py
-```
-
-#### **Web Frontend (React)**
-📖 See [web-frontend/README.md](web-frontend/README.md) for:
-- Node.js installation
-- Dependencies setup
-- Vite development server
-- Build configuration
+### Option 2: 💻 Frontend (local, separate terminal)
 
 ```bash
 cd web-frontend
 npm install
-npm run dev
+cp .env.example .env          # set VITE_API_URL (see Environment Configuration)
+npm run dev                   # http://localhost:5173
 ```
 
----
+> The dashboard is served by Vite. Point `VITE_API_URL` at your Laravel instance (local `http://localhost:8000`, the Docker API on `:8080`, or a cloud/ngrok domain). The doctor-join form and the `/doctor` proxy both read this same value.
 
-## 🔄 Service Dependencies & Startup Order
+### Option 3: 🔧 Fully local (no Docker)
 
-When running **locally without Docker**, start services in this order:
-
-1. **MySQL Database** (if not using Docker)
-   ```bash
-   # Ensure MySQL server is running
-   mysql --version
-   ```
-
-2. **Laravel API Backend**
-   ```bash
-   cd api-backend && php artisan serve  # Runs on http://localhost:8000
-   ```
-
-3. **AI Engine (FastAPI)**
-   ```bash
-   cd ai-engine && python main.py  # Runs on http://localhost:5000
-   ```
-
-4. **React Frontend**
-   ```bash
-   cd web-frontend && npm run dev  # Runs on http://localhost:5173
-   ```
+```bash
+# Terminal 1 — MySQL (your own instance)
+# Terminal 2 — Laravel
+cd api-backend && composer install && cp .env.example .env
+php artisan key:generate && php artisan migrate && php artisan serve   # :8000
+# Terminal 3 — AI Engine
+cd ai-engine && python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt && uvicorn app.main:app --reload        # :5000
+# Terminal 4 — Frontend
+cd web-frontend && npm install && npm run dev                          # :5173
+```
 
 ---
 
 ## 📋 Environment Configuration
 
-### Docker Environment
-Environment variables are automatically configured in `docker-compose.yml`:
-- **Database**: MySQL with root password and Laravel credentials
-- **Laravel**: Database connection, app key, cache drivers
-- **Python**: PYTHONUNBUFFERED flag for real-time logging
-
-### Local Development Environment
-
-Create `.env` files in each service folder:
-
-**api-backend/.env**
+### `api-backend/.env` (Laravel)
 ```env
 APP_NAME=MediScan
 APP_ENV=local
 APP_DEBUG=true
+APP_URL=http://localhost:8000
+
 DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
+DB_HOST=127.0.0.1          # use "database" inside docker-compose
 DB_PORT=3306
 DB_DATABASE=laravel_db
-DB_USERNAME=root
-DB_PASSWORD=
+DB_USERNAME=laravel_user
+DB_PASSWORD=laravel_password
+
+FASTAPI_URL=http://127.0.0.1:5000   # use "http://ai-engine:5000" in docker
+
+SESSION_DRIVER=database
+QUEUE_CONNECTION=database
+CACHE_STORE=database
+
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=465
+MAIL_USERNAME=your_mail@gmail.com
+MAIL_PASSWORD="your_app_password"
+MAIL_FROM_ADDRESS=your_mail@gmail.com
+MAIL_FROM_NAME="Medical-AI project"
+
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:8000/api/v1/auth/google/callback
+
+STRIPE_KEY=your_stripe_key
+STRIPE_SECRET=your_stripe_secret
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+
+FIREBASE_CREDENTIALS=storage/app/firebase-credentials.json
 ```
 
-**ai-engine/.env**
+### `ai-engine/.env` (FastAPI)
 ```env
-PINECONE_API_KEY=your_key
-PINECONE_INDEX=your_index
-GOOGLE_API_KEY=your_gemini_api_key
-PYTHONUNBUFFERED=1
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+GROQ_KEY=your_groq_key
+NVIDIA_API_KEY=your_nvidia_key
+CLOUDFLARE_API_KEY=your_cloudflare_key
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
+DEBUG=false
 ```
 
-**web-frontend/.env**
+### `web-frontend/.env` (Vite)
 ```env
-VITE_API_URL=http://localhost:8000/api
-VITE_AI_ENGINE_URL=http://localhost:5000
+# Local Laravel
+VITE_API_URL=http://localhost:8000
+# For cloud / mobile testing, point at your ngrok or VM domain instead:
+# VITE_API_URL=https://your-ngrok.ngrok-free.app
+```
+> Only `VITE_API_URL` is consumed (the `/doctor` dev proxy in `vite.config.js` reads the same value). The frontend does **not** call FastAPI directly.
+
+---
+
+## 🤖 AI Knowledge Insertion (Admin)
+
+Admins insert medical knowledge via the dashboard:
+
+1. Dashboard → upload a **PDF** or **JSON** file.
+2. Frontend `POST`s to Laravel `POST /admin/ai/insert/pdf` or `/admin/ai/insert/json-file`.
+3. `AiController` proxies the request (with file attachment) to FastAPI `/insert/*`.
+4. FastAPI chunks the content, generates embeddings, and **upserts** them into the Supabase `embeddings` table (idempotent).
+
+> The Supabase `embeddings` table needs INSERT/SELECT (and UPDATE) **Row-Level Security policies** enabled, or use the `service_role` key, otherwise inserts fail.
+
+---
+
+## 👩‍⚕️ Doctor Join Requests
+
+1. A doctor fills the form at `/joining-requests` → `POST /doctor/sendJoinRequest` (multipart: `full_name`, `email`, `password`, `phone`, `specialization`, `years_of_experience`, `license_number`, `license_file` (PDF), `cv_file` (PDF), optional `biography`/`photo`).
+2. The request is stored as `pending`.
+3. An admin approves it via the admin panel or `POST /admin/doctor-requests/approve/{id}` (requires the queue worker running).
+
+---
+
+## 🔄 CI/CD (GitHub Actions → Azure VM)
+
+`.github/workflows/deploy.yml` runs on push to `main`:
+
+1. Azure login, start the VM (`medical-ai-vm`).
+2. SCP the repo to `/home/azureuser/app`.
+3. Generate `api-backend/.env` and `ai-engine/.env` from GitHub secrets.
+4. `docker compose build` + `docker compose up -d` (MySQL, Laravel, queue-worker, AI engine).
+5. Run `migrate` + `storage:link`, prune old images.
+6. **Deallocate** the VM to save cost.
+
+To read data on the VM (e.g. an OTP):
+```bash
+ssh azureuser@<vm-ip>
+docker exec -it monorepo-db mysql -ularavel_user -plaravel_password laravel_db \
+  -e "SELECT id,email,otp,otp_verified_at FROM users WHERE email='razangung@gmail.com';"
+# or via Laravel tinker:
+docker exec -it laravel-app php artisan tinker
+>>> \App\Models\User::where('email','razangung@gmail.com')->first(['id','email','otp','otp_verified_at']);
 ```
 
 ---
 
-## 🛠️ Development Workflow
+## 🛠️ Useful Commands
 
-### With Docker Compose
 ```bash
-# Watch for changes and auto-reload
-docker-compose up -d
+# Stop everything
+docker compose down
 
-# SSH into container for debugging
-docker-compose exec laravel-app bash
-docker-compose exec ai-engine bash
+# Stop and DELETE database volume (WARNING: wipes data)
+docker compose down -v
 
-# Run database migrations
-docker-compose exec laravel-app php artisan migrate
+# Rebuild a service
+docker compose up -d --build laravel-app
 
-# Run tests
-docker-compose exec laravel-app php artisan test
-docker-compose exec ai-engine pytest
-```
+# Free disk space on the VM (safe — keeps the DB volume)
+docker builder prune -a -f
+docker system prune -a -f
 
-### Local Development
-```bash
-# Terminal 1: Laravel Backend
-cd api-backend && php artisan serve
-
-# Terminal 2: AI Engine
-cd ai-engine && python main.py
-
-# Terminal 3: React Frontend
-cd web-frontend && npm run dev
-
-# Terminal 4: Database (if needed)
-mysql -u root
+# Tinker / migrations
+docker compose exec laravel-app php artisan tinker
+docker compose exec laravel-app php artisan migrate
 ```
 
 ---
 
 ## ✅ Verification Checklist
 
-After startup, verify all services:
+After startup:
 
-- [ ] **Database**: `mysql -h localhost -u laravel_user -p` (password: laravel_password)
-- [ ] **Laravel API**: GET http://localhost:8080 (or 8000 locally)
-- [ ] **AI Engine**: GET http://localhost:5000/docs (or 5000 locally) — FastAPI Swagger UI
-- [ ] **React Dashboard**: http://localhost:3000 (or 5173 locally)
+- [ ] **MySQL**: `mysql -h localhost -u laravel_user -p` (password: `laravel_password`)
+- [ ] **Laravel API**: `curl http://localhost:8080` (or `:8000` locally)
+- [ ] **AI Engine**: open `http://localhost:5000/docs` (FastAPI Swagger UI)
+- [ ] **Frontend**: `http://localhost:5173` (set `VITE_API_URL` first)
+- [ ] **Queue worker** running (needed for doctor-request approvals)
 
 ---
 
@@ -368,5 +345,6 @@ After startup, verify all services:
 - [Laravel Documentation](https://laravel.com/docs)
 - [FastAPI Documentation](https://fastapi.tiangolo.com)
 - [React Documentation](https://react.dev)
+- [Supabase pgvector](https://supabase.com/docs/guides/database/extensions/pgvector)
 - [Docker Compose Reference](https://docs.docker.com/compose/compose-file)
-- [Pinecone Vector Database](https://docs.pinecone.io)
+- [GitHub Actions](https://docs.github.com/actions)
