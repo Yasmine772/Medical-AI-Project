@@ -18,9 +18,9 @@ class ReportController extends Controller
         $this->aiService = $aiService;
     }
 
-    public function generate(string $sessionId)
+    public function generate(Request $request, string $sessionId)
     {
-        $result = $this->aiService->generateReport($sessionId);
+        $result = $this->aiService->generateReport($sessionId, $request->input('language_code', 'en'));
 
         if ($result === null) {
             return $this->errorResponse('Report generation service error. Please check storage/logs/laravel.log for details', null, 503);
@@ -29,9 +29,9 @@ class ReportController extends Controller
         return $this->successResponse($result, 'Report generated successfully', 200);
     }
 
-    public function download(string $sessionId)
+    public function download(Request $request, string $sessionId)
     {
-        $result = $this->aiService->downloadReport($sessionId);
+        $result = $this->aiService->downloadReport($sessionId, $request->query('language_code', 'en'));
 
         if ($result === null) {
             return $this->errorResponse('Report download service error', null, 503);
@@ -40,9 +40,9 @@ class ReportController extends Controller
         return $result;
     }
 
-    public function preview(string $sessionId)
+    public function preview(Request $request, string $sessionId)
     {
-        $result = $this->aiService->previewReport($sessionId);
+        $result = $this->aiService->previewReport($sessionId, $request->query('language_code', 'en'));
 
         if ($result === null) {
             return $this->errorResponse('Report preview service error', null, 503);

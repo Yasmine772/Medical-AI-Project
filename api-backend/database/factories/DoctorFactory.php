@@ -1,0 +1,39 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Doctor;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<Doctor>
+ */
+class DoctorFactory extends Factory
+{
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+        'user_id' => User::factory(),
+        // 'full_name' => $this->faker->name(),     
+        // 'email' => $this->faker->unique()->safeEmail(),
+        // 'password' => bcrypt('password'),
+        'phone' => $this->faker->phoneNumber(),
+        'is_active' => $this->faker->boolean(80), 
+        'specialization' => $this->faker->randomElement([
+            'Cardiologist', 'Neurologist', 'Dermatologist', 'Gastroenterologist',
+            'Pulmonologist', 'Endocrinologist', 'Infectious Disease Specialist',
+            'General Physician', 'Pediatrician', 'Ophthalmologist',
+            'Orthopedic Surgeon', 'Hepatologist', 'Allergist / Immunologist',
+        ]), 
+        'years_of_experience'=> $this->faker->numberBetween(1, 30),
+        'photo' => $this->faker->imageUrl(640, 480),
+        'clinic_phone' => $this->faker->phoneNumber(),
+        ];
+    }
+}

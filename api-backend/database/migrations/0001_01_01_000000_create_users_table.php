@@ -23,6 +23,7 @@ return new class extends Migration
             $table->timestamp('otp_verified_at')->nullable();
             $table->string('avatar')->nullable();
             $table->integer('otp')->nullable(); 
+            $table->string('fcm_token')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });

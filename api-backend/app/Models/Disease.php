@@ -8,6 +8,7 @@ class Disease extends Model
 {
     protected $fillable = [
         'name',
+        'specialist',
         'risk_weight',
         'description',
     ];

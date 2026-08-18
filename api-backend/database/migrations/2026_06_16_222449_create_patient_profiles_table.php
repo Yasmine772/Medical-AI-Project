@@ -19,8 +19,10 @@ return new class extends Migration
             $table->boolean('has_diabetes')->default(false);
             $table->boolean('has_hypertension')->default(false);
             $table->boolean('is_pregnant')->default(false);
+            $table->boolean('drinks_alcohol')->default(false);
+            $table->string('occupation')->nullable();
             $table->enum('activity_level', ['sedentary', 'moderate', 'active'])->nullable();
-            $table->timestamp('last_checkup_date');
+            $table->timestamp('last_checkup_date')->nullable();
             //setting for user preferences
             $table->boolean('notifications_enabled')->default(true);
             $table->string('theme')->default('light');

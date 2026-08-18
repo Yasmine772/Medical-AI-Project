@@ -1,7 +1,161 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\settingController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Web\Admin\AuditLogs\AuditContoller;
+use App\Http\Controllers\Web\Admin\Dashboard\DashboardController;
+use App\Http\Controllers\Web\Doctor\Dashboard\DashboardController as DoctorDashboardController;
+use App\Http\Controllers\web\Admin\UserManagement\UserController;
+use App\Http\Controllers\Web\Auth\AuthController as WebAuthController;
+use App\Http\Controllers\Web\Admin\DoctorManagement\DoctorController;
+use App\Http\Controllers\Web\Doctor\DoctorReviewController;
+use App\Http\Controllers\Web\Doctor\DoctorScheduleController;
+use App\Http\Controllers\Api\V1\Ai\AiController;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+//setting
+Route::get('/legal/terms-of-use', [settingController::class, 'termsOfUse']);
+Route::get('/legal/privacy-policy', [settingController::class, 'privacyPolicy']);
+Route::get('/app/updates/latest', [settingController::class, 'latestUpdates']);
+
+
+Route::prefix('admin')->group(function () {
+    Route::post('/login', [WebAuthController::class, 'adminLogin']);
+    Route::post('/verifyOtp', [WebAuthController::class, 'adminVerifyOtp']);
+    Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
+
+    Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+    // Route::get('doctor-requests/', [DoctorController::class, 'index']);
+    // Route::patch('doctor-requests/approve/{id}', [DoctorController::class, 'approve']);
+    // Route::patch('doctor-requests/reject/{id}', [DoctorController::class, 'reject']);
+    // Route::get('doctor-requests/approvedDoctors', [DoctorController::class, 'showApprovedDoctors']);
+    // Route::get('doctor-requests/count', [DoctorController::class, 'getDoctorRequestCount']);
+
+    // Route::get('/notifications', [NotificationController::class, 'index']);
+    // Route::get('notifications/count-unread', [NotificationController::class, 'countUnreadNotifications']);
+    // Route::patch('notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
+    // Route::patch('notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
+
+
+    Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+
+        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:admin-logout');
+        // Profile routes
+        Route::get('/profile', [AuthController::class, 'viewProfile'])->middleware('permission:view-profile');
+        Route::patch('/profile', [AuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
+
+        Route::post('/push-fcm-token', [DoctorController::class, 'pushToken']);
+
+        // AI disease ingestion (proxied to FastAPI)
+        Route::post('/ai/insert/json-file', [AiController::class, 'insertJsonFile'])->middleware('permission:insert-disease');
+        Route::post('/ai/insert/pdf', [AiController::class, 'insertPdfFile'])->middleware('permission:insert-disease');
+
+
+        // User Management 
+        Route::get('/users', [UserController::class, 'index'])->middleware('permission:view-users');
+        Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->middleware('permission:toggle-user');
+
+        // Audit Logs
+        Route::prefix('audit-logs')->group(function () {
+            Route::get('/', [AuditContoller::class, 'showLogs'])->middleware('permission:show-logs');
+            Route::get('/count', [AuditContoller::class, 'countLogs'])->middleware('permission:count-logs');
+            Route::get('/changes', [AuditContoller::class, 'changeLogs'])->middleware('permission:change-logs');
+        });
+
+        // Dashboard
+        Route::prefix('dashboard')->group(function () {
+            Route::get('/current-date', [DashboardController::class, 'currentDate'])->middleware('permission:show-currentDate');
+            Route::get('/type-of-patient-count',[DashboardController::class, 'typeOfPatientCount'])->middleware('permission:type-of-patient-count');
+            Route::get('/user-active-count', [DashboardController::class, 'userActiveCount'])->middleware('permission:user-active-count');
+            Route::get('/doctor-active-count', [DashboardController::class, 'DoctorActiveCount'])->middleware('permission:doctor-active-count');
+            Route::get('/daily-diagnoses-count', [DashboardController::class, 'dailyDiagnosesCount'])->middleware('permission:daily-diagnoses-count');
+            Route::get('/new-content-items-count', [DashboardController::class, 'newContentItemsCount'])->middleware('permission:new-content-items-count');
+            Route::get('/top-specialties-by-diagnoses', [DashboardController::class, 'getTopDiseasesByDiagnoses'])->middleware('permission:top-specialties-by-diagnoses');
+            Route::get('/diagnosis-sessions-status-count', [DashboardController::class, 'diagnosisSessionsStatusCount'])->middleware('permission:diagnosis-sessions-status-count');
+            Route::get('/platform-profits', [DashboardController::class, 'platformProfits'])->middleware('permission:show-platform-profits');
+        });
+
+        //Doctor management 
+        Route::prefix('doctor-requests')->group(function () {
+            Route::get('/approvedDoctors', [DoctorController::class, 'showApprovedDoctors'])->middleware('permission:show-approved-doctors');
+            Route::get('/count', [DoctorController::class, 'getDoctorRequestCount'])->middleware('permission:show-doctor-request-count');
+            Route::get('/', [DoctorController::class, 'index'])->middleware('permission:show-doctor-requests');
+            Route::get('/{id}', [DoctorController::class, 'show'])->middleware('permission:show-doctor-request-details');
+            Route::patch('approve/{id}', [DoctorController::class, 'approve'])->middleware('permission:approve-doctor-request');
+            Route::patch('reject/{id}', [DoctorController::class, 'reject'])->middleware('permission:reject-doctor-request');
+        });
+        
+    });
+
+    // Route::prefix('notifications')->group(function () {
+    //     Route::get('/', [NotificationController::class, 'index'])->middleware('permission:show-all-notifications');
+    //     Route::get('/count-unread', [NotificationController::class, 'countUnreadNotifications'])->middleware('permission:show-count-unread-notifications');
+    //     Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:mark-all-as-read-notifications');
+    //     Route::patch('/{notificationId}/read', [NotificationController::class, 'markAsRead'])->middleware('permission:mark-as-read-notifications');
+    // });
+});
+
+Route::prefix('doctor')->group(function () {
+    Route::post('/sendJoinRequest', [DoctorController::class, 'sendJoinRequest']);
+    Route::post('/login', [WebAuthController::class, 'doctorLogin']);
+    Route::post('/verifyOtpForEmail', [WebAuthController::class, 'doctorVerifyOtpForEmail']);
+    Route::post('/verifyOtpForPassword', [WebAuthController::class, 'doctorVerifyOtpForPassword']);
+    Route::post('/resendOtp', [AuthController::class, 'resendOtp']);
+    Route::post('/forget-password', [AuthController::class, 'forgetPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+
+    Route::middleware(['auth:sanctum', 'role:doctor'])->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout'])->middleware('permission:doctor-logout');
+        // Profile routes
+        Route::get('/profile', [WebAuthController::class, 'viewProfile'])->middleware('permission:view-profile');
+        Route::patch('/profile', [WebAuthController::class, 'updateProfile'])->middleware('permission:edit-profile');
+
+        Route::get('/summary', [DoctorDashboardController::class, 'getDoctorSummary'])->middleware('permission:get-doctor-summary');
+        Route::patch('/availability', [DoctorDashboardController::class, 'updateAvailability'])->middleware('permission:update-availability');
+    
+        Route::get('/profits', [DoctorDashboardController::class, 'getDoctorProfits'])->middleware('permission:get-profits');
+        Route::get('/profits/daily', [DoctorDashboardController::class, 'getDailyProfits'])->middleware('permission:get-daily-profits');
+        Route::get('/profits/monthly', [DoctorDashboardController::class, 'getMonthlyProfits'])->middleware('permission:get-monthly-profits');
+
+        Route::get('/today-cases', [DoctorDashboardController::class, 'todayCases'])->middleware('permission:view-today-cases');
+        Route::get('/month-cases', [DoctorDashboardController::class, 'monthCases'])->middleware('permission:view-month-cases');
+
+        Route::get('/recent-completed', [DoctorDashboardController::class, 'recentCompleted'])->middleware('permission:view-recent-completed-cases');
+        Route::get('/case/{id}', [DoctorDashboardController::class, 'getCase'])->middleware('permission:view-case-details');
+        Route::get('/incoming-cases', [DoctorDashboardController::class, 'incomingCases'])->middleware('permission:view-incoming-cases');
+        Route::get('/urgent-cases', [DoctorDashboardController::class, 'urgentCases'])->middleware('permission:view-urgent-cases');
+
+        Route::post('/check-expired', [DoctorDashboardController::class, 'checkExpired']);
+        Route::post('/reassign/{id}', [DoctorDashboardController::class, 'reassign']);
+
+
+
+        //Weekly Schedule routes
+        Route::get('/schedules', [DoctorScheduleController::class, 'index'])->middleware('permission:view-doctor-schedules');
+        Route::patch('/schedules/{id}', [DoctorScheduleController::class, 'update'])->middleware('permission:update-doctor-schedules');
+
+        // Diagnosis review routes (AI data assigned to this doctor)
+        Route::get('/reviews', [DoctorReviewController::class, 'index'])->middleware('permission:view-doctor-reviews');
+        Route::get('/reviews/stats', [DoctorReviewController::class, 'stats'])->middleware('permission:view-doctor-reviews');
+        //this route is for getting the details of a specific diagnosis session assigned to the doctor for review
+        Route::get('/reviews/{sessionHash}', [DoctorReviewController::class, 'show'])->middleware('permission:view-doctor-reviews');
+        Route::get('/reviews/{sessionHash}/pdf', [DoctorReviewController::class, 'getPdf'])->middleware('permission:view-doctor-reviews');
+        Route::post('/reviews/{sessionHash}/submit', [DoctorReviewController::class, 'submit'])->middleware('permission:submit-doctor-review');
+
+
+
+
+
+
+
+
+
+    });
 });

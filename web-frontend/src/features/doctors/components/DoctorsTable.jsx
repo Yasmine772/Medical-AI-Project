@@ -1,68 +1,67 @@
+import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { deleteDoctor } from "../doctorsSlice";
-import { useOutletContext } from "react-router-dom";
-
+import { fetchApprovedDoctors } from "../doctorsSlice";
+import api from "../../../api/axios";
 const DoctorsTable = () => {
- 
-  const fullState = useSelector((state) => state);
-  console.log("Current Redux State:", fullState);
-  const doctors = useSelector((state) => state.doctors.approved || []);
   const dispatch = useDispatch();
-  const { setActionModal } = useOutletContext();
-  const handleDelete = (doctor) => {
-    setActionModal({
-      isOpen: true,
-      type: "Delete", 
-      onConfirm: () => {
-        dispatch(deleteDoctor(doctor.id)); 
-      },
-    });
+  const { approved, loading } = useSelector((state) => state.doctors);
+
+  
+  useEffect(() => {
+    dispatch(fetchApprovedDoctors());
+  }, [dispatch]);
+
+  const getDoctorPhotoUrl = (photoPath) => {
+    if (!photoPath) return "https://via.placeholder.com/40";
+    if (photoPath.startsWith("http")) return photoPath;
+   
+    return `${api.defaults.baseURL}/storage/${photoPath}`;
+    // أو إذا كان الـ API يخزنها مباشرة بدون storage/ ارجعي للرابط السابق:
+    // return `${api.defaults.baseURL}/${photoPath}`;
   };
+
   return (
     <div className="bg-white/30 backdrop-blur-md rounded-3xl border border-white/50 p-6 mt-6 shadow-sm">
       <h2 className="text-xl font-bold mb-6 text-gray-700">
         Doctors Directory
       </h2>
+
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="text-gray-400 text-sm border-b border-white/30">
-            <th className="pb-4">Doctor Profile</th>
+            <th className="pb-4">Doctor Photo</th>
+            <th className="pb-4">Name</th>
+            <th className="pb-4">Email</th>
+            <th className="pb-4">Phone</th>
             <th className="pb-4">Specialization</th>
-            <th className="pb-4">Status</th>
-            <th className="pb-4">Action</th>
           </tr>
         </thead>
         <tbody className="text-gray-700">
-          {doctors.length > 0 ? (
-            doctors.map((doc) => (
+          {loading ? (
+            <tr>
+              <td colSpan="5" className="py-6 text-center text-gray-500">
+                Loading doctors...
+              </td>
+            </tr>
+          ) : approved.length > 0 ? (
+            approved.map((doc) => (
               <tr key={doc.id} className="border-b border-white/20">
-                <td className="py-4 font-semibold">{doc.name}</td>
-                <td className="py-4">{doc.specialty}</td>
                 <td className="py-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs ${
-                      doc.status === "Active"
-                        ? "bg-green-100 text-green-600"
-                        : "bg-yellow-100 text-yellow-600"
-                    }`}
-                  >
-                    {doc.status}
-                  </span>
+                  <img
+                    src={getDoctorPhotoUrl(doc.photo)}
+                    alt={`${doc.full_name}'s profile`}
+                    className="w-20 h-20 rounded-full object-cover"
+                  />
                 </td>
-               
-                <td className="py-4">
-                  <button
-                    onClick={() => handleDelete(doc)}
-                    className="text-red-500 font-bold hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
+                <td className="py-4 font-semibold">{doc.full_name}</td>
+                <td className="py-4 text-gray-600">{doc.email}</td>
+                <td className="py-4 text-gray-600">{doc.phone}</td>
+                <td className="py-4">{doc.specialization}</td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="4" className="py-6 text-center text-gray-500">
+              <td colSpan="5" className="py-6 text-center text-gray-500">
                 No approved doctors yet.
               </td>
             </tr>

@@ -2,10 +2,10 @@
 
 namespace App\Services\Api;
 
+use App\Models\Doctor;
 use App\Models\User;
 use App\Notifications\OTPNotification;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class OTPService 
 {
@@ -14,12 +14,12 @@ class OTPService
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expiresAt = Carbon::now()->addMinutes(5);
 
+        $user->notify((new OTPNotification($otp))->onQueue('default'));
+
         $user->update([ 'otp' => $otp,
                         'expires_at' => $expiresAt ,
-                        'otp_verified_at' => now()
+                        'otp_verified_at' => null
                     ]);
-
-        $user->notify(new OTPNotification($otp));
     }
     //************************************************* */
     public function verifyOtp(array $request)
@@ -42,6 +42,7 @@ class OTPService
             'otp' => null,
             'expires_at' => null,
             'otp_verified_at' => now(),
+            'email_verified_at'=> now()
         ]);
 
         if($user->otp == null){
@@ -54,7 +55,6 @@ class OTPService
     public function resendOtp(array $request)
     {
         $user = User::where('email', $request['email'])->first();
-
         if (!$user) {
             return 'UserNotFound';
         }

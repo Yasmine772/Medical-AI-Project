@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Notifications;
+
+use App\Models\DoctorRequest;
+use App\Notifications\Channels\FirebaseChannel;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Notification;
+
+class NewDoctorRequestNotification extends Notification implements ShouldQueue
+{
+    use Queueable;
+
+    protected DoctorRequest $doctorRequest;
+
+    public function __construct(DoctorRequest $doctorRequest)
+    {
+        $this->doctorRequest = $doctorRequest;
+    }
+
+    /**
+     * Get the notification's delivery channels.
+     */
+    public function via($notifiable): array
+    {
+        return ['database', 'firebase']; 
+    }
+
+    /**
+     * Get the array representation of the notification.
+     */
+    public function toArray($notifiable)
+    {
+        return [
+            'type' => 'new_doctor_request',
+            'title' => 'New Doctor Request',
+            'message' => "New doctor request from {$this->doctorRequest->full_name}",
+            'doctor_request_id' => $this->doctorRequest->id,
+            'full_name' => $this->doctorRequest->full_name,
+            'email' => $this->doctorRequest->email,
+            'specialization' => $this->doctorRequest->specialization,
+            'url' => "/admin/doctor-requests/{$this->doctorRequest->id}",
+        ];
+    }
+
+    public function toFirebase($notifiable)
+    {
+        return [
+            'title' => 'New Doctor Request',
+            'body' => "New doctor request from {$this->doctorRequest->full_name}",
+            'click_action' => url("/admin/doctor-requests/{$this->doctorRequest->id}"),
+        ];
+    }
+}

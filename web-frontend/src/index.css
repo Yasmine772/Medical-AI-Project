@@ -1,15 +1,12 @@
 @import "tailwindcss";
 
 @theme {
- 
   --color-medical: #72a6bb;
   --color-medical-light: #e3f0f5;
   --color-medical-dark: #58889b;
 
-  
   --font-tajawal: "Tajawal", sans-serif;
 }
-
 
 @layer base {
   body {

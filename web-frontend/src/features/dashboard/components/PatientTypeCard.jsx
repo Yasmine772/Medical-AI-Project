@@ -1,16 +1,15 @@
-const PatientTypeCard = () => {
+const PatientTypeCard = ({ now, regular }) => {
   return (
-    <div className="!bg-white/30 backdrop-blur-md p-6 rounded-3xl shadow-sm border border-gray-100">
-      <h3 className="text-sm text-gray-500 mb-4">Type of Patients</h3>
-      <div className="flex justify-between text-center">
+    <div className="bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/50 shadow-sm">
+      <h3 className="text-gray-500 font-bold text-sm mb-4">Type of Patients</h3>
+      <div className="flex justify-between">
         <div>
-          <p className="text-xs text-gray-400">NOW</p>
-          <p className="text-2xl font-bold">10</p>
+          <p className="text-gray-400 text-xs uppercase">Now</p>
+          <p className="text-2xl font-bold text-gray-800">{now}</p>
         </div>
-        <div className="w-px bg-gray-200" /> {/* خط فاصل */}
         <div>
-          <p className="text-xs text-gray-400">REGULAR</p>
-          <p className="text-2xl font-bold">10</p>
+          <p className="text-gray-400 text-xs uppercase">Regular</p>
+          <p className="text-2xl font-bold text-gray-800">{regular}</p>
         </div>
       </div>
     </div>

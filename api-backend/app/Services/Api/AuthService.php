@@ -3,22 +3,28 @@
 namespace app\Services\Api;
 
 use App\Models\User;
+use App\Models\Notification;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-
+use App\Notifications\WelcomeMessageNotification;
 class AuthService
 {
     public function register(array $data)
     {
+        $existingUser = User::where('email', $data['email'])->first();
+
+        if ($existingUser) {
+            return $existingUser;
+        }
+
         $user = User::create([
             'full_name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
-
         $user->assignRole('patient');
 
         return $user;
@@ -40,13 +46,21 @@ class AuthService
 
         $accessTokenExpiresAt = Carbon::now()->addDays(1);
 
-        $accessToken = $user->createToken('access_token', ['*'], $accessTokenExpiresAt)->plainTextToken;
-        
-        return [
+        $accessToken = $user->createToken('access_token', ['patient'], $accessTokenExpiresAt)->plainTextToken;
+
+        if (isset($data['fcm_token'])) {
+             $user->update(['fcm_token' => $data['fcm_token']]);
+             $user->notify(new WelcomeMessageNotification());
+        }
+
+        $user->notify(new WelcomeMessageNotification());
+
+            return [
             'user' => $user,
             'access_token' =>  $accessToken,
             'access_token_expires_at' => '1 day',
             'token_type' => 'Bearer',
+            'fcm_token' => $data['fcm_token'] ?? null
         ];
     }
 
@@ -65,20 +79,21 @@ class AuthService
      *
      * @return User
      */
-    public function updateProfile(User $user, array $data, $avatarFile = null)
+    public function updateProfile(User $user, array $data, $avatarFile = null, bool $isMedicalOnly = false)
     {
-        // dd($avatarFile);
-        if ($avatarFile instanceof UploadedFile) {
+        if (!$isMedicalOnly && $avatarFile instanceof UploadedFile) {
             if ($user->avatar) {
                 Storage::disk('public')->delete($user->avatar);
             }
             $user->avatar = $avatarFile->store('avatars', 'public');
         }
 
-        $user->update([
-            'full_name' => $data['full_name'] ?? $user->full_name,
-            'avatar' => $user->avatar ?? $user->avatar,
-        ]);
+        if (!$isMedicalOnly) {
+            $user->update([
+                'full_name' => $data['full_name'] ?? $user->full_name,
+                'avatar' => $user->avatar ?? $user->avatar,
+            ]);
+        }
         $medicalData = array_intersect_key($data, array_flip([
             'birth_date',
             'gender',
@@ -87,7 +102,14 @@ class AuthService
             'has_hypertension',
             'is_pregnant',
             'activity_level',
+            'drinks_alcohol',
+            'occupation',
+            'blood_type',
         ]));
+
+        if (isset($medicalData['blood_type']) && $medicalData['blood_type'] !== null) {
+            $medicalData['blood_type'] = strtoupper(trim($medicalData['blood_type']));
+        }
 
         $user->profile()->updateOrCreate(
             ['user_id' => $user->id],

@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable;
 
-
-class PatientProfile extends Model
+class PatientProfile extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
+
     protected $fillable = [
         'birth_date',
         'gender',
@@ -14,10 +16,13 @@ class PatientProfile extends Model
         'has_diabetes',
         'has_hypertension',
         'is_pregnant',
+        'drinks_alcohol',
         'activity_level',
         'last_checkup_date',
         'user_id',
-    ];                              
+        'occupation',
+        'blood_type',
+    ];
 
     public function user()
     {
@@ -30,6 +35,10 @@ class PatientProfile extends Model
         'has_diabetes' => 'boolean',
         'has_hypertension' => 'boolean',
         'is_pregnant' => 'boolean',
+        'drinks_alcohol' => 'boolean',
+        'blood_type' => 'encrypted',
+        'occupation' => 'encrypted',
+        'gender' => 'encrypted',
+        'activity_level' => 'encrypted',
     ];
-
 }

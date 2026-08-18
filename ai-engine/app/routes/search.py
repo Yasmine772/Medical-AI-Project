@@ -1,3 +1,4 @@
+"""Raw vector-search endpoint (no LLM), mostly for debugging/development."""
 from fastapi import APIRouter, Query
 from app.state import get_store, get_embedder
 
@@ -5,7 +6,7 @@ router = APIRouter()
 
 
 @router.get("/search")
-async def search(q: str = Query(""), limit: int = Query(5)):
+def search(q: str = Query(""), limit: int = Query(5)):
     if not q:
         return {"results": []}
     store = get_store()

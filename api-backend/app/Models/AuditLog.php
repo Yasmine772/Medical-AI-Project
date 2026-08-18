@@ -1,23 +1,35 @@
 <?php
-
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Models\Audit as BaseAudit;
 
-class AuditLog extends Model
+class AuditLog extends BaseAudit
 {
-    protected $fillable = [
-        'action',
-        'table_name',
-        'record_id',
-        'old_data',
-        'new_data',
-        'user_id',
-        'created_at'
-    ];
-
-    public function user()
+    /**
+     * Scope a query to filter audit logs by event.
+     */
+  public function scopeByEvent($query, $event)
     {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+        return $query->when($event, function ($q) use ($event) {
+            $q->where('event', $event);
+        });
+    }
+
+    /**
+     * Scope a query to filter audit logs by category (user type).
+     */
+      public function scopeByCategory($query, $category)
+    {
+        return $query->when($category, function ($q) use ($category) {
+            $q->where('user_type', $category);
+        });
+    }
+
+    /**
+     * Scope a query to filter audit logs created today.
+     */
+    public function scopeToday($query)
+    {
+       return $query->whereDate('created_at', today());
     }
 }

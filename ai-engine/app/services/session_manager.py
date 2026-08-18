@@ -1,3 +1,8 @@
+"""Persistence for diagnosis sessions, conversations, and generated questions.
+
+Sessions are stored in Supabase via Postgres RPCs; the ``candidates`` dict
+holds the live diagnosis state (selected symptoms, probabilities, diseases).
+"""
 import json
 import os
 import uuid
@@ -11,6 +16,7 @@ from app.services.logger import log
 
 
 class SessionManager:
+    """CRUD wrapper around the Supabase diagnosis session tables."""
 
     def __init__(self):
         self.supabase_url = os.environ.get("SUPABASE_URL")
@@ -20,6 +26,7 @@ class SessionManager:
         self._supabase: Optional[Client] = None
 
     def connect(self):
+        """Lazily create and return the Supabase client."""
         if self._supabase is None:
             self._supabase = create_client(self.supabase_url, self.supabase_key)
         return self._supabase
@@ -33,6 +40,7 @@ class SessionManager:
         initial_symptoms: str,
         candidates: Optional[List[Dict]] = None,
     ) -> str:
+        """Create a new diagnosis session and return its UUID."""
         session_id = str(uuid.uuid4())
         self._rpc("create_diagnosis_session", {
             "p_id": session_id,
@@ -44,6 +52,7 @@ class SessionManager:
         return session_id
 
     def get_session(self, session_id: str) -> Optional[Dict]:
+        """Load a session, JSON-decoding its ``conversation`` and ``candidates``."""
         result = self._rpc("get_diagnosis_session", {"p_id": session_id})
         if not result.data:
             log("DB", f"Session {session_id[:8]} not found")
@@ -65,6 +74,7 @@ class SessionManager:
         status: Optional[str] = None,
         candidates: Optional[Dict] = None,
     ):
+        """Persist the conversation transcript (and optionally status/candidates)."""
         data = {"conversation": json.dumps(conversation)}
         if status:
             data["status"] = status
@@ -72,3 +82,63 @@ class SessionManager:
             data["candidates"] = json.dumps(candidates)
         self.connect().table("diagnosis_sessions").update(data).eq("id", session_id).execute()
         log("DB", f"Updated session {session_id[:8]} status={status or '-'} candidates_keys={list(candidates.keys()) if candidates else 'none'}")
+
+    def insert_question(
+        self,
+        session_id: str,
+        question_index: int,
+        question_jsonb: Dict,
+    ) -> Optional[str]:
+        """Persist a generated question; returns its DB id (or None on failure)."""
+        try:
+            result = self._rpc("insert_diagnosis_question", {
+                "p_session_id": session_id,
+                "p_question_index": question_index,
+                "p_question_jsonb": json.dumps(question_jsonb),
+            })
+            qid = result.data
+            if isinstance(qid, list) and qid:
+                qid = qid[0]
+            log("DB", f"Inserted question {qid} for session {session_id[:8]} idx={question_index}")
+            return qid
+        except Exception as e:
+            log("DB", f"insert_question failed (non-fatal): {e}")
+            return None
+
+    def get_question(self, question_id: str) -> Optional[Dict]:
+        """Load a single question by id."""
+        result = self._rpc("get_diagnosis_question", {"p_id": question_id})
+        if not result.data:
+            return None
+        q = result.data
+        if isinstance(q, str):
+            q = json.loads(q)
+        return q
+
+    def list_questions(self, session_id: str) -> List[Dict]:
+        """Return all questions recorded for a session."""
+        result = self._rpc("list_diagnosis_questions", {"p_session_id": session_id})
+        if not result.data:
+            return []
+        data = result.data
+        if isinstance(data, str):
+            data = json.loads(data)
+        return data if isinstance(data, list) else []
+
+    def list_sessions_by_user(self, user_id: str) -> List[Dict]:
+        """Return completed sessions for a user, newest first."""
+        result = (
+            self.connect()
+            .table("diagnosis_sessions")
+            .select("id, user_id, created_at, updated_at, status, candidates")
+            .eq("user_id", user_id)
+            .eq("status", "completed")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        if not result.data:
+            return []
+        rows = result.data
+        if isinstance(rows, str):
+            rows = json.loads(rows)
+        return rows if isinstance(rows, list) else []
