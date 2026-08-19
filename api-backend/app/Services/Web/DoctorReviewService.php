@@ -178,6 +178,7 @@ class DoctorReviewService
             'patient'  => $this->buildPatientData($session),
             'symptoms' => $session->symptoms,
             'ai_result'=> $session->ai_result,
+            'conversation' => $session->conversation,
             'tips'     => $session->tips,
             'pdf_url'  => $session->pdf_url,
             'doctor_notes' => $session->doctor_notes,

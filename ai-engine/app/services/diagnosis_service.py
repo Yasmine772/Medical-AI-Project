@@ -999,6 +999,7 @@ class DiagnosisService:
                 "diagnoses": parsed["diagnoses"],
             },
             "symptoms": self._get_symptoms(candidates, lang),
+            "conversation": conversation,
             "total": MAX_QUESTIONS,
         }
 

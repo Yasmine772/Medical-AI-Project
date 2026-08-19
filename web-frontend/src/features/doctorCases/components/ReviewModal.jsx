@@ -8,9 +8,97 @@ import {
   User,
   Activity,
   CheckCircle2,
+  MessageSquare,
+  ChevronDown,
 } from "lucide-react";
 import { fetchCaseDetails, submitReview } from "../doctorCasesSlice";
 import toast from "react-hot-toast";
+
+// Assistant messages may carry JSON (question / diagnosis payloads). Surface
+// human-readable text + options for the transcript instead of raw JSON.
+// Some payloads contain NaN/Infinity in probs_per_option (invalid JSON), so we
+// sanitize before parsing and fall back to regex extraction if needed.
+const safeParse = (str) => {
+  try {
+    return JSON.parse(str);
+  } catch {
+    try {
+      const s = str
+        .replace(/\bNaN\b/g, "null")
+        .replace(/-\s*Infinity\b/g, "null")
+        .replace(/\bInfinity\b/g, "null");
+      return JSON.parse(s);
+    } catch {
+      return null;
+    }
+  }
+};
+
+const extractOptions = (raw) => {
+  const m = raw.match(/"options"\s*:\s*\[([^\]]*)\]/);
+  if (!m) return [];
+  return (m[1].match(/"([^"]*)"/g) || []).map((s) => s.replace(/^"|"$/g, ""));
+};
+
+const formatConversationMessage = (msg) => {
+  const raw = msg?.content ?? (typeof msg === "string" ? msg : "");
+
+  // extract the JSON object itself by its { ... } boundaries, ignoring any
+  // wrapping (code fences, language tags, stray chars) around it
+  const stripFences = (s) => {
+    const start = s.indexOf("{");
+    const end = s.lastIndexOf("}");
+    if (start !== -1 && end > start) return s.slice(start, end + 1);
+    return s.trim();
+  };
+
+  if (typeof raw !== "string") {
+    if (raw && (raw.question || raw.type || raw.message)) {
+      const c = raw;
+      if (c.type === "diagnosis") return { kind: "diagnosis", text: "Final diagnosis generated." };
+      if (c.question)
+        return { kind: "question", question: c.question, options: c.options || [], probs: c.probs_per_option || {} };
+      if (c.message) return { kind: "message", text: c.message };
+    }
+    return { kind: "plain", text: String(raw) };
+  }
+
+  let content = stripFences(raw);
+  if (!content.startsWith("{")) {
+    return { kind: "plain", text: content };
+  }
+
+  let parsed = safeParse(content);
+
+  // unwrap double-encoded message: { role, content: "{...}" }
+  if (parsed && typeof parsed.content === "string") {
+    const inner = safeParse(stripFences(parsed.content));
+    if (inner && (inner.question || inner.type || inner.message)) {
+      parsed = inner;
+    }
+  }
+
+  if (!parsed) {
+    const q = content.match(/"question"\s*:\s*"([^"]*)"/);
+    const mes = content.match(/"message"\s*:\s*"([^"]*)"/);
+    if (q) return { kind: "question", question: q[1], options: extractOptions(content), probs: {} };
+    if (mes) return { kind: "message", text: mes[1] };
+    return { kind: "plain", text: content };
+  }
+
+  if (parsed.type === "diagnosis") return { kind: "diagnosis", text: "Final diagnosis generated." };
+  if (parsed.type === "need_more_symptoms")
+    return { kind: "message", text: "Need more symptoms" };
+  if (parsed.question)
+    return {
+      kind: "question",
+      question: parsed.question,
+      options: parsed.options || [],
+      probs: parsed.probs_per_option || {},
+    };
+  if (parsed.message) return { kind: "message", text: parsed.message };
+  return { kind: "plain", text: JSON.stringify(parsed) };
+};
 const ReviewModal = ({
   isOpen,
   onClose,
@@ -29,6 +117,7 @@ const ReviewModal = ({
   const [customDiseaseAr, setCustomDiseaseAr] = useState("");
   const [percentages, setPercentages] = useState({});
   const [initializedHash, setInitializedHash] = useState(null);
+  const [showConversation, setShowConversation] = useState(false);
 
  
   useEffect(() => {
@@ -57,6 +146,7 @@ const ReviewModal = ({
   const patient = caseData?.patient;
   const symptoms = caseData?.symptoms || [];
   const tips = caseData?.tips || [];
+  const conversation = caseData?.conversation || [];
   const handleSendReport = () => {
     if (!medicalNote.trim()) {
       toast.error("يرجى كتابة ملاحظة طبية قبل إرسال التقرير");
@@ -258,6 +348,76 @@ const ReviewModal = ({
                   ))}
                 </div>
               </div>
+
+              {/* Conversation (Patient ↔ AI) */}
+              {conversation.length > 0 && (
+                <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowConversation((v) => !v)}
+                      className="w-full flex items-center justify-between font-bold text-gray-700 text-sm border-b pb-2"
+                    >
+                      <span className="flex items-center gap-2">
+                        <MessageSquare size={16} className="text-[#72A6BB]" />
+                        Patient – AI Conversation
+                      </span>
+                      <ChevronDown
+                        size={18}
+                        className={`text-gray-400 transition-transform ${showConversation ? "" : "-rotate-90"}`}
+                      />
+                    </button>
+                  {showConversation && (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {conversation.map((msg, idx) => {
+                      const isUser = msg.role === "user";
+                      const rendered = formatConversationMessage(msg);
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex ${isUser ? "justify-start" : "justify-end"}`}
+                        >
+                          <div
+                            className={`max-w-[80%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${
+                              isUser
+                                ? "bg-gray-100 text-gray-800 rounded-tl-sm"
+                                : "bg-[#72A6BB]/10 text-[#2c2c2a] rounded-tr-sm"
+                            }`}
+                          >
+                            <div className="text-[10px] font-semibold mb-0.5 opacity-60">
+                              {isUser ? "Patient" : "AI"}
+                            </div>
+                            {rendered.kind === "question" ? (
+                              <div className="space-y-1 text-[13px] leading-relaxed">
+                                <div>
+                                  <span className="font-semibold">Question: </span>
+                                  {rendered.question}
+                                </div>
+                                {rendered.options?.length > 0 && (
+                                  <div>
+                                    <span className="font-semibold">options: </span>
+                                    {rendered.options.join(" | ")}
+                                  </div>
+                                )}
+                                {Object.keys(rendered.probs || {}).length > 0 && (
+                                  <div>
+                                    <span className="font-semibold">
+                                      probable diseases:{" "}
+                                    </span>
+                                    {Object.keys(rendered.probs).join(", ")}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div>{rendered.text}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  )}
+                </div>
+              )}
 
               {/* 3. AI Suggested Tips Section */}
               {tips.length > 0 && (

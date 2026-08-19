@@ -310,6 +310,7 @@ class AiService
             'phase' => 'doctor_review',
             'ai_result' => $inner['diagnosis_summary']['diagnoses'] ?? $session->ai_result,
             'symptoms' => $inner['symptoms'] ?? $session->symptoms,
+            'conversation' => $inner['conversation'] ?? $session->conversation,
         ]);
     }
 
@@ -612,6 +613,7 @@ class AiService
                 'completed_at' => $session->completed_at,
                 'ai_result' => $session->ai_result,
                 'symptoms' => $session->symptoms,
+                'conversation' => $session->conversation,
             ],
             'doctor' => $doctor ? [
                 'id' => $doctor->id,
