@@ -14,7 +14,7 @@ class ReassignExpiredCases implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(protected $caseId) {}
+    public function __construct(public $caseId) {}
 
 
     /**

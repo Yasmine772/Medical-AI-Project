@@ -131,42 +131,19 @@ class DashboardController extends Controller
         if ($cases === 'DoctorNotFound') {
             return $this->errorResponse('Doctor not found!', null, 404);
         }
-
         return $this->successResponse($cases, 'Urgent cases retrieved successfully', 200);
-    }
-    //*************************** */
-    public function checkExpired()
-    {
-        $result = $this->doctorDashboardService->checkExpiredCases();
-
-        if ($result === 'DoctorNotFound') {
-            return $this->errorResponse('Doctor not found!', null, 404);
-        }
-        return $this->successResponse($result, 'Expired cases checked successfully', 200);
     }
     //***************************** */
     public function reassign(Request $request, $id)
     {
         $result = $this->doctorDashboardService->reassignCase($id);
-
-        if ($result === 'DoctorNotFound') {
-            return $this->errorResponse('Doctor not found!', null, 404);
-        }
-
-        if ($result === 'CaseNotFound') {
-            return $this->errorResponse('Case not found!', null, 404);
-        }
-
-        if ($result === 'NotAuthorized') {
-            return $this->errorResponse('You are not authorized to reassign this case', null, 403);
-        }
-
-        if ($result === 'NoDoctorAvailable') {
-            return $this->errorResponse('No available doctor found for reassignment', null, 404);
-        }
-
-        return $this->successResponse($result, 'Case reassigned successfully', 200);
+        return match ($result) {
+            'DoctorNotFound'    => $this->errorResponse('Doctor not found!', null, 404),
+            'CaseNotFound'      => $this->errorResponse('Case not found!', null, 404),
+            'NotAuthorized'     => $this->errorResponse('You are not authorized to reassign this case', null, 403),
+            'NoDoctorAvailable' => $this->errorResponse('No available doctor found for reassignment', null, 404),
+            default             => $this->successResponse($result, 'Case reassigned successfully', 200),
+        };
     }
-
 }
 

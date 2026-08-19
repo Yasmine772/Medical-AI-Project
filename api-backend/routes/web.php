@@ -132,7 +132,6 @@ Route::prefix('doctor')->group(function () {
         Route::get('/incoming-cases', [DoctorDashboardController::class, 'incomingCases'])->middleware('permission:view-incoming-cases');
         Route::get('/urgent-cases', [DoctorDashboardController::class, 'urgentCases'])->middleware('permission:view-urgent-cases');
 
-        Route::post('/check-expired', [DoctorDashboardController::class, 'checkExpired']);
         Route::post('/reassign/{id}', [DoctorDashboardController::class, 'reassign']);
 
 

@@ -171,38 +171,16 @@ class DoctorDashboardService
                                     ?? null;
                 }
             }
-            // $timeAgo = $this->getTimeAgo($case->completed_at);
-
             return [
                 'id' => $case->id,
                 'patient_number' => $patientNumber,
                 'patient_name' => $patientName,
                 'disease_name' => $diseaseName,
                 'status_text' => 'Review Completed',
-                // 'time_ago' => $timeAgo,
                 'view_url' => "/doctor/case/{$case->id}",
             ];
         })->values()->toArray();
     }
-
-    // private function getTimeAgo($dateTime)
-    // {
-    //     $diff = abs(now()->diffInMinutes($dateTime));
-
-    //     if ($diff < 1) {
-    //         return 'Just now';
-    //     } elseif ($diff < 60) {
-    //         return $diff . ' minute' . ($diff > 1 ? 's' : '') . ' ago';
-    //     } elseif ($diff < 1440) {
-    //         $hours = floor($diff / 60);
-    //         return $hours . ' hour' . ($hours > 1 ? 's' : '') . ' ago';
-    //     } elseif ($diff < 2880) { 
-    //         return 'Yesterday';
-    //     } else {
-    //         $days = floor($diff / 1440);
-    //         return $days . ' day' . ($days > 1 ? 's' : '') . ' ago';
-    //     }
-    // }
 //*************************************** */
     public function getCase($id)
     {
@@ -385,57 +363,9 @@ class DoctorDashboardService
             ];
         })->values()->toArray();
     }
-
-    //*************************************** */
-    public function checkExpiredCases()
-    {
-        $doctor = Doctor::where('user_id', auth()->id())->first();
-
-        if (!$doctor) {
-            return 'DoctorNotFound';
-        }
-
-        $expiredCases = DiagnosisSession::where('doctor_id', $doctor->id)
-            ->where('phase', 'doctor_review')
-            ->whereNull('doctor_reviewed_at')
-            ->get()
-            ->filter(function ($case) {
-                return $case->isReviewExpired();
-            });
-
-        if ($expiredCases->isEmpty()) {
-            return [
-                'message' => 'No expired cases found',
-                'reassigned_count' => 0,
-                'reassigned_cases' => [],
-            ];
-        }
-
-        $reassigned = [];
-
-        foreach ($expiredCases as $case) {
-            $result = $this->reassignCase($case->id);
-
-            if ($result !== 'NoDoctorAvailable' && $result !== 'NotAuthorized') {
-                $reassigned[] = $result;
-            }
-        }
-
-        return [
-            'message' => 'Expired cases checked',
-            'reassigned_count' => count($reassigned),
-            'reassigned_cases' => $reassigned,
-        ];
-    }
     //******************************** */
     public function reassignCase($caseId)
     {
-        $doctor = Doctor::where('user_id', auth()->id())->first();
-
-        if (!$doctor) {
-            return 'DoctorNotFound';
-        }
-
         $case = DiagnosisSession::where('id', $caseId)->first();
 
         if (!$case) {
@@ -447,32 +377,54 @@ class DoctorDashboardService
         }
 
         $specialization = $this->getCaseSpecialization($case);
+        $wanted = strtolower(trim($specialization));
+        $byWorkload = fn ($d) => $d->diagnosisSessions()->where('phase', 'doctor_review')->count();
 
-        $newDoctor = Doctor::where('is_active', true)
+        // 1) Same specialty (case-insensitive) + currently on schedule + active
+        $newDoctor = Doctor::whereRaw('LOWER(specialization) = ?', [$wanted])
+            ->where('is_active', true)
             ->where('id', '!=', $case->doctor_id)
-            ->where('specialization', $specialization)
             ->whereHas('schedules', function ($query) {
                 $query->where('day_of_week', now()->format('l'))
                     ->where('is_closed', false)
                     ->whereTime('start_time', '<=', now()->format('H:i:s'))
                     ->whereTime('end_time', '>=', now()->format('H:i:s'));
             })
-            ->withCount(['diagnosisSessions' => function ($query) {
-                $query->where('phase', 'doctor_review')
-                    ->whereNull('doctor_reviewed_at');
-            }])
-            ->orderBy('diagnosis_sessions_count', 'asc')
+            ->get()
+            ->sortBy($byWorkload)
             ->first();
 
+        // 2) Same specialty (case-insensitive) + active, no schedule check
+        if (!$newDoctor) {
+            $newDoctor = Doctor::whereRaw('LOWER(specialization) = ?', [$wanted])
+                ->where('is_active', true)
+                ->where('id', '!=', $case->doctor_id)
+                ->get()
+                ->sortBy($byWorkload)
+                ->first();
+        }
+
+        // 3) Fuzzy LIKE match on specialty + active
+        if (!$newDoctor) {
+            $newDoctor = Doctor::whereRaw('LOWER(specialization) LIKE ?', ['%' . $wanted . '%'])
+                ->where('is_active', true)
+                ->where('id', '!=', $case->doctor_id)
+                ->get()
+                ->sortBy(function ($d) {
+                    return [
+                        strlen($d->specialization),
+                        $d->diagnosisSessions()->where('phase', 'doctor_review')->count(),
+                    ];
+                })
+                ->first();
+        }
+
+        // 4) Last resort: any active doctor
         if (!$newDoctor) {
             $newDoctor = Doctor::where('is_active', true)
                 ->where('id', '!=', $case->doctor_id)
-                ->where('specialization', $specialization)
-                ->withCount(['diagnosisSessions' => function ($query) {
-                    $query->where('phase', 'doctor_review')
-                        ->whereNull('doctor_reviewed_at');
-                }])
-                ->orderBy('diagnosis_sessions_count', 'asc')
+                ->get()
+                ->sortBy($byWorkload)
                 ->first();
         }
 
@@ -487,9 +439,8 @@ class DoctorDashboardService
         $oldDoctorId = $case->doctor_id;
         $case->doctor_id = $newDoctor->id;
         $case->phase = 'doctor_review';
-        $case->status = 'ACTIVE';
         $case->save();
-        
+
         Log::warning('Case reassigned', [
             'case_id' => $case->id,
             'old_doctor_id' => $oldDoctorId,

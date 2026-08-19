@@ -11,6 +11,8 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\ReassignExpiredCases; 
+
 
 class PaymentService
 {
@@ -256,6 +258,7 @@ class PaymentService
 
             if ($doctorId) {
                 $this->notifyAssignedDoctor($session->refresh());
+                ReassignExpiredCases::dispatch($session->id)->delay(now()->addMinutes(75));
             }
 
         } catch (\Exception $e) {
@@ -266,7 +269,7 @@ class PaymentService
         }
     }
 
-    private function notifyAssignedDoctor(DiagnosisSession $session): void
+    public function notifyAssignedDoctor(DiagnosisSession $session): void
     {
         try {
             app(DiagnosisDataService::class)->store($session);
