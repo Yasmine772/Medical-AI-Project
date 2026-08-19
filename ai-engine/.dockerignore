@@ -1,0 +1,16 @@
+# Never bake secrets or local artifacts into the image.
+# The runtime .env is provided via a bind mount in docker-compose.yml,
+# so rotating secrets only requires `docker restart ai-engine`.
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.git/
+.gitignore

@@ -79,6 +79,10 @@ services:
       - "5000:5000"
     volumes:
       - ai_reports:/app/reports
+      # Mount .env at runtime so secrets (Cloudflare tokens, Supabase, etc.)
+      # can be changed on the VM and applied with `docker restart ai-engine`
+      # — no image rebuild required.
+      - ./ai-engine/.env:/app/.env:ro
     environment:
       - PYTHONUNBUFFERED=1
     depends_on:
