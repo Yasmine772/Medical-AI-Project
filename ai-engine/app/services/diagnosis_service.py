@@ -9,6 +9,7 @@ from app.services.bayesian import (
     check_stopping,
     force_top3,
     MAX_QUESTIONS,
+    CONFIDENCE_THRESHOLD,
 )
 from app.services.socrates import (
     format_candidates,
@@ -40,7 +41,7 @@ from app.services.question_builder import (
     build_fallback_question,
 )
 
-MIN_QUESTIONS_BEFORE_DIAGNOSIS = 4
+MIN_QUESTIONS_BEFORE_DIAGNOSIS = 6
 MAX_TOTAL_DISEASES = 15
 MAX_NEW_DISEASES = 3
 
@@ -173,8 +174,10 @@ class DiagnosisService:
 
         model_name = candidates.get("model_name")
 
-        # Vector search anchored on the selected result
-        query_vector = self.embedder.encode_query(query_text)
+        # Vector search anchored on the selected result, biased by patient priors
+        prior_q = self._prior_query(candidates.get("baseline"))
+        search_query = f"{prior_q} | {query_text}" if prior_q else query_text
+        query_vector = self.embedder.encode_query(search_query)
         vector_results = self.store.search(query_vector, limit=10, filter_type=None)
         log(
             "VECTOR",
@@ -432,14 +435,32 @@ class DiagnosisService:
         question_count = question_count + 1
         candidates["question_count"] = question_count
 
-        can_stop = check_stopping(probabilities, socrates_axis)
-
         remaining = MAX_QUESTIONS - question_count
         top1 = max(probabilities.items(), key=lambda x: x[1])[1] if probabilities else 0
+        sorted_p = sorted(probabilities.items(), key=lambda x: -x[1])
+        top3_sum = sum(p for _, p in sorted_p[:3])
+
+        # Convergence / info-gain aware stopping: stop when confident OR when the
+        # top probability has barely moved for two consecutive questions (we are no
+        # longer gaining useful information), once the minimum number of questions
+        # has been asked. This avoids both dragging and cutting off too early.
+        prev_top1 = candidates.get("prev_top1")
+        stable = candidates.get("stable_count", 0)
+        if prev_top1 is not None and abs(top1 - prev_top1) < 0.03:
+            stable += 1
+        else:
+            stable = 0
+        candidates["prev_top1"] = top1
+        candidates["stable_count"] = stable
+        converged = stable >= 2
+        can_stop = check_stopping(probabilities, socrates_axis) or (
+            question_count >= MIN_QUESTIONS_BEFORE_DIAGNOSIS
+            and (top1 >= CONFIDENCE_THRESHOLD or top3_sum >= TOP3_THRESHOLD or converged)
+        )
         symptom_cap = per_symptom_cap(top1, remaining, MIN_PER_SYMPTOM)
         log(
             "CAP",
-            f"question_count={question_count} remaining={remaining} top1={top1:.2f} per_symptom_cap={symptom_cap} questions_on_current={questions_on_current} stop={can_stop}",
+            f"question_count={question_count} remaining={remaining} top1={top1:.2f} per_symptom_cap={symptom_cap} questions_on_current={questions_on_current} stop={can_stop} converged={converged}",
         )
 
         # Hard stops where we MUST diagnose (can't afford more questions):
@@ -450,6 +471,12 @@ class DiagnosisService:
             force_diagnosis
             or question_count >= MAX_QUESTIONS
             or remaining <= MIN_PER_SYMPTOM
+            # Only auto-finalize on confidence/convergence once the patient has
+            # explicitly said there are NO more symptoms. Otherwise we let the
+            # "add another symptom" gate run so the engine gathers a fuller
+            # picture (multiple symptoms) instead of diagnosing a single symptom
+            # after just a few questions.
+            or (can_stop and bool(candidates.get("no_more_symptoms")))
         )
         if force:
             log(
@@ -544,6 +571,7 @@ class DiagnosisService:
         )
 
         baseline = candidates.get("baseline", {})
+        summary_text, _ = self._patient_facts(candidates, conversation)
         system_prompt = build_system_prompt(
             diseases_text,
             socrates_axis,
@@ -554,6 +582,7 @@ class DiagnosisService:
             asked_questions=self._extract_asked_questions(conversation),
             no_more_symptoms=bool(candidates.get("no_more_symptoms")),
             symptoms_text=", ".join(self._get_symptoms(candidates, "en")),
+            summary_text=summary_text,
         )
         messages = [{"role": "system", "content": system_prompt}, *conversation]
         content = self.llm.ask(messages, model=model_name)
@@ -684,6 +713,7 @@ class DiagnosisService:
             )
             parsed = build_fallback_question(socrates_axis)
             content = json.dumps(parsed, ensure_ascii=False)
+        self._absorb_new_symptoms(candidates, parsed)
         parsed = self._tag_question(session_id, parsed, q_index)
         conversation.append({"role": "assistant", "content": content})
         candidates["socrates_axis"] = socrates_axis + 1
@@ -726,6 +756,7 @@ class DiagnosisService:
         )
 
         baseline = candidates.get("baseline", {})
+        summary_text, _ = self._patient_facts(candidates, conversation)
         system_prompt = build_system_prompt(
             diseases_text,
             socrates_axis,
@@ -736,6 +767,7 @@ class DiagnosisService:
             asked_questions=self._extract_asked_questions(conversation),
             no_more_symptoms=bool(candidates.get("no_more_symptoms")),
             symptoms_text=", ".join(self._get_symptoms(candidates, "en")),
+            summary_text=summary_text,
         )
         if initial_msg and not conversation:
             conversation = [
@@ -793,6 +825,7 @@ class DiagnosisService:
             log("LLM", "Empty first question rejected, using fallback")
             parsed = build_fallback_question(socrates_axis)
             content = json.dumps(parsed, ensure_ascii=False)
+        self._absorb_new_symptoms(candidates, parsed)
         parsed = self._tag_question(session_id, parsed, q_index)
         conversation.append({"role": "assistant", "content": content})
         candidates["socrates_axis"] = socrates_axis + 1
@@ -808,6 +841,63 @@ class DiagnosisService:
 
     # ── Finalize diagnosis ──
 
+    def _ground_probabilities_by_symptoms(
+        self, probabilities: dict, diseases: list, candidates: dict
+    ) -> dict:
+        """Re-weight disease probabilities by how well each disease's documented
+        symptoms overlap the patient's REPORTED symptoms.
+
+        The Bayesian ``probabilities`` are seeded from retrieval popularity
+        (how common a disease's source text is in the KB), which lets a
+        retrieval-strong disease (e.g. Influenza) dominate even when it has
+        nothing to do with the patient. This blends in a symptom-fit score so
+        the actual reported picture drives the differential.
+
+        Returns a normalized ``{disease: probability}`` dict.
+        """
+        # Collect the patient's REPORTED symptoms in ENGLISH (name_en), so we can
+        # match them against the English symptom text of candidate diseases.
+        # Must read name_en directly: the lang-aware _get_symptoms() returns the
+        # localized (e.g. Arabic) name for a non-English patient, which never
+        # matches the English disease text and silently disables grounding.
+        # Absorbed answer-revealed symptoms live in selected_symptoms too.
+        patient_syms = []
+        for s in candidates.get("selected_symptoms", []) or []:
+            ne = (s.get("name_en") or s.get("name_local") or "").strip()
+            if ne:
+                patient_syms.append(ne)
+        tokens = set()
+        for s in patient_syms:
+            for w in re.split(r"\W+", s.lower()):
+                if len(w) >= 3:
+                    tokens.add(w)
+        if not tokens:
+            return probabilities  # nothing reported to ground on
+
+        # Per-disease symptom-fit in [0, 1].
+        fit = {}
+        for d in diseases or []:
+            name = d.get("name_en") or ""
+            syms = d.get("symptoms_en") or ""
+            doc = d.get("document") or ""
+            text = ((syms if syms else doc) + " " + name).lower()
+            if not text.strip():
+                fit[name] = None  # no symptom info -> keep prior
+                continue
+            matched = sum(1 for t in tokens if t in text)
+            fit[name] = min(1.0, matched / max(1, len(tokens)))
+
+        w = 0.6  # weight given to symptom fit vs retrieval prior
+        out = {}
+        for name, p in probabilities.items():
+            f = fit.get(name)
+            if f is None:
+                out[name] = p
+            else:
+                out[name] = (1 - w) * p + w * f
+        total = sum(out.values()) or 1.0
+        return {k: v / total for k, v in out.items()}
+
     def _finalize(
         self,
         session_id,
@@ -822,6 +912,12 @@ class DiagnosisService:
         labels = candidates.get("id_labels", {})
         model_name = candidates.get("model_name")
 
+        # Ground the probabilities in the patient's REPORTED symptoms so a
+        # retrieval-popular disease can't dominate an unrelated picture.
+        probabilities = self._ground_probabilities_by_symptoms(
+            probabilities, diseases, candidates
+        )
+
         # The Bayesian posterior is the source of truth for WHICH diseases rank
         # top-3 and their probabilities. The LLM may only contribute names,
         # specialists, and advice; its self-reported probabilities are ignored
@@ -832,11 +928,12 @@ class DiagnosisService:
         # picking the top-3 so we never answer "chest pain" when the patient
         # reported chest pain. The remaining probabilities are renormalized so
         # the real diseases get a fair share of the mass.
-        symptom_names = {
-            (s.get("name_en") or "").strip().lower()
-            for s in candidates.get("selected_symptoms", [])
-            if s.get("name_en")
-        }
+        symptom_names = set()
+        for s in candidates.get("selected_symptoms", []) or []:
+            for key in ("name_en", "name_local"):
+                v = (s.get(key) or "").strip().lower()
+                if v:
+                    symptom_names.add(v)
         posterior = dict(probabilities)
         if symptom_names:
             for name in list(posterior):
@@ -865,8 +962,11 @@ class DiagnosisService:
             else:
                 named = parsed_override.get("diagnoses") or []
         if not named:
+            summary_text, _ = self._patient_facts(candidates, conversation)
             named = self._name_diagnoses(
-                probabilities, diseases, lang, model_name=model_name
+                probabilities, diseases, lang, model_name=model_name,
+                baseline=candidates.get("baseline"),
+                summary_text=summary_text,
             )
 
         # Normalize any LLM-supplied probabilities to a 0-1 fraction. The LLM
@@ -968,10 +1068,22 @@ class DiagnosisService:
                 d["probability"] = round(max(0.0, min(1.0, p)), 2)
             else:
                 d["probability"] = 0.0
+
+        # No single diagnosis may claim 100%: a differential always carries some
+        # uncertainty. Cap the top probability and renormalize the rest so the
+        # engine can never report a literally certain (and often wrong) disease.
+        MAX_SINGLE = 0.95
+        top_p = max((d.get("probability") or 0) for d in merged)
+        if top_p > MAX_SINGLE:
+            for d in merged:
+                d["probability"] = round(min(d["probability"], MAX_SINGLE), 2)
+            total = sum(d["probability"] for d in merged) or 1.0
+            for d in merged:
+                d["probability"] = round(d["probability"] / total, 2)
         return merged
 
     def _name_diagnoses(
-        self, probabilities, diseases, lang, model_name: str = None
+        self, probabilities, diseases, lang, model_name: str = None, baseline: dict = None, summary_text: str = ""
     ) -> list:
         try:
             top = sorted(probabilities.items(), key=lambda x: -x[1])[:5]
@@ -987,7 +1099,11 @@ class DiagnosisService:
                 chunks.append(f"[PASSAGE id={key} weight={round(prob,2)}]\n{text}")
             candidates_text = "\n\n".join(chunks)
             probs_text = "\n".join(f"  {k}: {v*100:.0f}%" for k, v in top)
-            prompt = build_diagnosis_naming_prompt(candidates_text, probs_text, lang)
+            priors_text = self._prior_query(baseline or {})
+            prompt = build_diagnosis_naming_prompt(
+                candidates_text, probs_text, lang,
+                priors_text=priors_text, summary_text=summary_text,
+            )
             content = self.llm.ask(
                 [{"role": "system", "content": prompt}],
                 temperature=0,
@@ -1135,6 +1251,103 @@ class DiagnosisService:
             if name:
                 symptoms.append(name)
         return symptoms
+
+    def _prior_query(self, baseline: dict) -> str:
+        """Turn patient risk factors into a short text fragment that, when
+        embedded alongside the symptom query, biases vector retrieval toward
+        diseases associated with those factors (smoking, alcohol, age, etc.)."""
+        if not baseline:
+            return ""
+        parts = []
+        if baseline.get("age") is not None:
+            parts.append(f"age {baseline['age']}")
+        if baseline.get("gender"):
+            parts.append(str(baseline["gender"]))
+        if baseline.get("is_smoker"):
+            parts.append("smoking")
+        if baseline.get("has_diabetes"):
+            parts.append("diabetes")
+        if baseline.get("has_hypertension"):
+            parts.append("hypertension")
+        if baseline.get("is_pregnant"):
+            parts.append("pregnancy")
+        if baseline.get("activity_level"):
+            parts.append(f"activity {baseline['activity_level']}")
+        return " ".join(parts)
+
+    def _extract_question_text(self, content: str) -> str:
+        """Pull the human-readable question text out of an assistant message
+        (which may be a JSON blob carrying a 'question' field)."""
+        content = content or ""
+        try:
+            p = parse_llm_response(content)
+            if isinstance(p, dict):
+                q = p.get("question") or ""
+                if q:
+                    return q
+        except Exception:
+            pass
+        return content
+
+    def _patient_facts(self, candidates: dict, conversation: list) -> tuple:
+        """Build a compact, deterministic 'known facts' summary and a Q&A-only
+        fragment from the conversation. Pure local computation (no LLM call),
+        so it adds zero latency.
+
+        Returns (summary_text, qa_text):
+          - summary_text: reported symptoms + risk factors + recent Q&A, for the
+            system prompt so the model integrates everything it already knows.
+          - qa_text: just the "Q -> A" pairs, for vector retrieval so a re-search
+            uses the full picture instead of only the last 3 answers.
+        """
+        symptoms = self._get_symptoms(candidates, "en")
+        prior = self._prior_query(candidates.get("baseline") or {})
+
+        qa = []
+        n = len(conversation)
+        for i, m in enumerate(conversation):
+            if m.get("role") != "assistant":
+                continue
+            q = self._extract_question_text(m.get("content", ""))
+            ans = ""
+            for j in range(i + 1, n):
+                if conversation[j].get("role") == "user":
+                    ans = conversation[j].get("content", "")
+                    break
+            if q and ans:
+                qa.append(f"{q} -> {ans}")
+        qa_text = " | ".join(qa[-8:])
+
+        parts = []
+        if symptoms:
+            parts.append("Reported symptoms: " + ", ".join(symptoms))
+        if prior:
+            parts.append("Risk factors: " + prior)
+        if qa_text:
+            parts.append("So far: " + qa_text)
+        summary_text = "\n".join(parts)
+        return summary_text, qa_text
+
+    def _absorb_new_symptoms(self, candidates: dict, parsed: dict) -> None:
+        """If the model surfaced newly-revealed symptoms in the question JSON
+        ('new_symptoms'), add them to the session's selected symptoms so they
+        drive later questions, retrieval, and priors. No extra LLM call — the
+        field is read from the question we already generated."""
+        raw = parsed.get("new_symptoms") if isinstance(parsed, dict) else None
+        if not isinstance(raw, list):
+            return
+        symptoms = candidates.setdefault("selected_symptoms", [])
+        existing = {(s.get("name_en") or "").strip().lower() for s in symptoms}
+        for name in raw:
+            nm = (name or "").strip()
+            if not nm:
+                continue
+            key = nm.lower()
+            if key in existing:
+                continue
+            symptoms.append({"name_en": nm, "name_local": nm, "snippet": ""})
+            existing.add(key)
+            log("SYMPTOMS", f"Absorbed new symptom from answer: {nm}")
 
     def _get_session(self, session_id: str) -> dict:
         # Load a session by FastAPI UUID (stored in Supabase → diagnosis_sessions.id).
@@ -1304,7 +1517,16 @@ class DiagnosisService:
         symptom_query = " | ".join(sorted({
             s.get("name_en", "") for s in selected if s.get("name_en")
         }))
-        query_parts = ([symptom_query] if symptom_query else []) + user_texts[-3:]
+        prior_q = self._prior_query(candidates.get("baseline"))
+        # Use the full patient Q&A picture (not just the last 3 answers) so the
+        # re-search reflects everything the patient has revealed, not a sliding
+        # window that forgets earlier context.
+        _, qa_text = self._patient_facts(candidates or {}, conversation)
+        query_parts = (
+            ([prior_q] if prior_q else [])
+            + ([symptom_query] if symptom_query else [])
+            + ([qa_text] if qa_text else [])
+        )
         query = " | ".join([p for p in query_parts if p])
         query_vector = self.embedder.encode_query(query)
         results = self.store.search(query_vector, limit=10) or []

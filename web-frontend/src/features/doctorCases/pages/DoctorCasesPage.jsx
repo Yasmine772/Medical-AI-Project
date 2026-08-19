@@ -26,7 +26,7 @@ const DoctorCasesPage = () => {
   }, [dispatch]);
 
   const stats = useSelector((state) => state.doctorCases.stats);
- 
+
   useEffect(() => {
     dispatch(
       fetchDoctorReviews({
@@ -43,19 +43,30 @@ const DoctorCasesPage = () => {
     setIsReviewOpen(true);
   };
 
+  // استخراج التاريخ الحالي ديناميكياً
+  const today = new Date();
+
+  // للحصول على اسم اليوم والتاريخ بصيغة مطابقة (مثال: Monday, July 14, 2026)
+  const formattedDate = today.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10" dir="ltr">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#72A6BB] p-6 rounded-[24px] shadow-sm gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white/35 backdrop-blur-md p-6 rounded-[24px] border border-white shadow-sm gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white">Incoming Cases</h1>
-          <p className="text-xs font-semibold text-white/90 mt-1">
-            Monday, July 14, 2026
+          <h1 className="text-3xl font-bold text-[#72A6BB]">Incoming Cases</h1>
+          <p className="text-xs font-semibold text-gray-500 mt-1">
+            {formattedDate}
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white/20 border border-white/30 rounded-full px-4 py-2 w-fit">
-          <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-          <span className="text-xs text-white font-semibold">
+        <div className="flex items-center gap-2 bg-[#72A6BB]/10 border border-[#72A6BB]/30 rounded-full px-4 py-2 w-fit">
+          <div className="w-2 h-2 rounded-full bg-[#72A6BB] animate-pulse"></div>
+          <span className="text-xs text-[#72A6BB] font-semibold">
             Available for Cases
           </span>
         </div>
@@ -135,7 +146,6 @@ const DoctorCasesPage = () => {
           </div>
         ) : (
           casesList.map((item) => {
-            
             const patientData = item.patient || {};
             const badges = [];
             if (patientData.smoker) badges.push("Smoker");
@@ -148,10 +158,10 @@ const DoctorCasesPage = () => {
                 caseId={item.id}
                 patientType={`${item.patient_name || "Patient"} (${patientData.gender || "N/A"}, ${patientData.age || "?"} yrs)`}
                 status={
-                  item.is_urgent
-                    ? "urgent"
-                    : item.status === "COMPLETED"
-                      ? "done"
+                  item.doctor_reviewed_at
+                    ? "done"
+                    : item.is_urgent
+                      ? "urgent"
                       : "new"
                 }
                 timeInfo={
@@ -174,7 +184,7 @@ const DoctorCasesPage = () => {
                     : []
                 }
                 onReview={() => {
-                  if (item.status === "COMPLETED") return; 
+                  if (item.doctor_reviewed_at) return;
                   if (item.session_hash) {
                     handleOpenReview(item.session_hash);
                   } else {
@@ -182,7 +192,9 @@ const DoctorCasesPage = () => {
                   }
                 }}
                 onPdf={() =>
-                  dispatch(fetchPdfReport(item.session.session_hash))
+                  item.session_hash
+                    ? dispatch(fetchPdfReport(item.session_hash))
+                    : toast.error("لا يوجد تقرير PDF لهذه الجلسة")
                 }
                 pdfLoading={pdfLoading}
               />

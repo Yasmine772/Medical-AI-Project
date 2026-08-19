@@ -39,6 +39,17 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         try {
+            $email = $request->validated()['email'];
+            $existingUser = User::where('email', $email)->first();
+
+            if ($existingUser) {
+                return $this->successResponse(
+                    new UserResource($existingUser),
+                    'User already registered. Please check your email for OTP.',
+                    200
+                );
+            }
+
             $user = $this->authService->register($request->validated());
 
             $this->otpService->sendOTP($user);

@@ -3,26 +3,26 @@
 namespace App\Models;
 
 use App\Notifications\ResetPasswordOTPNotification;
+use Carbon\Carbon;
+use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use Laravel\Cashier\Billable;
-use Illuminate\Auth\Passwords\CanResetPassword;
-use Carbon\Carbon;
+use Laravel\Sanctum\HasApiTokens;
 use OwenIt\Auditing\Contracts\Auditable;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements Auditable
 {
-    use HasFactory, Notifiable, HasApiTokens, CanResetPassword, HasRoles, Billable;
+    use Billable, CanResetPassword, HasApiTokens, HasFactory, HasRoles, Notifiable;
     use \OwenIt\Auditing\Auditable;
 
     /**
      * The attributes excluded from the audit.
      */
     protected $auditExclude = ['password', 'remember_token'];
-    
+
     protected $fillable = [
         'full_name',
         'email',
@@ -32,7 +32,7 @@ class User extends Authenticatable implements Auditable
         'email_verified_at',
         'avatar',
         'otp',
-        'otp_verified_at' ,
+        'otp_verified_at',
         'expires_at',
         'created_at',
         'fcm_token',
@@ -47,7 +47,6 @@ class User extends Authenticatable implements Auditable
         'remember_token',
     ];
 
-   
     protected function casts(): array
     {
         return [
@@ -55,13 +54,14 @@ class User extends Authenticatable implements Auditable
             'otp_verified_at' => 'datetime',
             'password' => 'hashed',
             'expires_at' => 'datetime',
+            'otp' => 'encrypted',
+            'fcm_token' => 'encrypted',
         ];
     }
 
-
     public function sendPasswordResetNotification($token): void
     {
-       $this->notify(new ResetPasswordOTPNotification($token));
+        $this->notify(new ResetPasswordOTPNotification($token));
     }
 
     public function profile()
@@ -69,9 +69,9 @@ class User extends Authenticatable implements Auditable
         return $this->hasOne(PatientProfile::class, 'user_id');
     }
 
-    
     /**
      * Get the age attribute based on the birth date.
+     *
      * @return int|null
      */
     public function getAgeAttribute()
@@ -79,6 +79,7 @@ class User extends Authenticatable implements Auditable
         if ($this->profile && $this->profile->birth_date) {
             return Carbon::parse($this->profile->birth_date)->age;
         }
+
         return null;
     }
 
@@ -89,7 +90,7 @@ class User extends Authenticatable implements Auditable
 
     public function payments()
     {
-        return $this->hasMany(\App\Models\Payment::class);
+        return $this->hasMany(Payment::class);
     }
 
     /**
@@ -99,7 +100,7 @@ class User extends Authenticatable implements Auditable
      */
     public function routeNotificationForFcm()
     {
-    return $this->fcm_token;
+        return $this->fcm_token;
     }
 
     /**

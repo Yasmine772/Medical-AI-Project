@@ -4,6 +4,7 @@ import {
   fetchDoctorSummary,
   updateAvailability,
 } from "../doctorDashboardSlice";
+import api from "../../../api/axios";
 
 const WelcomeCard = () => {
   const dispatch = useDispatch();
@@ -19,7 +20,7 @@ const WelcomeCard = () => {
 
   const doctorName = summary?.full_name || "Doctor";
   const doctorPhoto = summary?.doctor_photo
-    ? `http://127.0.0.1:8001/storage/${summary.doctor_photo}`
+    ? `${api.defaults.baseURL}/storage/${summary.doctor_photo}`
     : null;
 
   const formatDate = (dateString) => {

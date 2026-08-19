@@ -26,6 +26,7 @@ const ReviewModal = ({
   const [verdict, setVerdict] = useState("approve");
   const [medicalNote, setMedicalNote] = useState("");
   const [customDisease, setCustomDisease] = useState("");
+  const [customDiseaseAr, setCustomDiseaseAr] = useState("");
   const [percentages, setPercentages] = useState({});
   const [initializedHash, setInitializedHash] = useState(null);
 
@@ -57,6 +58,11 @@ const ReviewModal = ({
   const symptoms = caseData?.symptoms || [];
   const tips = caseData?.tips || [];
   const handleSendReport = () => {
+    if (!medicalNote.trim()) {
+      toast.error("يرجى كتابة ملاحظة طبية قبل إرسال التقرير");
+      return;
+    }
+
     let payload = {};
 
     if (verdict === "approve") {
@@ -67,8 +73,8 @@ const ReviewModal = ({
     } else if (verdict === "modify") {
      
       const updatedAiResults = aiResults.map((item) => ({
-        name_en: item.disease_name,
-        name_ar: item.disease_name_local,
+        disease_name: item.disease_name,
+        disease_name_local: item.disease_name_local,
         probability: percentages[item.disease_name] ?? item.probability,
         confidence: item.confidence,
         specialist: item.specialist,
@@ -80,11 +86,15 @@ const ReviewModal = ({
         ai_result: updatedAiResults,
       };
     } else if (verdict === "custom") {
+      if (!customDisease.trim()) {
+        toast.error("يرجى كتابة اسم المرض قبل إرسال التقرير");
+        return;
+      }
       payload = {
         decision: "new",
         doctor_notes: medicalNote || null,
         disease_name: customDisease,
-        disease_name_ar: "تشخيص مخصص", 
+        disease_name_local: customDiseaseAr || "تشخيص مخصص", 
         disease_probability: 95,
         disease_specialist: "General Practitioner",
         disease_confidence: "High",
@@ -396,6 +406,18 @@ const ReviewModal = ({
                       value={customDisease}
                       onChange={(e) => setCustomDisease(e.target.value)}
                       placeholder="e.g. Type 1 Diabetes"
+                      className="w-full p-2.5 rounded-xl border border-gray-200 outline-none focus:border-[#72A6BB]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-500 block mb-1">
+                      Disease Name (Arabic)
+                    </label>
+                    <input
+                      type="text"
+                      value={customDiseaseAr}
+                      onChange={(e) => setCustomDiseaseAr(e.target.value)}
+                      placeholder="مثال: السكري من النوع الأول"
                       className="w-full p-2.5 rounded-xl border border-gray-200 outline-none focus:border-[#72A6BB]"
                     />
                   </div>

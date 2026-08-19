@@ -14,6 +14,12 @@ class AuthService
 {
     public function register(array $data)
     {
+        $existingUser = User::where('email', $data['email'])->first();
+
+        if ($existingUser) {
+            return $existingUser;
+        }
+
         $user = User::create([
             'full_name' => $data['name'],
             'email' => $data['email'],

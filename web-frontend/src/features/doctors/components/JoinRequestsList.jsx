@@ -7,7 +7,6 @@ import JoinRequestCard from "./JoinRequestCard";
 const JoinRequestsList = ({ onViewDetails }) => {
   const dispatch = useDispatch();
 
-  
   const { requests, loading, error } = useSelector(
     (state) => state.doctorRequests,
   );
@@ -21,7 +20,7 @@ const JoinRequestsList = ({ onViewDetails }) => {
       <div className="text-center py-10 text-gray-500">Loading requests...</div>
     );
   if (error)
-    return <div className="text-center py-10 text-red-500">Error: {error}</div>;
+    return <div className="text-center py-10 text-red-500"> {error}</div>;
 
   return (
     <div className="mt-6">
@@ -30,7 +29,7 @@ const JoinRequestsList = ({ onViewDetails }) => {
           <JoinRequestCard
             key={doctor.id}
             doctor={doctor}
-            onViewDetails={onViewDetails} 
+            onViewDetails={onViewDetails}
           />
         ))
       ) : (

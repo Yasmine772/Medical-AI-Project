@@ -15,6 +15,48 @@ from app.services.i18n import detect_lang, translate_batch, to_english
 router = APIRouter()
 
 
+# ── Idempotency store (in-memory, per-process) ──
+# Keyed by "{session_id}:{idempotency_key}".  Values are the full response
+# dicts.  Entries expire after 10 minutes via TTL wrapper.
+import time as _time
+
+_idempotency_store: dict[str, tuple[float, dict]] = {}
+_IDEMPOTENCY_TTL = 600  # 10 minutes
+
+
+def _check_idempotency(session_id: str, key: str | None) -> dict | None:
+    """Return cached response if this idempotency key was seen recently."""
+    if not key:
+        return None
+    cache_key = f"{session_id}:{key}"
+    entry = _idempotency_store.get(cache_key)
+    if entry is None:
+        return None
+    ts, data = entry
+    if _time.time() - ts > _IDEMPOTENCY_TTL:
+        _idempotency_store.pop(cache_key, None)
+        return None
+    log("IDEMPOTENCY", f"Cache hit for key={key[:16]}… session={session_id[:8]}")
+    return data
+
+
+def _save_idempotency(session_id: str, key: str | None, result: dict):
+    """Store a response for idempotency replay."""
+    if not key:
+        return
+    cache_key = f"{session_id}:{key}"
+    _idempotency_store[cache_key] = (_time.time(), result)
+    # Evict expired entries opportunistically (max 50 per call)
+    now = _time.time()
+    evicted = 0
+    for k in list(_idempotency_store):
+        if evicted >= 50:
+            break
+        if now - _idempotency_store[k][0] > _IDEMPOTENCY_TTL:
+            _idempotency_store.pop(k, None)
+            evicted += 1
+
+
 @router.get("/symptoms")
 async def search_symptoms(
     q: str = Query(default="", description="Search query for symptoms or illnesses"),
@@ -87,6 +129,7 @@ async def search_symptoms(
 
     name_en_list = []
     summary_en_list = []
+    type_en_list = []
     seen_names = set()
     for it in items:
         # Cap results so the UI isn't flooded with 100+ items AND so we don't
@@ -103,8 +146,13 @@ async def search_symptoms(
             continue
         seen_names.add(key)
         summary = (it.get("summary") or "").strip()[:200]
+        raw_type = (it.get("type") or "illness").strip().lower()
+        item_type = raw_type if raw_type in ("illness", "symptom") else "illness"
+        if item_type != "symptom":
+            continue
         name_en_list.append(name_en)
         summary_en_list.append(summary)
+        type_en_list.append(item_type)
 
     if lang != "en":
         names_local = translate_batch(name_en_list, lang)
@@ -119,7 +167,7 @@ async def search_symptoms(
             "id": idx,
             "name_en": ne,
             "name_local": names_local[idx],
-            "type": "illness",
+            "type": type_en_list[idx],
             "summary": summaries_local[idx],
             "source_id": "",
             "similarity": 1.0,
@@ -168,15 +216,24 @@ async def start_diagnosis(
 async def select_symptom(
     session_id: str = Form(...),
     name: str = Form(..., description="Name of the chosen symptom/illness"),
+    idempotency_key: str = Header(default=None, alias="Idempotency-Key"),
 ):
     """Select a symptom/illness; returns the first SOCRATES follow-up question."""
+    cached = _check_idempotency(session_id, idempotency_key)
+    if cached:
+        return cached
+
     try:
         svc = _get_svc()
         parsed = {"name_en": name, "search_query": name}
         out = svc.select_symptom(session_id, parsed)
         if "error" in out:
-            return {"status": "error", "detail": out["error"]}
-        return {"status": "success", "data": out}
+            result = {"status": "error", "detail": out["error"]}
+        else:
+            result = {"status": "success", "data": out}
+
+        _save_idempotency(session_id, idempotency_key, result)
+        return result
     except Exception as e:
         import traceback
         return {"status": "error", "detail": str(e), "traceback": traceback.format_exc()}
@@ -200,8 +257,13 @@ async def submit_follow_up_answer(
     question_id: str = Form(...),
     answer: str = Form(...),
     force_diagnosis: bool = Form(False, description="When true, force the engine to produce a diagnosis now"),
+    idempotency_key: str = Header(default=None, alias="Idempotency-Key"),
 ):
     """Submit an answer for a question; returns the next question or final diagnosis."""
+    cached = _check_idempotency(session_id, idempotency_key)
+    if cached:
+        return cached
+
     try:
         svc = _get_svc()
         result = svc.submit_follow_up_answer(
@@ -211,8 +273,12 @@ async def submit_follow_up_answer(
             force_diagnosis=force_diagnosis,
         )
         if "error" in result:
-            return {"status": "error", "detail": result["error"]}
-        return {"status": "success", "data": result}
+            response = {"status": "error", "detail": result["error"]}
+        else:
+            response = {"status": "success", "data": result}
+
+        _save_idempotency(session_id, idempotency_key, response)
+        return response
     except Exception as e:
         import traceback
         return {"status": "error", "detail": str(e), "traceback": traceback.format_exc()}

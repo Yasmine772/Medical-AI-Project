@@ -1,6 +1,68 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios";
 
+export const fetchIncomingCases = createAsyncThunk(
+  "doctorDashboard/fetchIncomingCases",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/doctor/incoming-cases");
+      return response.data.data; 
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
+
+export const fetchDoctorTodayCases = createAsyncThunk(
+  "doctorDashboard/fetchDoctorTodayCases",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/doctor/today-cases");
+      return response.data.data; 
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
+export const fetchDoctorMonthCases = createAsyncThunk(
+  "doctorDashboard/fetchDoctorMonthCases",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/doctor/month-cases");
+      return response.data.data; 
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
+
+export const fetchDoctorMonthlyProfits = createAsyncThunk(
+  "doctorDashboard/fetchDoctorMonthlyProfits",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/doctor/profits/monthly");
+      return response.data.data; 
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
+export const fetchDoctorDailyProfits = createAsyncThunk(
+  "doctorDashboard/fetchDoctorDailyProfits",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/doctor/profits/daily");
+      return response.data.data; 
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
 export const fetchDoctorSchedules = createAsyncThunk(
   "doctorDashboard/fetchDoctorSchedules",
   async (_, { rejectWithValue }) => {
@@ -53,8 +115,13 @@ const doctorDashboardSlice = createSlice({
   initialState: {
     summary: null,
     schedules: [],
+    monthlyProfits: null,
+    dailyProfits: null,
+    todayCases: null, 
+    monthCases: null,
     loading: false,
     error: null,
+    incomingCases: [],
   },
   reducers: {},
   extraReducers: (builder) => {
@@ -80,7 +147,6 @@ const doctorDashboardSlice = createSlice({
         state.schedules = action.payload;
       })
       .addCase(updateDoctorScheduleItem.fulfilled, (state, action) => {
-     
         const index = state.schedules.findIndex(
           (s) => s.id === action.payload.id,
         );
@@ -89,6 +155,22 @@ const doctorDashboardSlice = createSlice({
         } else {
           state.schedules.push(action.payload);
         }
+      })
+      .addCase(fetchDoctorMonthlyProfits.fulfilled, (state, action) => {
+        state.monthlyProfits = action.payload;
+      })
+
+      .addCase(fetchDoctorDailyProfits.fulfilled, (state, action) => {
+        state.dailyProfits = action.payload;
+      })
+      .addCase(fetchDoctorTodayCases.fulfilled, (state, action) => {
+        state.todayCases = action.payload;
+      })
+      .addCase(fetchDoctorMonthCases.fulfilled, (state, action) => {
+        state.monthCases = action.payload;
+      })
+      .addCase(fetchIncomingCases.fulfilled, (state, action) => {
+        state.incomingCases = action.payload;
       });
   },
 });

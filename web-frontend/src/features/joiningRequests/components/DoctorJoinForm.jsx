@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { sendJoinRequest, clearStatus } from "../joiningRequestsSlice";
-// استيراد أيقونات Lucide React المناسبة للحقول والوثائق
+
 import {
   User,
   Phone,
@@ -16,6 +16,19 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
+
+const SPECIALIZATIONS = [
+  "Allergist", "Allergy Specialist", "Cardiologist", "Dentist", "Dermatologist",
+  "Endocrinologist", "ENT Specialist", "Eye Specialist", "Gastroenterologist",
+  "General Physician", "General Practitioner", "Gynaecologist", "Gynecologist",
+  "Health Care Physician", "Hepatologist", "HIV Specialist", "Immunologist",
+  "Infectious Disease Specialist", "Nephrologist", "Anesthesiologist", "Neurologist",
+  "Neurosurgeon", "Nutritionist", "Oncologist", "Ophthalmic Surgeon", "Ophthalmologist",
+  "Optometrist", "Orthopedic Surgeon", "Otorhinolaryngologist", "Pathologist", "Pediatrician",
+  "Pharmacist", "Physician", "Psychiatrist", "Pulmonologist", "Renal Specialist",
+  "Rheumatologist", "Skin Specialist", "Sleep Specialist", "Specialist", "Surgeon",
+  "Technician", "Therapist", "Urologist",
+];
 
 export default function DoctorJoinForm() {
   const dispatch = useDispatch();
@@ -73,7 +86,7 @@ export default function DoctorJoinForm() {
       onSubmit={handleSubmit}
       className="bg-white border border-gray-100 rounded-2xl p-6 sm:p-8 shadow-xl shadow-gray-100 relative overflow-hidden"
     >
-      {/* رأس النموذج */}
+     
       <div className="mb-6 pb-4 border-b border-gray-100">
         <div className="text-[18px] font-extrabold text-gray-900 mb-1 flex items-center gap-2">
           <Stethoscope className="w-5 h-5 text-[#72A6BB]" />
@@ -84,7 +97,7 @@ export default function DoctorJoinForm() {
         </div>
       </div>
 
-      {/* رسالة النجاح */}
+     
       {successMessage && (
         <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fadeIn">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -94,9 +107,18 @@ export default function DoctorJoinForm() {
 
       {/* رسالة الخطأ */}
       {error && (
-        <div className="mb-5 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fadeIn">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
+        <div className="mb-5 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-start gap-2 animate-fadeIn">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <span>{error.message}</span>
+            {error.errors && (
+              <ul className="mt-1 list-disc pr-5 space-y-0.5 font-normal">
+                {Object.entries(error.errors).map(([field, msgs]) => (
+                  <li key={field}>{Array.isArray(msgs) ? msgs[0] : msgs}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 
@@ -205,13 +227,11 @@ export default function DoctorJoinForm() {
                 required
               >
                 <option value="">اختر التخصص</option>
-                <option value="أمراض جلدية">أمراض جلدية</option>
-                <option value="أمراض باطنية">أمراض باطنية</option>
-                <option value="أطفال">أطفال</option>
-                <option value="قلبية وأوعية دموية">قلبية وأوعية دموية</option>
-                <option value="عظام ومفاصل">عظام ومفاصل</option>
-                <option value="طب عام">طب عام</option>
-                <option value="أخرى">أخرى</option>
+                {SPECIALIZATIONS.map((spec) => (
+                  <option key={spec} value={spec}>
+                    {spec}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -311,6 +331,7 @@ export default function DoctorJoinForm() {
               type="file"
               name="license_file"
               onChange={handleFileChange}
+              accept=".pdf"
               className="file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#72A6BB]/15 file:text-[#72A6BB] hover:file:bg-[#72A6BB] hover:file:text-white file:transition-all p-2 rounded-xl border border-gray-200 bg-gray-50/50 text-xs text-gray-500 cursor-pointer"
               required
             />
@@ -327,6 +348,7 @@ export default function DoctorJoinForm() {
               type="file"
               name="cv_file"
               onChange={handleFileChange}
+              accept=".pdf"
               className="file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#72A6BB]/15 file:text-[#72A6BB] hover:file:bg-[#72A6BB] hover:file:text-white file:transition-all p-2 rounded-xl border border-gray-200 bg-gray-50/50 text-xs text-gray-500 cursor-pointer"
               required
             />
@@ -340,13 +362,14 @@ export default function DoctorJoinForm() {
               type="file"
               name="photo"
               onChange={handleFileChange}
+              accept="image/*"
               className="file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#72A6BB]/15 file:text-[#72A6BB] hover:file:bg-[#72A6BB] hover:file:text-white file:transition-all p-2 rounded-xl border border-gray-200 bg-gray-50/50 text-xs text-gray-500 cursor-pointer"
             />
           </div>
         </div>
       </div>
 
-      {/* زر الإرسال */}
+      
       <button
         type="submit"
         disabled={loading}

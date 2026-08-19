@@ -80,7 +80,7 @@ const DoctorForgotPassword = () => {
           <Button
             type="submit"
             disabled={loading}
-            className="bg-[#72A6BB] hover:bg-[#58889B] text-white transition-colors"
+            className="bg-[#72A6BB] hover:bg-[#58889B] text-white transition-colors rounded-full py-3 shadow-sm font-semibold"
           >
             {loading ? "Sending..." : "Send OTP"}
           </Button>
