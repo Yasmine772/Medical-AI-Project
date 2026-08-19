@@ -15,6 +15,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $users = User::query()
+            ->role('patient')
             ->when($request->has('min_diagnosis'), function ($query) use ($request) {
                 $query->where('diagnose_num', '>=', $request->min_diagnosis);
             })

@@ -141,7 +141,7 @@ const CaseCard = ({
         </div>
       )}
 
-      {/* Actions
+      {/* Actions */}
       <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
         {!isDone && (
           <button
@@ -156,22 +156,6 @@ const CaseCard = ({
             <Stethoscope size={14} /> Review & Send Report
           </button>
         )}
-        <button
-          onClick={onPdf}
-          className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all"
-        >
-          <FileText size={14} /> {isDone ? "View Sent Report" : "View PDF"}
-        </button>
-      </div> */}
-
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
-        <button
-          onClick={onReview}
-          className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl transition-all bg-[#72A6BB] text-white hover:bg-[#5f92a6]"
-        >
-          <Stethoscope size={14} /> Review & Send Report
-        </button>
         <button
           onClick={onPdf}
           className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all"
