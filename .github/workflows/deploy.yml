@@ -36,6 +36,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           password: ${{ secrets.VM_PASSWORD }}
+          command_timeout: 60m
           script: |
             cd /home/azureuser/app
 

@@ -66,7 +66,7 @@ The platform has three roles: **Patients** (consultations), **Doctors** (join th
 
 This repository is a **Monorepo** with three services:
 
-- `/api-backend`: Laravel 11 REST API — auth, CRUD, RBAC, orchestration, and AI proxy.
+- `/api-backend`: Laravel 11 REST API — auth, CRUD, RBAC,  orchestration, and AI proxy.
 - `/ai-engine`: FastAPI service — RAG, embeddings (`pgvector`), LLM integration, PDF processing.
 - `/web-frontend`: React 18 + Vite admin/doctor dashboard (run **locally**, not containerized in production).
 
