@@ -140,7 +140,7 @@ class DiagnosisService:
 
         if _is_no(name_en) or _is_no(result.get("name_local")):
             log("SELECT", f"No more symptoms (sentinel 'no') session={session_id[:8]}")
-            conversation = candidates.get("conversation", [])
+            conversation = session.get("conversation", []) or candidates.get("conversation", [])
             # Let the LLM know the patient has nothing else to add, so it
             # continues with questions about existing symptoms (or diagnoses)
             # instead of asking for yet another symptom.
@@ -319,7 +319,7 @@ class DiagnosisService:
             return {"response_type": "unknown", "question": None}
 
         # If a diagnosis was already produced, return it (last thing in the session).
-        conversation = candidates.get("conversation", [])
+        conversation = session.get("conversation", []) or candidates.get("conversation", [])
         for m in reversed(conversation):
             if m.get("role") != "assistant":
                 continue
@@ -375,7 +375,7 @@ class DiagnosisService:
             return {"error": "Session already completed"}
 
         lang = candidates.get("language", "en")
-        conversation = candidates.get("conversation", [])
+        conversation = session.get("conversation", []) or candidates.get("conversation", [])
         diseases = candidates.get("diseases", [])
         probabilities = candidates.get("probabilities", {})
         socrates_axis = candidates.get("socrates_axis", 0)
@@ -485,6 +485,7 @@ class DiagnosisService:
             )
 
         conversation.append({"role": "user", "content": answer_en})
+        candidates["conversation"] = conversation
         self._save_candidates(session_id, candidates)
 
         if force:
@@ -1151,7 +1152,7 @@ class DiagnosisService:
         log("REPORT", f"Generating report session={session_id[:8]}")
         session = self._get_session(session_id)
         candidates = session.get("candidates", {})
-        conversation = candidates.get("conversation", [])
+        conversation = session.get("conversation", []) or candidates.get("conversation", [])
         lang = candidates.get("language", "en")
 
         for m in reversed(conversation):
