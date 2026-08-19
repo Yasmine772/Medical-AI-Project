@@ -258,7 +258,7 @@ class PaymentService
 
             if ($doctorId) {
                 $this->notifyAssignedDoctor($session->refresh());
-                ReassignExpiredCases::dispatch($session->id)->delay(now()->addMinutes(90));
+                ReassignExpiredCases::dispatch($session->id)->delay(now()->addMinutes(75));
             }
 
         } catch (\Exception $e) {

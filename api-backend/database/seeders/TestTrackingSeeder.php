@@ -257,6 +257,66 @@ class TestTrackingSeeder extends Seeder
         }
         $this->command->info('Seeded '.count($sessions).' test sessions.');
 
+        // 4-reassign. Session that should be reassigned (started 80 min ago, not reviewed)
+        // Doctor 1 = Endocrinologist already exists. Make sure a 2nd one is available.
+        $reassignDisease = Disease::where('name', 'Diabetes')->first();
+        $existingEndo = Doctor::where('specialization', 'Endocrinologist')->first();
+
+        if ($reassignDisease && $existingEndo) {
+            // Create a 2nd Endocrinologist if only one exists
+            $secondEndoUser = User::firstOrCreate(
+                ['email' => 'doctor-endo-2@test.com'],
+                [
+                    'full_name' => 'Dr. Endocrinologist-2',
+                    'password' => Hash::make('password'),
+                    'email_verified_at' => now(),
+                ]
+            );
+            $secondEndoUser->assignRole('doctor');
+
+            $secondEndo = Doctor::updateOrCreate(
+                ['user_id' => $secondEndoUser->id],
+                [
+                    'specialization' => 'Endocrinologist',
+                    'is_active' => true,
+                    'phone' => '0598999999',
+                    'years_of_experience' => 10,
+                ]
+            );
+
+            // Ensure both have schedules for today
+            $today = now()->format('l');
+            foreach ([$existingEndo, $secondEndo] as $endo) {
+                DoctorSchedule::updateOrCreate(
+                    ['doctor_id' => $endo->id, 'day_of_week' => $today],
+                    ['start_time' => '09:00:00', 'end_time' => '17:00:00', 'is_closed' => false]
+                );
+            }
+
+            $reassignSession = DiagnosisSession::firstOrCreate(
+                ['session_hash' => 'test-reassign-' . uniqid()],
+                [
+                    'status' => 'ACTIVE',
+                    'phase' => 'doctor_review',
+                    'user_id' => $user->id,
+                    'disease_id' => $reassignDisease->id,
+                    'doctor_id' => $existingEndo->id,
+                    'started_at' => now()->subMinutes(80),
+                    'symptoms' => ['الشعور بالعطش الشديد', 'كثرة التبول', 'فقدان الوزن المفاجئ'],
+                    'ai_result' => [
+                        ['disease_name_local' => 'السكري من النوع الثاني', 'disease_name' => 'Type 2 Diabetes', 'probability' => 87, 'confidence' => 'High', 'specialist' => 'Endocrinologist'],
+                        ['disease_name_local' => 'مقدمات السكري', 'disease_name' => 'Prediabetes', 'probability' => 9, 'confidence' => 'Medium', 'specialist' => 'Endocrinologist'],
+                    ],
+                    'tips' => ['راقب مستوى السكر بانتظام'],
+                ]
+            );
+
+            // Dispatch the reassignment job immediately for testing
+            \App\Jobs\ReassignExpiredCases::dispatch($reassignSession->id);
+
+            $this->command->info("Seeded reassignment test case: session #{$reassignSession->id} assigned to Dr. {$existingEndo->user->full_name}, job dispatched to reassign to Dr. {$secondEndoUser->full_name}.");
+        }
+
         // 4a-extra. Incomplete sessions (AI never finished -> no ai_result, no doctor, disease_id null)
         // so patient history / doctor lists filtering can be tested (db:seed only).
         $incompleteSessions = [

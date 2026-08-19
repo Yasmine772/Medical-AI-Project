@@ -101,12 +101,8 @@ class DiagnosisSession extends Model
         }
 
         $remaining = $this->reviewRemainingMinutes();
-        
-        if ($remaining <= 0) {
-            return false;
-        }
 
-        return $remaining !== null && $remaining < self::URGENT_THRESHOLD_MINUTES;
+        return $remaining !== null && $remaining > 0 && $remaining < self::URGENT_THRESHOLD_MINUTES;
     }
 
     public function getWorkflowStepsAttribute(): array

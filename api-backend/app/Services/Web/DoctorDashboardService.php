@@ -366,12 +366,6 @@ class DoctorDashboardService
     //******************************** */
     public function reassignCase($caseId)
     {
-        $doctor = Doctor::where('user_id', auth()->id())->first();
-
-        if (!$doctor) {
-            return 'DoctorNotFound';
-        }
-
         $case = DiagnosisSession::where('id', $caseId)->first();
 
         if (!$case) {
@@ -383,32 +377,54 @@ class DoctorDashboardService
         }
 
         $specialization = $this->getCaseSpecialization($case);
+        $wanted = strtolower(trim($specialization));
+        $byWorkload = fn ($d) => $d->diagnosisSessions()->where('phase', 'doctor_review')->count();
 
-        $newDoctor = Doctor::where('is_active', true)
+        // 1) Same specialty (case-insensitive) + currently on schedule + active
+        $newDoctor = Doctor::whereRaw('LOWER(specialization) = ?', [$wanted])
+            ->where('is_active', true)
             ->where('id', '!=', $case->doctor_id)
-            ->where('specialization', $specialization)
             ->whereHas('schedules', function ($query) {
                 $query->where('day_of_week', now()->format('l'))
                     ->where('is_closed', false)
                     ->whereTime('start_time', '<=', now()->format('H:i:s'))
                     ->whereTime('end_time', '>=', now()->format('H:i:s'));
             })
-            ->withCount(['diagnosisSessions' => function ($query) {
-                $query->where('phase', 'doctor_review')
-                    ->whereNull('doctor_reviewed_at');
-            }])
-            ->orderBy('diagnosis_sessions_count', 'asc')
+            ->get()
+            ->sortBy($byWorkload)
             ->first();
 
+        // 2) Same specialty (case-insensitive) + active, no schedule check
+        if (!$newDoctor) {
+            $newDoctor = Doctor::whereRaw('LOWER(specialization) = ?', [$wanted])
+                ->where('is_active', true)
+                ->where('id', '!=', $case->doctor_id)
+                ->get()
+                ->sortBy($byWorkload)
+                ->first();
+        }
+
+        // 3) Fuzzy LIKE match on specialty + active
+        if (!$newDoctor) {
+            $newDoctor = Doctor::whereRaw('LOWER(specialization) LIKE ?', ['%' . $wanted . '%'])
+                ->where('is_active', true)
+                ->where('id', '!=', $case->doctor_id)
+                ->get()
+                ->sortBy(function ($d) {
+                    return [
+                        strlen($d->specialization),
+                        $d->diagnosisSessions()->where('phase', 'doctor_review')->count(),
+                    ];
+                })
+                ->first();
+        }
+
+        // 4) Last resort: any active doctor
         if (!$newDoctor) {
             $newDoctor = Doctor::where('is_active', true)
                 ->where('id', '!=', $case->doctor_id)
-                ->where('specialization', $specialization)
-                ->withCount(['diagnosisSessions' => function ($query) {
-                    $query->where('phase', 'doctor_review')
-                        ->whereNull('doctor_reviewed_at');
-                }])
-                ->orderBy('diagnosis_sessions_count', 'asc')
+                ->get()
+                ->sortBy($byWorkload)
                 ->first();
         }
 
