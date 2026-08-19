@@ -70,16 +70,26 @@ class SessionManager:
     def update_conversation(
         self,
         session_id: str,
-        conversation: List[Dict],
+        conversation: Optional[List[Dict]] = None,
         status: Optional[str] = None,
         candidates: Optional[Dict] = None,
     ):
-        """Persist the conversation transcript (and optionally status/candidates)."""
-        data = {"conversation": json.dumps(conversation)}
+        """Persist the conversation transcript (and optionally status/candidates).
+
+        ``conversation`` is only written when explicitly provided. When it is
+        ``None`` (e.g. a caller saved candidates without touching the
+        transcript) the existing transcript is left untouched instead of being
+        overwritten with an empty list, which previously wiped the history.
+        """
+        data = {}
+        if conversation is not None:
+            data["conversation"] = json.dumps(conversation)
         if status:
             data["status"] = status
-        if candidates:
+        if candidates is not None:
             data["candidates"] = json.dumps(candidates)
+        if not data:
+            return
         self.connect().table("diagnosis_sessions").update(data).eq("id", session_id).execute()
         log("DB", f"Updated session {session_id[:8]} status={status or '-'} candidates_keys={list(candidates.keys()) if candidates else 'none'}")
 

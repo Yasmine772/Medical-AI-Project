@@ -1376,7 +1376,7 @@ class DiagnosisService:
         return session
 
     def _save_candidates(self, session_id: str, candidates: dict):
-        conversation = candidates.pop("conversation", [])
+        conversation = candidates.pop("conversation", None)
         self.session_mgr.update_conversation(
             session_id, conversation, candidates=candidates
         )
