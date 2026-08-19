@@ -3,7 +3,7 @@
 
 <img src="https://img.shields.io/badge/Medical%20AI-Diagnostic%20System-blue?style=for-the-badge&logo=heart&logoColor=white" alt="Medical AI"/>
 
-# 🏥 Medical-AI-Project
+# 🏥 Medical-AI-Project 
 
 ### Intelligent Medical Diagnostic System — Syrian Market Edition
 
