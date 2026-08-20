@@ -10,6 +10,7 @@ from app.services.bayesian import (
     force_top3,
     MAX_QUESTIONS,
     CONFIDENCE_THRESHOLD,
+    TOP3_THRESHOLD,
 )
 from app.services.socrates import (
     format_candidates,
@@ -1168,6 +1169,7 @@ class DiagnosisService:
                             "diagnoses": diags,
                         },
                         "symptoms": self._get_symptoms(candidates, lang),
+                        "conversation": conversation,
                         "total": MAX_QUESTIONS,
                     }
 
@@ -1183,6 +1185,7 @@ class DiagnosisService:
                 "diagnoses": diags,
             },
             "symptoms": self._get_symptoms(candidates, lang),
+            "conversation": conversation,
             "total": MAX_QUESTIONS,
         }
 
